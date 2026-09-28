@@ -1,0 +1,123 @@
+/* ─────────────────────────────────────────────────────────────
+   STUDYLOOP design tokens
+   Teal = measured energy · Coral = action/research · Ink = structure
+   ───────────────────────────────────────────────────────────── */
+
+@font-face {
+  /* ASTROZ is licensed separately. Uses a locally installed copy if present;
+     to self-host, add public/fonts/Astroz.woff2 and append:
+     url("/fonts/Astroz.woff2") format("woff2")
+     Michroma (Google Fonts) stands in until then. */
+  font-family: "Astroz";
+  src: local("Astroz"), local("ASTROZ"), local("Astroz Regular");
+  font-display: swap;
+}
+
+:root {
+  /* ── Colour primitives ── */
+  --teal-500: #14b8a6;
+  --teal-300: #5fd9cb;
+  --teal-900: #0f2a2a;
+  --teal-950: #102524;
+  --coral-500: #ff6b5a;
+  --coral-300: #ff9a8d;
+  --ink-900: #0b0d0f;
+  --ivory: #f4f1ea;
+  --muted: #b7c4c1;
+
+  /* ── Semantic surfaces (the 60%) ── */
+  --room: #060808;
+  --chassis: #0a0d0e;
+  --surface-main: #0b1413;
+  --surface-1: #0d1716;
+  --surface-2: #122120;
+  --surface-3: #183130;
+
+  /* ── Semantic ink ── */
+  --text-1: var(--ivory);
+  --text-2: var(--muted);
+  --text-3: #8a9695;
+  --text-on-coral: var(--ink-900);
+  --text-on-teal: #04110f;
+
+  /* ── Meaning ── */
+  --measured: var(--teal-500);
+  --measured-soft: rgba(20, 184, 166, 0.14);
+  --measured-line: rgba(20, 184, 166, 0.32);
+  --action: var(--coral-500);
+  --action-soft: rgba(255, 107, 90, 0.14);
+  --action-line: rgba(255, 107, 90, 0.36);
+
+  /* ── Hairlines ── */
+  --line-1: rgba(244, 241, 234, 0.06);
+  --line-2: rgba(244, 241, 234, 0.1);
+  --line-3: rgba(244, 241, 234, 0.18);
+  --highlight: inset 0 1px 0 rgba(244, 241, 234, 0.045);
+
+  /* ── Space (8px system; 4/12 for optical tuning only) ── */
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 24px;
+  --s-6: 32px;
+  --s-7: 40px;
+  --s-8: 48px;
+  --s-9: 64px;
+  --s-10: 96px;
+  --s-11: 128px;
+
+  /* ── Radius family ── */
+  --r-chip: 8px;
+  --r-tile: 12px;
+  --r-card: 16px;
+  --r-panel: 20px;
+  --r-chassis: 28px;
+  --r-pill: 999px;
+
+  /* ── Type ── */
+  --font-display: "Astroz", var(--font-display-fallback), "Satoshi", sans-serif;
+  --font-ui: "Satoshi", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-serif: var(--font-instrument-serif), "Iowan Old Style", Georgia, serif;
+
+  --fs-label: 11px;
+  --fs-small: 13px;
+  --fs-body: 15px;
+  --fs-title: 20px;
+  --fs-metric: 32px;
+  --fs-display: clamp(44px, 5vw, 96px);
+  --tracking-label: 0.12em;
+  --tracking-display: 0.04em;
+
+  /* ── Elevation ── */
+  --shadow-rest: 0 1px 0 rgba(0, 0, 0, 0.4), 0 8px 24px -16px rgba(0, 0, 0, 0.8);
+  --shadow-lift: 0 1px 0 rgba(0, 0, 0, 0.4), 0 16px 40px -20px rgba(0, 0, 0, 0.9);
+  --shadow-float: 0 24px 48px -16px rgba(0, 0, 0, 0.75), 0 2px 8px rgba(0, 0, 0, 0.5);
+  --blur-glass: 16px;
+
+  /* ── Motion ── */
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-1: 120ms;
+  --dur-2: 240ms;
+  --dur-3: 480ms;
+  --dur-4: 900ms;
+
+  /* ── Opacity ── */
+  --o-disabled: 0.4;
+  --o-dim: 0.64;
+
+  /* ── Layout ── */
+  --chassis-max: 1440px;
+  --gutter: var(--s-2);
+  --page-x: clamp(16px, 3vw, 48px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur-1: 0ms;
+    --dur-2: 0ms;
+    --dur-3: 0ms;
+    --dur-4: 0ms;
+  }
+}
