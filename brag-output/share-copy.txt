@@ -1,0 +1,2 @@
+StudyLoop. A screenless band that reads your pulse and skin conductance, and one quiet session screen that shows where they moved while you studied.
+Not a mind reader. Study with feedback.

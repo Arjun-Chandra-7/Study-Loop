@@ -1,0 +1,744 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <title>StudyLoop — One line</title>
+    <script src="assets/gsap.min.js"></script>
+    <script src="assets/score-env.js"></script>
+    <style>
+      @font-face { font-family: "Michroma"; src: url("assets/fonts/Michroma.woff2") format("woff2"); font-weight: 400; }
+      @font-face { font-family: "Instrument Serif"; src: url("assets/fonts/InstrumentSerif-Italic.woff2") format("woff2"); font-style: italic; font-weight: 400; }
+      @font-face { font-family: "Instrument Serif"; src: url("assets/fonts/InstrumentSerif-Regular.woff2") format("woff2"); font-style: normal; font-weight: 400; }
+      @font-face { font-family: "Satoshi"; src: url("assets/fonts/Satoshi-400.woff2") format("woff2"); font-weight: 400; }
+      @font-face { font-family: "Satoshi"; src: url("assets/fonts/Satoshi-500.woff2") format("woff2"); font-weight: 500; }
+      @font-face { font-family: "Satoshi"; src: url("assets/fonts/Satoshi-700.woff2") format("woff2"); font-weight: 700; }
+
+      :root {
+        --room: #060808; --chassis: #0a0d0e; --s1: #0d1716; --s2: #122120; --s3: #183130;
+        --teal: #14b8a6; --teal-l: #5fd9cb; --coral: #ff6b5a; --coral-l: #ff9a8d;
+        --ivory: #f4f1ea; --muted: #b7c4c1; --ink: #0b0d0f; --paper: #efe9dc;
+      }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; background: var(--room); }
+      body { font-family: "Satoshi", sans-serif; color: var(--ivory); }
+      #root { position: relative; width: 100%; height: 100%; overflow: hidden; background: var(--room); }
+
+      /* ── persistent room ── */
+      #room { position: absolute; inset: 0; background:
+        radial-gradient(120% 90% at 50% 40%, #0a1110 0%, #060808 60%, #040505 100%); }
+      #floor { position: absolute; left: -10%; right: -10%; bottom: -380px; height: 760px; border-radius: 50%;
+        background: radial-gradient(closest-side, rgba(20,184,166,0.30), rgba(20,184,166,0.10) 45%, rgba(20,184,166,0) 100%);
+        opacity: 0.5; }
+      #grain { position: absolute; inset: 0; pointer-events: none; opacity: 0.035;
+        background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 1 0'/></filter><rect width='220' height='220' filter='url(%23n)'/></svg>"); }
+      #vignette { position: absolute; inset: 0; pointer-events: none;
+        background: radial-gradient(120% 100% at 50% 50%, rgba(0,0,0,0) 55%, rgba(0,0,0,0.55) 100%); }
+
+      .scene { position: absolute; inset: 0; overflow: hidden; }
+      .fill { position: absolute; inset: 0; }
+      .serif { font-family: "Instrument Serif", serif; font-style: italic; font-weight: 400; letter-spacing: -0.005em; }
+      .display { font-family: "Michroma", sans-serif; letter-spacing: 0.16em; font-weight: 400; }
+      .caps { font-family: "Satoshi", sans-serif; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; }
+
+      /* ── S1 desk ── */
+      #s1-persp { position: absolute; inset: 0; perspective: 2100px; perspective-origin: 50% 20%; }
+      #desk { position: absolute; left: -140px; top: -110px; width: 2200px; height: 1300px; transform-origin: 1100px 650px;
+        border-radius: 40px;
+        background:
+          radial-gradient(60% 55% at 45% 62%, rgba(244,241,234,0.07), rgba(244,241,234,0) 70%),
+          repeating-linear-gradient(92deg, rgba(255,255,255,0.012) 0 3px, rgba(0,0,0,0) 3px 11px),
+          linear-gradient(180deg, #0e1817 0%, #0b1312 100%); }
+      .obj { position: absolute; }
+      #laptop { left: 640px; top: 30px; width: 920px; height: 520px; border-radius: 22px; background: #0a0d0e;
+        box-shadow: 0 30px 60px -20px rgba(0,0,0,0.9), inset 0 0 0 2px #1a2524; padding: 16px; }
+      #screen { position: relative; width: 100%; height: 100%; border-radius: 10px; background: #111a19; overflow: hidden; }
+      #tabs { position: absolute; left: 10px; right: 10px; top: 10px; height: 44px; display: flex; gap: 4px; }
+      .tab { flex: 0 0 auto; width: 0px; height: 44px; overflow: hidden; border-radius: 10px 10px 0 0; background: #1b2827;
+        color: #c9d3d1; font: 500 17px "Satoshi"; white-space: nowrap; padding: 12px 14px 0; opacity: 0; }
+      .tab.active { background: #243534; color: var(--ivory); }
+      #addr { position: absolute; left: 10px; right: 10px; top: 58px; height: 34px; border-radius: 8px; background: #1b2827; }
+      #pdf { position: absolute; left: 70px; right: 70px; top: 110px; bottom: -20px; background: #e9e4d8; border-radius: 4px; padding: 36px 48px; color: #1b2322; }
+      #pdf h4 { margin: 0 0 14px; font: 700 26px "Satoshi"; }
+      .pline { height: 10px; border-radius: 5px; background: #c7c1b3; margin: 14px 0; }
+
+      #notebook { left: 560px; top: 610px; width: 820px; height: 560px; }
+      .page { position: absolute; top: 0; width: 410px; height: 560px; background: var(--paper);
+        background-image: repeating-linear-gradient(180deg, rgba(0,0,0,0) 0 37px, rgba(60,90,110,0.22) 37px 39px);
+        box-shadow: 0 24px 50px -18px rgba(0,0,0,0.85); }
+      .page.l { left: 0; border-radius: 10px 2px 2px 10px; }
+      .page.r { left: 410px; border-radius: 2px 10px 10px 2px; }
+      #nb-kicker { position: absolute; left: 44px; top: 30px; font: 700 18px "Satoshi"; letter-spacing: 0.16em; color: #0f5e56; }
+      #nb-title { position: absolute; left: 42px; top: 58px; font-size: 50px; color: #13201f; white-space: nowrap; }
+      #nb-formula { position: absolute; left: 46px; top: 424px; font: 400 34px "Instrument Serif"; color: #13201f; white-space: nowrap; }
+      #nb-ink, #nb-diagram { position: absolute; inset: 0; overflow: visible; }
+
+      #phone { left: 1510px; top: 640px; width: 270px; height: 540px; border-radius: 40px; background: #0a0d0e;
+        box-shadow: 0 30px 60px -20px rgba(0,0,0,0.95), inset 0 0 0 2px #1d2827; padding: 12px; }
+      #phone-screen { position: relative; width: 100%; height: 100%; border-radius: 30px; background: linear-gradient(180deg, #13201f, #0c1413); overflow: hidden; }
+      #phone-time { position: absolute; left: 0; right: 0; top: 50px; text-align: center; font: 500 58px "Satoshi"; color: var(--ivory); }
+      .notif { position: absolute; left: 10px; right: 10px; top: 150px; height: 66px; border-radius: 16px; background: rgba(40,58,57,0.96);
+        padding: 9px 12px; opacity: 0; box-shadow: 0 8px 20px -8px rgba(0,0,0,0.8); }
+      .notif b { display: block; font: 700 12px "Satoshi"; letter-spacing: 0.1em; text-transform: uppercase; color: var(--teal-l); }
+      .notif span { display: block; font: 500 16px "Satoshi"; color: var(--ivory); white-space: nowrap; overflow: hidden; margin-top: 4px; }
+      .notif.hot b { color: var(--coral-l); }
+
+      #clock { left: 180px; top: 150px; width: 300px; height: 300px; border-radius: 50%; background: #0f1a19;
+        box-shadow: 0 24px 50px -16px rgba(0,0,0,0.9), inset 0 0 0 4px #223130; }
+      .hand { position: absolute; left: 150px; bottom: 150px; transform-origin: 50% 100%; border-radius: 4px; }
+      #h-hour { width: 10px; height: 78px; margin-left: -5px; background: var(--ivory); }
+      #h-min { width: 7px; height: 118px; margin-left: -3.5px; background: var(--ivory); }
+      #h-sec { width: 3px; height: 128px; margin-left: -1.5px; background: var(--coral); }
+      #clock-dot { position: absolute; left: 140px; top: 140px; width: 20px; height: 20px; border-radius: 50%; background: var(--coral); }
+
+      #book { left: 150px; top: 640px; width: 380px; height: 500px; border-radius: 10px 16px 16px 10px; background: #0f2a2a;
+        box-shadow: 0 24px 50px -16px rgba(0,0,0,0.9), inset 14px 0 0 #0b201f; padding: 60px 44px; }
+      #book .display { font-size: 34px; color: var(--teal-l); letter-spacing: 0.18em; }
+      #book .serif { font-size: 30px; color: var(--muted); margin-top: 18px; }
+      #mug { left: 1780px; top: 230px; width: 210px; height: 210px; border-radius: 50%; background: radial-gradient(circle at 50% 50%, #2a1a12 0 55%, #e8e2d6 56% 100%);
+        box-shadow: 0 20px 40px -14px rgba(0,0,0,0.9); }
+      #pencil { left: 1180px; top: 1180px; width: 380px; height: 18px; border-radius: 9px; background: linear-gradient(90deg, #1b2322 0 8%, #ff6b5a 8% 88%, #e9d9b9 88% 100%); }
+      .sticky { width: 190px; height: 180px; padding: 22px 20px; font: 400 38px/1.05 "Instrument Serif"; font-style: italic; color: #1b1210;
+        box-shadow: 0 20px 34px -14px rgba(0,0,0,0.85); opacity: 0; }
+      .sticky.c { background: #ff8a7c; }
+      .sticky.i { background: #f1ead9; }
+
+      #pulse-wrap { position: absolute; left: 0; top: 925px; width: 1920px; height: 160px; transform-origin: 960px 80px; }
+      #pulse-svg { position: absolute; left: 0; top: 0; overflow: visible; }
+      #s1-scrim { position: absolute; inset: 0; background: radial-gradient(75% 34% at 50% 49%, rgba(4,6,6,0.93) 30%, rgba(4,6,6,0.6) 65%, rgba(4,6,6,0) 100%); opacity: 0; }
+      #s1-head { position: absolute; left: 0; right: 0; top: 470px; text-align: center; font-size: 124px; line-height: 1; color: var(--ivory);
+        text-shadow: 0 6px 40px rgba(0,0,0,0.8); transform-origin: 50% 50%; }
+
+      /* ── line + band (persistent across S2/S3/S7) ── */
+      #band { position: absolute; left: 0; top: 0; width: 1536px; height: 1024px; transform-origin: 707px 397px; opacity: 0;
+        -webkit-mask-image: radial-gradient(58% 58% at 46% 45%, #000 55%, rgba(0,0,0,0) 100%);
+                mask-image: radial-gradient(58% 58% at 46% 45%, #000 55%, rgba(0,0,0,0) 100%); }
+      #band img { display: block; width: 1536px; height: 1024px; }
+      #line { position: absolute; left: 0; top: 0; width: 140px; height: 6px; border-radius: 3px; transform-origin: 70px 3px; opacity: 0;
+        background: linear-gradient(90deg, #5fd9cb, #bff7ef 50%, #5fd9cb);
+        box-shadow: 0 0 8px 1px rgba(127,240,226,0.95), 0 0 26px 4px rgba(20,184,166,0.65); }
+      #line-bloom { position: absolute; left: 0; top: 0; width: 900px; height: 240px; border-radius: 50%; opacity: 0;
+        background: radial-gradient(closest-side, rgba(95,217,203,0.55), rgba(20,184,166,0.18) 45%, rgba(20,184,166,0) 100%); }
+      #flash { position: absolute; inset: 0; opacity: 0; background: radial-gradient(40% 30% at 50% 50%, rgba(191,247,239,0.45), rgba(20,184,166,0) 100%); }
+
+      /* ── S2 wordmark ── */
+      #s2-scrim { position: absolute; left: 0; right: 0; bottom: 0; height: 460px; background: linear-gradient(180deg, rgba(6,8,8,0), rgba(6,8,8,0.92) 60%); }
+      .wordmark { position: absolute; left: 0; right: 0; text-align: center; color: var(--ivory); font-size: 124px; line-height: 1; white-space: nowrap; }
+      #s2-word { top: 830px; }
+
+      /* ── S3 signals ── */
+      #s3-head { position: absolute; left: 120px; top: 110px; font-size: 104px; line-height: 1; color: var(--ivory); white-space: nowrap; }
+      #sig-svg { position: absolute; left: 0; top: 0; overflow: visible; }
+      .sig-label { position: absolute; font-size: 24px; color: var(--teal-l); white-space: nowrap; }
+      .sig-sub { position: absolute; font: 500 24px "Satoshi"; color: var(--muted); white-space: nowrap; }
+      #ring-wrap { position: absolute; left: 1580px; top: 92px; width: 200px; height: 200px; }
+      #ring-txt { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+      #ring-txt .n { font: 700 50px "Satoshi"; color: var(--ivory); line-height: 1; }
+      #ring-txt .caps { font-size: 16px; color: var(--muted); margin-top: 8px; }
+
+      /* ── S4 live UI ── */
+      #live-persp { position: absolute; left: 520px; top: 118px; width: 1340px; height: 846px; perspective: 2200px; }
+      #live-wrap { position: absolute; inset: 0; transform-origin: 50% 100%; }
+      #live-cam { position: absolute; inset: 0; transform-origin: 25% 32%; border-radius: 28px; overflow: hidden;
+        box-shadow: 0 60px 120px -40px rgba(0,0,0,0.95), 0 0 0 1px rgba(244,241,234,0.08); }
+      #live-cam img { position: absolute; inset: 0; width: 100%; height: 100%; }
+      #live-reflect { position: absolute; left: 600px; top: 930px; width: 1180px; height: 150px; border-radius: 50%;
+        background: radial-gradient(closest-side, rgba(20,184,166,0.22), rgba(20,184,166,0)); }
+      .s4-line { position: absolute; left: 96px; font-size: 92px; line-height: 1; color: var(--ivory); white-space: nowrap; }
+      #s4-a { top: 360px; }
+      #s4-b { top: 480px; }
+      #s4-kick { position: absolute; left: 100px; top: 300px; font-size: 20px; color: var(--teal-l); }
+      #paper { position: absolute; left: 0; top: 0; width: 300px; height: 96px; border-radius: 6px; padding: 12px 16px; transform-origin: 0 0;
+        box-shadow: 0 20px 40px -12px rgba(0,0,0,0.8); }
+      #paper-bg { position: absolute; inset: 0; border-radius: 6px; background: var(--paper);
+        background-image: repeating-linear-gradient(180deg, rgba(0,0,0,0) 0 22px, rgba(60,90,110,0.2) 22px 23px); }
+      #paper-k { position: relative; font: 700 13px "Satoshi"; letter-spacing: 0.16em; color: #0f5e56; }
+      #paper-t { position: relative; font-size: 40px; color: #13201f; white-space: nowrap; margin-top: 4px; }
+      #press-ring { position: absolute; left: 1001px; top: 528px; width: 170px; height: 170px; margin: -85px 0 0 -85px; border-radius: 50%;
+        border: 3px solid var(--coral); opacity: 0; }
+      #press-flash { position: absolute; left: 921px; top: 509px; width: 162px; height: 38px; border-radius: 10px; background: rgba(255,107,90,0.35); opacity: 0; }
+
+      /* ── flag (S4 → S5) ── */
+      #flag { position: absolute; left: 0; top: 0; width: 24px; height: 60px; opacity: 0; transform-origin: 1px 0; }
+      #flag-head { position: absolute; left: 0; top: 0; width: 22px; height: 16px; border-radius: 2px; background: var(--coral);
+        box-shadow: 0 0 18px rgba(255,107,90,0.8); }
+      #flag-pole { position: absolute; left: 0; top: 0; width: 3px; height: 100%; background: var(--coral); box-shadow: 0 0 10px rgba(255,107,90,0.7); }
+
+      /* ── S5 insights ── */
+      #ins-wrap { position: absolute; left: -37px; top: 143px; width: 2000px; height: 1262px; }
+      #ins-cam { position: absolute; inset: 0; transform-origin: 997px 388px; }
+      #ins-cam img { position: absolute; left: 0; top: 0; width: 2000px; height: 1262px; }
+      #ins-full { clip-path: inset(0% 93.6% 0% 0%); }
+      #playhead { position: absolute; left: 0; top: 206px; width: 4px; height: 364px; border-radius: 2px; opacity: 0;
+        background: linear-gradient(180deg, rgba(191,247,239,0), #bff7ef 20%, #bff7ef 80%, rgba(191,247,239,0));
+        box-shadow: 0 0 16px 3px rgba(95,217,203,0.8), 0 0 60px 12px rgba(20,184,166,0.35); }
+      .ping { position: absolute; width: 90px; height: 90px; margin: -45px 0 0 -45px; border-radius: 50%; border: 3px solid var(--coral); opacity: 0; }
+      .ping.t { border-color: var(--teal-l); }
+      #stat-bar { position: absolute; left: 1540px; top: 214px; width: 150px; height: 5px; border-radius: 3px; background: var(--teal-l);
+        box-shadow: 0 0 14px rgba(95,217,203,0.8); transform-origin: 0 50%; opacity: 0; }
+      #s5-scrim { position: absolute; left: 0; right: 0; bottom: 0; height: 420px; background: linear-gradient(180deg, rgba(6,8,8,0), rgba(6,8,8,0.94) 58%); }
+      #s5-head { position: absolute; left: 120px; top: 900px; font-size: 96px; line-height: 1; color: var(--ivory); white-space: nowrap; }
+
+      /* ── S6/S7 loop ── */
+      #loop-svg { position: absolute; left: 0; top: 0; overflow: visible; }
+      .s6-line { position: absolute; left: 0; right: 0; top: 760px; text-align: center; font-size: 112px; line-height: 1; color: var(--ivory); white-space: nowrap; }
+      #s7-scrim { position: absolute; left: 0; right: 0; bottom: 0; height: 520px; background: linear-gradient(180deg, rgba(6,8,8,0), rgba(6,8,8,0.94) 55%); }
+      #s7-word { top: 790px; }
+      #s7-tag { position: absolute; left: 0; right: 0; top: 950px; text-align: center; font-size: 58px; color: var(--muted); white-space: nowrap; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-width="1920" data-height="1080" data-duration="28.5" data-fps="30">
+      <!-- persistent room (not clips) -->
+      <div id="room"></div>
+      <div id="floor"></div>
+
+      <!-- ═══ S1 · The desk ═══ -->
+      <section id="s1" class="clip scene" data-start="0" data-duration="4.45" data-track-index="1">
+        <div id="s1-persp">
+          <div id="desk">
+            <div id="clock" class="obj">
+              <div id="h-hour" class="hand"></div>
+              <div id="h-min" class="hand"></div>
+              <div id="h-sec" class="hand"></div>
+              <div id="clock-dot"></div>
+            </div>
+            <div id="laptop" class="obj">
+              <div id="screen">
+                <div id="tabs">
+                  <div class="tab active" id="tab0">Lecture 7 — Optics.pdf</div>
+                  <div class="tab" id="tab1">Snell's law</div>
+                  <div class="tab" id="tab2">Problem set 4</div>
+                  <div class="tab" id="tab3">Study group chat</div>
+                  <div class="tab" id="tab4">Lo-fi beats · live</div>
+                  <div class="tab" id="tab5">Inbox (12)</div>
+                  <div class="tab" id="tab6">Cart (3)</div>
+                  <div class="tab" id="tab7">Flashcards</div>
+                  <div class="tab" id="tab8">New tab</div>
+                </div>
+                <div id="addr"></div>
+                <div id="pdf">
+                  <h4>Lecture 7 — Refraction of light</h4>
+                  <div class="pline" style="width: 92%"></div><div class="pline" style="width: 86%"></div>
+                  <div class="pline" style="width: 95%"></div><div class="pline" style="width: 64%"></div>
+                  <div class="pline" style="width: 90%"></div><div class="pline" style="width: 80%"></div>
+                  <div class="pline" style="width: 88%"></div><div class="pline" style="width: 52%"></div>
+                </div>
+              </div>
+            </div>
+            <div id="book" class="obj"><div class="display">OPTICS</div><div class="serif">Principles of light</div></div>
+            <div id="mug" class="obj"></div>
+            <div id="notebook" class="obj">
+              <div class="page l"></div>
+              <div class="page r"></div>
+              <div id="nb-kicker">PHYSICS</div>
+              <div id="nb-title" class="serif">Light — Refraction</div>
+              <div id="nb-formula">n₁ sin θ₁ = n₂ sin θ₂</div>
+              <svg id="nb-ink" width="820" height="560" viewBox="0 0 820 560"></svg>
+              <svg id="nb-diagram" width="820" height="560" viewBox="0 0 820 560">
+                <g fill="none" stroke="#1b2a29" stroke-width="3" stroke-linecap="round">
+                  <rect id="dg-block" x="490" y="220" width="260" height="170" rx="2" />
+                  <path id="dg-normal" d="M620 90 L620 520" stroke-dasharray="8 9" stroke-width="2" />
+                  <path id="dg-in" d="M520 110 L620 220" stroke="#d2493b" stroke-width="4" />
+                  <path id="dg-mid" d="M620 220 L665 390" stroke="#d2493b" stroke-width="4" />
+                  <path id="dg-out" d="M665 390 L765 500" stroke="#d2493b" stroke-width="4" />
+                </g>
+              </svg>
+            </div>
+            <div id="pencil" class="obj"></div>
+            <div id="phone" class="obj">
+              <div id="phone-screen">
+                <div id="phone-time">21:47</div>
+                <div class="notif" id="n0"><b>Study group</b><span>14 new messages</span></div>
+                <div class="notif hot" id="n1"><b>Calendar</b><span>Problem set due 9:00</span></div>
+                <div class="notif" id="n2"><b>Messages</b><span>are you coming tonight?</span></div>
+                <div class="notif hot" id="n3"><b>Reminder</b><span>Quiz on Friday</span></div>
+                <div class="notif" id="n4"><b>Battery</b><span>12% remaining</span></div>
+              </div>
+            </div>
+            <div class="obj sticky c" id="st0">lab report!!</div>
+            <div class="obj sticky i" id="st1">email prof</div>
+            <div class="obj sticky c" id="st2">Ch. 5 reading</div>
+            <div class="obj sticky i" id="st3">quiz fri 9am</div>
+          </div>
+        </div>
+        <div id="pulse-wrap">
+          <svg id="pulse-svg" width="1920" height="160" viewBox="0 0 1920 160">
+            <path id="pulse-path" fill="none" stroke="#f4f1ea" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" d="M0 80" />
+          </svg>
+        </div>
+        <div id="s1-scrim"></div>
+        <div id="s1-head" class="serif">Everything pulls at you.</div>
+      </section>
+
+      <!-- band + line: persistent, timeline-driven (S2, S3, S7) -->
+      <div id="band"><img src="assets/ui/band.jpg" alt="StudyLoop band" /></div>
+      <div id="line-bloom"></div>
+      <div id="line"></div>
+      <div id="flash"></div>
+
+      <!-- ═══ S2 · wordmark ═══ -->
+      <section id="s2" class="clip scene" data-start="4.4" data-duration="3.3" data-track-index="2">
+        <div id="s2-scrim"></div>
+        <div id="s2-word" class="wordmark display">STUDYLOOP</div>
+      </section>
+
+      <!-- ═══ S3 · It learns your normal ═══ -->
+      <section id="s3" class="clip scene" data-start="7.4" data-duration="4.45" data-track-index="3">
+        <div id="s3-inner" class="fill">
+          <svg id="sig-svg" width="1920" height="1080" viewBox="0 0 1920 1080">
+            <defs>
+              <clipPath id="sig-clip"><rect x="600" y="0" width="1260" height="1080" /></clipPath>
+              <linearGradient id="sig-fade" x1="600" x2="1860" y1="0" y2="0" gradientUnits="userSpaceOnUse">
+                <stop offset="0" stop-color="#5fd9cb" stop-opacity="1" /><stop offset="0.85" stop-color="#5fd9cb" stop-opacity="1" /><stop offset="1" stop-color="#5fd9cb" stop-opacity="0" />
+              </linearGradient>
+            </defs>
+            <path id="conn-hr" d="M560 600 C 590 600, 580 520, 620 520" fill="none" stroke="#5fd9cb" stroke-width="3" stroke-opacity="0.7" />
+            <path id="conn-eda" d="M560 640 C 590 640, 580 760, 620 760" fill="none" stroke="#5fd9cb" stroke-width="3" stroke-opacity="0.7" />
+            <g clip-path="url(#sig-clip)">
+              <path id="base-hr" d="M620 520 L1860 520" stroke="#f4f1ea" stroke-opacity="0.55" stroke-width="3" stroke-dasharray="2 12" stroke-linecap="round" fill="none" />
+              <path id="base-eda" d="M620 760 L1860 760" stroke="#f4f1ea" stroke-opacity="0.55" stroke-width="3" stroke-dasharray="2 12" stroke-linecap="round" fill="none" />
+              <g id="sig-move">
+                <path id="tr-hr" fill="none" stroke="url(#sig-fade)" stroke-width="4" stroke-linejoin="round" d="M620 520" />
+                <path id="tr-eda" fill="none" stroke="url(#sig-fade)" stroke-width="4" stroke-linejoin="round" d="M620 760" />
+              </g>
+            </g>
+          </svg>
+          <div class="sig-label caps" id="lab-hr" style="left: 640px; top: 380px">Heart rate</div>
+          <div class="sig-sub" id="sub-hr" style="left: 640px; top: 414px">PPG pulse · inner wrist</div>
+          <div class="sig-label caps" id="lab-eda" style="left: 640px; top: 830px">Skin conductance</div>
+          <div class="sig-sub" id="sub-eda" style="left: 640px; top: 864px">EDA · two electrodes</div>
+          <div id="ring-wrap">
+            <svg width="200" height="200" viewBox="0 0 200 200">
+              <circle cx="100" cy="100" r="86" fill="none" stroke="#183130" stroke-width="8" />
+              <circle id="ring" cx="100" cy="100" r="86" fill="none" stroke="#5fd9cb" stroke-width="8" stroke-linecap="round"
+                transform="rotate(-90 100 100)" stroke-dasharray="540.35" stroke-dashoffset="540.35" />
+            </svg>
+            <div id="ring-txt"><div class="n">20 s</div><div class="caps">Baseline</div></div>
+          </div>
+          <div id="s3-head" class="serif">It learns your normal.</div>
+        </div>
+      </section>
+
+      <!-- ═══ S4 · One subject. One timer. ═══ -->
+      <section id="s4" class="clip scene" data-start="11.5" data-duration="5.15" data-track-index="4">
+        <div id="live-reflect"></div>
+        <div id="live-persp">
+          <div id="live-wrap">
+            <div id="live-cam">
+              <img src="assets/ui/ui-live.jpg" alt="StudyLoop live session" />
+              <div id="press-flash"></div>
+              <div id="press-ring"></div>
+            </div>
+          </div>
+        </div>
+        <div id="s4-kick" class="caps">Live session</div>
+        <div id="s4-a" class="s4-line serif">One subject.</div>
+        <div id="s4-b" class="s4-line serif">One timer.</div>
+        <div id="paper"><div id="paper-bg"></div><div id="paper-k">PHYSICS</div><div id="paper-t" class="serif">Light — Refraction</div></div>
+      </section>
+
+      <!-- ═══ S5 · Insights (hero) ═══ -->
+      <section id="s5" class="clip scene" data-start="16.1" data-duration="6.9" data-track-index="5">
+        <div id="ins-wrap">
+          <div id="ins-cam">
+            <img id="ins-empty" src="assets/ui/ui-insights-empty.jpg" alt="StudyLoop Insights" />
+            <img id="ins-full" src="assets/ui/ui-insights.jpg" alt="StudyLoop Insights with signals" />
+            <div id="playhead"></div>
+            <div class="ping" id="pg0" style="left: 478px; top: 236px"></div>
+            <div class="ping t" id="pg1" style="left: 756px; top: 546px"></div>
+            <div class="ping" id="pg2" style="left: 1196px; top: 236px"></div>
+            <div class="ping t" id="pg3" style="left: 1392px; top: 546px"></div>
+            <div id="stat-bar"></div>
+          </div>
+        </div>
+        <div id="s5-scrim"></div>
+        <div id="s5-head" class="serif">See where your signals moved.</div>
+      </section>
+
+      <div id="flag"><div id="flag-pole"></div><div id="flag-head"></div></div>
+
+      <!-- ═══ S6 · Not a mind reader ═══ -->
+      <section id="s6" class="clip scene" data-start="22.2" data-duration="3.5" data-track-index="6">
+        <div id="s6-a" class="s6-line serif">Not a mind reader.</div>
+        <div id="s6-b" class="s6-line serif">Study with feedback.</div>
+      </section>
+
+      <!-- loop trace: persistent SVG (S6 → S7) -->
+      <svg id="loop-svg" width="1920" height="1080" viewBox="0 0 1920 1080">
+        <defs>
+          <filter id="glow" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="6" result="b" /><feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
+        </defs>
+        <g id="loop-g" style="transform-origin: 960px 470px">
+          <path id="trace" fill="none" stroke="#5fd9cb" stroke-width="5" stroke-linejoin="round" stroke-linecap="round" filter="url(#glow)" opacity="0" d="M0 0" />
+          <path id="comet" fill="none" stroke="#e6fffb" stroke-width="7" stroke-linecap="round" filter="url(#glow)" opacity="0" d="M0 0" />
+        </g>
+      </svg>
+
+      <!-- ═══ S7 · Brand ═══ -->
+      <section id="s7" class="clip scene" data-start="25.6" data-duration="2.9" data-track-index="7">
+        <div id="s7-scrim"></div>
+        <div id="s7-word" class="wordmark display">STUDYLOOP</div>
+        <div id="s7-tag" class="serif">Focus, measured differently.</div>
+      </section>
+
+      <div id="grain"></div>
+      <div id="vignette"></div>
+
+      <!-- ═══ audio ═══ -->
+      <audio id="score" data-start="0" data-duration="28.5" data-track-index="10" data-volume="1" src="assets/music/studyloop-score.wav"></audio>
+      <audio id="sfx-n0" data-start="0.88" data-duration="1.2" data-track-index="11" data-volume="0.42" src="assets/sfx/notification.mp3"></audio>
+      <audio id="sfx-t1" data-start="1.44" data-duration="0.6" data-track-index="12" data-volume="0.35" src="assets/sfx/click-soft.mp3"></audio>
+      <audio id="sfx-n1" data-start="1.93" data-duration="1.2" data-track-index="13" data-volume="0.36" src="assets/sfx/ping.mp3"></audio>
+      <audio id="sfx-s0" data-start="2.28" data-duration="0.8" data-track-index="14" data-volume="0.42" src="assets/sfx/card-slide-1.ogg"></audio>
+      <audio id="sfx-n2" data-start="2.63" data-duration="1.2" data-track-index="15" data-volume="0.36" src="assets/sfx/notification.mp3"></audio>
+      <audio id="sfx-t2" data-start="2.94" data-duration="0.6" data-track-index="11" data-volume="0.35" src="assets/sfx/click-soft.mp3"></audio>
+      <audio id="sfx-s1" data-start="3.18" data-duration="0.8" data-track-index="12" data-volume="0.40" src="assets/sfx/card-slide-1.ogg"></audio>
+      <audio id="sfx-n3" data-start="3.43" data-duration="1.0" data-track-index="16" data-volume="0.34" src="assets/sfx/ping.mp3"></audio>
+      <audio id="sfx-s2" data-start="3.68" data-duration="0.7" data-track-index="14" data-volume="0.38" src="assets/sfx/card-slide-1.ogg"></audio>
+      <audio id="sfx-t3" data-start="3.88" data-duration="0.5" data-track-index="13" data-volume="0.32" src="assets/sfx/click-soft.mp3"></audio>
+      <audio id="sfx-n4" data-start="3.98" data-duration="0.45" data-track-index="15" data-volume="0.30" src="assets/sfx/notification.mp3"></audio>
+      <audio id="sfx-l0" data-start="8.33" data-duration="0.6" data-track-index="11" data-volume="0.30" src="assets/sfx/drop_002.ogg"></audio>
+      <audio id="sfx-l1" data-start="8.73" data-duration="0.6" data-track-index="12" data-volume="0.28" src="assets/sfx/drop_002.ogg"></audio>
+      <audio id="sfx-pw" data-start="11.72" data-duration="0.9" data-track-index="11" data-volume="0.34" src="assets/sfx/whoosh-short.mp3"></audio>
+      <audio id="sfx-pl" data-start="12.5" data-duration="0.6" data-track-index="12" data-volume="0.40" src="assets/sfx/drop_002.ogg"></audio>
+      <audio id="sfx-mk" data-start="14.69" data-duration="0.37" data-track-index="13" data-volume="0.6" src="assets/sfx/click-soft.mp3"></audio>
+      <audio id="sfx-fw" data-start="15.3" data-duration="0.9" data-track-index="14" data-volume="0.28" src="assets/sfx/whoosh-short.mp3"></audio>
+      <audio id="sfx-p0" data-start="17.52" data-duration="1.0" data-track-index="11" data-volume="0.30" src="assets/sfx/impactGlass_light_001.ogg"></audio>
+      <audio id="sfx-p1" data-start="18.19" data-duration="1.0" data-track-index="12" data-volume="0.24" src="assets/sfx/impactGlass_light_002.ogg"></audio>
+      <audio id="sfx-p2" data-start="19.24" data-duration="1.0" data-track-index="13" data-volume="0.30" src="assets/sfx/impactGlass_light_001.ogg"></audio>
+      <audio id="sfx-p3" data-start="19.70" data-duration="1.0" data-track-index="14" data-volume="0.24" src="assets/sfx/impactGlass_light_002.ogg"></audio>
+      <audio id="sfx-lw" data-start="22.3" data-duration="0.9" data-track-index="15" data-volume="0.24" src="assets/sfx/whoosh-short.mp3"></audio>
+    </div>
+
+    <script>
+      (function () {
+        // ── deterministic helpers ─────────────────────────────
+        function prng(seed) {
+          return function () {
+            seed |= 0; seed = (seed + 0x6d2b79f5) | 0;
+            var t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+            t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+            return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+          };
+        }
+        function pathFrom(pts) {
+          var d = "M" + pts[0][0].toFixed(1) + " " + pts[0][1].toFixed(1);
+          for (var i = 1; i < pts.length; i++) d += " L" + pts[i][0].toFixed(1) + " " + pts[i][1].toFixed(1);
+          return d;
+        }
+        var $ = function (s) { return document.querySelector(s); };
+        // the desk is deliberately cluttered: its texture text and the headline over it are intentional layering
+        document.querySelectorAll("#desk *, #s1-head, #paper-k, #paper-t").forEach(function (el) { el.setAttribute("data-layout-allow-overlap", ""); });
+        document.querySelectorAll("#desk, #pulse-wrap").forEach(function (el) { el.setAttribute("data-layout-allow-overflow", ""); });
+        var tl = gsap.timeline({ paused: true });
+        // wordmark: split into glyphs, spread in on x (no letter-spacing reflow)
+        function wordIn(sel, t, d) {
+          var el = $(sel), txt = el.textContent.trim(); el.textContent = "";
+          var n = txt.length, mid = (n - 1) / 2, spans = [];
+          for (var i = 0; i < n; i++) { var sp = document.createElement("span"); sp.textContent = txt[i]; sp.style.display = "inline-block"; el.appendChild(sp); spans.push(sp); }
+          tl.fromTo(el, { opacity: 0, filter: "blur(12px)" }, { opacity: 1, filter: "blur(0px)", duration: d * 0.8, ease: "power2.out" }, t);
+          spans.forEach(function (sp, i) { tl.fromTo(sp, { x: (i - mid) * 34 }, { x: 0, duration: d, ease: "expo.out" }, t); });
+        }
+
+        // ═════════ persistent room: audio-reactive floor light ═════════
+        var env = window.SCORE_ENV || [];
+        var efps = window.SCORE_ENV_FPS || 10;
+        tl.set("#floor", { opacity: 0.25 }, 0);
+        for (var e = 1; e < env.length; e++) {
+          tl.to("#floor", { opacity: 0.22 + 0.62 * env[e], duration: 1 / efps, ease: "none" }, (e - 1) / efps);
+        }
+
+        // ═════════ S1 · the desk (0 – 4.4) ═════════
+        tl.fromTo("#desk", { rotationX: 36, scale: 1.0, y: 10 }, { rotationX: 30, scale: 1.13, y: -24, duration: 4.0, ease: "sine.inOut" }, 0);
+        // notebook ink: handwriting lines that stop when the distractions start
+        var rnd = prng(11);
+        var ink = $("#nb-ink");
+        var inkLines = [];
+        var rows = [196, 234, 272, 310, 348];
+        rows.forEach(function (y, r) {
+          var x0 = 46, x1 = 46 + (r === 4 ? 180 : 300 + rnd() * 50), pts = [];
+          for (var x = x0; x <= x1; x += 6) pts.push([x, y + Math.sin(x * 0.21 + r) * 5 + (rnd() - 0.5) * 3]);
+          var p = document.createElementNS("http://www.w3.org/2000/svg", "path");
+          p.setAttribute("d", pathFrom(pts));
+          p.setAttribute("fill", "none"); p.setAttribute("stroke", "#23403d"); p.setAttribute("stroke-width", "3");
+          p.setAttribute("stroke-linecap", "round"); p.setAttribute("stroke-linejoin", "round");
+          ink.appendChild(p);
+          var len = (x1 - x0) * 1.35;
+          p.setAttribute("stroke-dasharray", len); p.setAttribute("stroke-dashoffset", len);
+          inkLines.push({ el: p, len: len });
+        });
+        // writing slows down, the last line never finishes
+        var inkT = [0.05, 0.42, 0.8, 1.25, 1.85];
+        inkLines.forEach(function (l, i) {
+          tl.to(l.el, { attr: { "stroke-dashoffset": i === 4 ? l.len * 0.55 : 0 }, duration: i === 4 ? 0.9 : 0.42, ease: "none" }, inkT[i]);
+        });
+        ["#dg-block", "#dg-normal", "#dg-in", "#dg-mid", "#dg-out"].forEach(function (id, i) {
+          var el = $(id), L = el.getTotalLength ? el.getTotalLength() : 800;
+          el.setAttribute("stroke-dasharray", id === "#dg-normal" ? "8 9" : L);
+          if (id !== "#dg-normal") {
+            tl.fromTo(el, { attr: { "stroke-dashoffset": L } }, { attr: { "stroke-dashoffset": 0 }, duration: 0.45, ease: "power1.inOut" }, 0.15 + i * 0.3);
+          } else {
+            tl.fromTo(el, { opacity: 0 }, { opacity: 1, duration: 0.3 }, 0.3);
+          }
+        });
+        tl.fromTo("#nb-formula", { opacity: 0, x: -8 }, { opacity: 1, x: 0, duration: 0.5 }, 1.2);
+
+        // clock: time runs away
+        tl.fromTo("#h-min", { rotation: 30 }, { rotation: 30 + 1080, duration: 4.35, ease: "power2.in" }, 0);
+        tl.fromTo("#h-hour", { rotation: 290 }, { rotation: 290 + 90, duration: 4.35, ease: "power2.in" }, 0);
+        tl.fromTo("#h-sec", { rotation: 0 }, { rotation: 3600, duration: 4.35, ease: "power1.in" }, 0);
+
+        // tabs multiply and shrink (Chrome-style)
+        var tabs = gsap.utils.toArray(".tab");
+        var tabEvents = [[0, 2], [1.45, 3], [2.95, 5], [3.9, 9]];
+        tabEvents.forEach(function (ev, k) {
+          var t = ev[0], count = ev[1], w = Math.min(230, (870 - count * 4) / count);
+          for (var i = 0; i < count; i++) {
+            var isNew = k === 0 || i >= tabEvents[k - 1][1];
+            if (k === 0) tl.set(tabs[i], { width: w, opacity: 1 }, 0);
+            else tl.to(tabs[i], { width: w, opacity: 1, duration: 0.28, ease: "power3.out" }, t + (isNew ? (i - tabEvents[k - 1][1]) * 0.05 : 0));
+          }
+        });
+
+        // phone notifications stack up
+        var nT = [0.9, 1.95, 2.65, 3.45, 4.0];
+        nT.forEach(function (t, i) {
+          tl.fromTo("#n" + i, { opacity: 0, y: -40, scale: 0.92 }, { opacity: 1, y: 0, scale: 1, duration: 0.3, ease: "back.out(1.6)" }, t);
+          for (var j = 0; j < i; j++) tl.to("#n" + j, { y: (i - j) * 72, duration: 0.3, ease: "power3.out" }, t);
+          tl.to("#phone", { keyframes: [{ rotation: 9.5, duration: 0.05 }, { rotation: 4.5, duration: 0.05 }, { rotation: 9, duration: 0.05 }, { rotation: 7, duration: 0.08 }], ease: "none" }, t);
+        });
+        tl.set("#phone", { rotation: 7 }, 0);
+        tl.set("#notebook", { rotation: -3 }, 0);
+        tl.set("#book", { rotation: 9 }, 0);
+        tl.set("#pencil", { rotation: -24 }, 0);
+
+        // sticky notes slap down
+        var stickies = [
+          { id: "#st0", x: 190, y: 480, r: -10, t: 2.3 },
+          { id: "#st1", x: 1600, y: 60, r: 8, t: 3.2 },
+          { id: "#st2", x: 1330, y: 520, r: 6, t: 3.7 },
+          { id: "#st3", x: 1790, y: 450, r: -7, t: 3.85 },
+        ];
+        stickies.forEach(function (s) {
+          document.querySelector(s.id).style.left = s.x + "px"; document.querySelector(s.id).style.top = s.y + "px";
+          tl.fromTo(s.id, { opacity: 0, scale: 1.5, rotation: s.r * 2.5, y: -60 },
+            { opacity: 1, scale: 1, rotation: s.r, y: 0, duration: 0.26, ease: "power4.out" }, s.t);
+        });
+
+        // pulse trace: scrolling, spikes get denser and it turns coral
+        var pp = [], x = 0, spacing = 300, r2 = prng(5);
+        pp.push([0, 80]);
+        while (x < 6000) {
+          x += spacing;
+          var amp = 34 + Math.min(34, x / 180);
+          pp.push([x - 20, 80]); pp.push([x - 10, 80 - amp * 0.25]); pp.push([x, 80 + amp * 0.3]);
+          pp.push([x + 8, 80 - amp]); pp.push([x + 18, 80 + amp * 0.45]); pp.push([x + 28, 80]);
+          pp.push([x + 60, 80 - 6 - r2() * 4]); pp.push([x + 90, 80]);
+          spacing = Math.max(95, spacing * 0.93);
+        }
+        $("#pulse-path").setAttribute("d", pathFrom(pp));
+        tl.fromTo("#pulse-svg", { x: 0 }, { x: -4000, duration: 4.4, ease: "power1.in" }, 0);
+        tl.fromTo("#pulse-path", { attr: { stroke: "#f4f1ea" }, opacity: 0.55 }, { attr: { stroke: "#ff6b5a" }, opacity: 0.95, duration: 4.0, ease: "power2.in" }, 0);
+
+        // headline
+        tl.fromTo("#s1-scrim", { opacity: 0 }, { opacity: 1, duration: 0.6 }, 1.8);
+        tl.fromTo("#s1-head", { opacity: 0, scale: 1.06, filter: "blur(10px)" }, { opacity: 1, scale: 1, filter: "blur(0px)", duration: 0.55, ease: "power3.out" }, 2.0);
+
+        // ── THE COLLAPSE (4.12 → 4.40) ──
+        tl.to("#desk", { scale: 1.17, duration: 0.12, ease: "power2.out" }, 4.0);
+        tl.to("#desk", { scaleY: 0.004, scaleX: 0.42, rotationX: 0, y: 0, filter: "brightness(3)", duration: 0.28, ease: "expo.in" }, 4.12);
+        tl.to("#s1-head", { scaleY: 0.02, scaleX: 0.6, opacity: 0.6, duration: 0.28, ease: "expo.in" }, 4.12);
+        tl.to("#pulse-wrap", { y: -465, scaleY: 0, duration: 0.28, ease: "expo.in" }, 4.12);
+        tl.to("#s1-scrim", { opacity: 0, duration: 0.2 }, 4.2);
+
+        // ═════════ S2 · one line → the band (4.4 – 7.5) ═════════
+        var L = { x: 707, y: 397 }; // status light in band.jpg
+        function bandAt(P, s, r) { return { x: P[0] - L.x, y: P[1] - L.y, scale: s, rotation: r }; }
+        function lineAt(P, s, r) { return { x: P[0] - 70, y: P[1] - 3, scaleX: s, rotation: r + 13.7 }; }
+        var P0 = [960, 540], P1 = [1000, 440], PC = [430, 560], PD = [1000, 430];
+
+        tl.set("#band", bandAt(P0, 6, -13.7), 0);
+        tl.set("#line", Object.assign(lineAt(P0, 6, -13.7), { opacity: 0 }), 0);
+        tl.set("#line-bloom", { x: 960 - 450, y: 540 - 120, opacity: 0 }, 0);
+        // ignition: the line snaps out wide then settles
+        tl.set("#line", { opacity: 1 }, 4.4);
+        tl.fromTo("#line", { scaleX: 9.5 }, { scaleX: 6, duration: 0.7, ease: "expo.out", immediateRender: false }, 4.4);
+        tl.fromTo("#flash", { opacity: 0.9 }, { opacity: 0, duration: 0.9, ease: "power2.out", immediateRender: false }, 4.4);
+        tl.fromTo("#line-bloom", { opacity: 0.9, scaleX: 1.4 }, { opacity: 0.45, scaleX: 1, duration: 0.8, ease: "power2.out", immediateRender: false }, 4.4);
+        // it breathes (heartbeats in the score at 5.25 / 6.25)
+        tl.to("#line-bloom", { opacity: 0.95, scaleY: 1.25, duration: 0.25, ease: "sine.out" }, 5.2);
+        tl.to("#line-bloom", { opacity: 0.4, scaleY: 1, duration: 0.25, ease: "sine.in" }, 5.45);
+        // pull back: the line is the status light
+        var pb0 = 5.7, pbD = 1.6, pbE = "power3.inOut";
+        tl.to("#band", Object.assign(bandAt(P1, 1.2, 0), { duration: pbD, ease: pbE }), pb0);
+        tl.to("#line", Object.assign(lineAt(P1, 1.2, 0), { duration: pbD, ease: pbE }), pb0);
+        tl.to("#line-bloom", { x: P1[0] - 450, y: P1[1] - 120, scale: 0.35, opacity: 0.55, duration: pbD, ease: pbE }, pb0);
+        tl.fromTo("#band", { opacity: 0, filter: "brightness(0.3)" }, { opacity: 1, filter: "brightness(1)", duration: 1.2, ease: "power2.inOut", immediateRender: false }, 5.95);
+        tl.to("#line", { opacity: 0, duration: 0.5 }, 6.85);
+        // wordmark
+        wordIn("#s2-word", 6.75, 0.6);
+        tl.fromTo("#s2-scrim", { opacity: 0 }, { opacity: 1, duration: 0.8 }, 6.5);
+        tl.to("#s2-word", { opacity: 0, y: -20, duration: 0.2, ease: "power2.in" }, 7.55);
+
+        // ═════════ S3 · it learns your normal (7.4 – 11.8) ═════════
+        tl.to("#band", Object.assign(bandAt(PC, 0.62, 0), { filter: "brightness(0.9)", duration: 0.85, ease: "power3.inOut" }), 7.55);
+        tl.to("#line-bloom", { x: PC[0] - 450, y: PC[1] - 120, scale: 0.22, opacity: 0.35, duration: 0.85, ease: "power3.inOut" }, 7.55);
+        tl.set("#line", lineAt(PC, 0.62, 0), 8.4);
+        // connectors from the band's contacts
+        ["#conn-hr", "#conn-eda"].forEach(function (id, i) {
+          var el = $(id), len = el.getTotalLength();
+          el.setAttribute("stroke-dasharray", len);
+          tl.fromTo(el, { attr: { "stroke-dashoffset": len } }, { attr: { "stroke-dashoffset": 0 }, duration: 0.3, ease: "power1.in" }, 8.2 + i * 0.1);
+        });
+        // HR (PPG) and EDA traces
+        var hr = [], eda = [], r3 = prng(3);
+        for (var xx = 620; xx <= 2200; xx += 4) {
+          var ph = ((xx - 620) % 84) / 84; // one beat
+          var ppg = Math.exp(-Math.pow((ph - 0.18) / 0.06, 2)) * 1.0 + Math.exp(-Math.pow((ph - 0.42) / 0.08, 2)) * 0.32;
+          hr.push([xx, 520 - ppg * 92 + 18 + (r3() - 0.5) * 2]);
+          var u = (xx - 620) / 1240;
+          var tonic = Math.sin(u * 3.2) * 10 + Math.sin(u * 7.1 + 1) * 5;
+          var phasic = 48 * Math.exp(-Math.pow((u - 0.62) / 0.08, 2));
+          eda.push([xx, 760 - tonic - phasic + 4]);
+        }
+        $("#tr-hr").setAttribute("d", pathFrom(hr));
+        $("#tr-eda").setAttribute("d", pathFrom(eda));
+        ["#tr-hr", "#tr-eda"].forEach(function (id, i) {
+          var el = $(id), len = el.getTotalLength();
+          el.setAttribute("stroke-dasharray", len);
+          tl.fromTo(el, { attr: { "stroke-dashoffset": len } }, { attr: { "stroke-dashoffset": len * 0.18 }, duration: 1.5, ease: "power2.out" }, 8.35 + i * 0.35);
+        });
+        tl.fromTo("#sig-move", { x: 0 }, { x: -336, duration: 3.5, ease: "none" }, 8.35);
+        tl.fromTo("#lab-hr", { opacity: 0, x: -14 }, { opacity: 1, x: 0, duration: 0.4, ease: "power3.out" }, 8.35);
+        tl.fromTo("#sub-hr", { opacity: 0, x: -14 }, { opacity: 1, x: 0, duration: 0.4, ease: "power3.out" }, 8.45);
+        tl.fromTo("#lab-eda", { opacity: 0, x: -14 }, { opacity: 1, x: 0, duration: 0.4, ease: "power3.out" }, 8.75);
+        tl.fromTo("#sub-eda", { opacity: 0, x: -14 }, { opacity: 1, x: 0, duration: 0.4, ease: "power3.out" }, 8.75);
+        // baseline: ring fills, status light breathes, dotted baselines draw
+        tl.fromTo("#ring-wrap", { opacity: 0, scale: 0.8 }, { opacity: 1, scale: 1, duration: 0.45, ease: "back.out(1.7)" }, 9.0);
+        tl.fromTo("#ring", { attr: { "stroke-dashoffset": 540.35 } }, { attr: { "stroke-dashoffset": 0 }, duration: 1.8, ease: "none" }, 9.05);
+        tl.fromTo("#line", { opacity: 0 }, { opacity: 1, duration: 0.2, immediateRender: false }, 9.0);
+        [0, 1].forEach(function (k) {
+          tl.to("#line-bloom", { opacity: 0.95, duration: 0.45, ease: "sine.inOut" }, 9.0 + k * 0.9);
+          tl.to("#line-bloom", { opacity: 0.35, duration: 0.45, ease: "sine.inOut" }, 9.45 + k * 0.9);
+        });
+        tl.to("#line", { opacity: 0, duration: 0.4 }, 10.85);
+        ["#base-hr", "#base-eda"].forEach(function (id, i) {
+          tl.fromTo(id, { attr: { "stroke-dashoffset": 1300 }, opacity: 0 }, { attr: { "stroke-dashoffset": 0 }, opacity: 1, duration: 1.0, ease: "power2.out" }, 9.7 + i * 0.15);
+          $(id).setAttribute("stroke-dasharray", "2 12");
+        });
+        tl.fromTo("#s3-head", { opacity: 0, y: 24, filter: "blur(8px)" }, { opacity: 1, y: 0, filter: "blur(0px)", duration: 0.6, ease: "power3.out" }, 9.1);
+        // exit into depth
+        tl.to("#s3-inner", { scale: 0.93, opacity: 0, filter: "blur(6px)", duration: 0.5, ease: "power2.in" }, 11.3);
+        tl.to("#band", { opacity: 0, scale: 0.56, duration: 0.5, ease: "power2.in" }, 11.3);
+        tl.to("#line-bloom", { opacity: 0, duration: 0.4 }, 11.3);
+
+        // ═════════ S4 · one subject, one timer (11.5 – 16.6) ═════════
+        tl.fromTo("#live-wrap", { y: 140, rotationX: 16, scale: 0.95, opacity: 0 }, { y: 0, rotationX: 0, scale: 1, opacity: 1, duration: 0.95, ease: "power3.out" }, 11.55);
+        tl.fromTo("#live-reflect", { opacity: 0 }, { opacity: 1, duration: 1.0 }, 11.6);
+        // the notebook title becomes the session header (paper → digital)
+        var plateW = 1340, plateH = 846;
+        var hdr = { x: 520 + 0.037 * plateW - 16, y: 118 + 0.118 * plateH - 12 };
+        tl.fromTo("#paper", { x: -420, y: 760, rotation: -14, scale: 1.7, opacity: 1 },
+          { x: hdr.x, y: hdr.y, rotation: 0, scale: 0.92, duration: 0.95, ease: "power3.inOut" }, 11.6);
+        tl.to("#paper-bg", { opacity: 0, duration: 0.35, ease: "power1.out" }, 12.55);
+        tl.to(["#paper-k", "#paper-t"], { opacity: 0, filter: "blur(4px)", duration: 0.35 }, 12.6);
+        // copy
+        tl.fromTo("#s4-kick", { opacity: 0, x: -14 }, { opacity: 1, x: 0, duration: 0.4 }, 12.6);
+        tl.fromTo("#s4-a", { opacity: 0, y: 30, filter: "blur(8px)" }, { opacity: 1, y: 0, filter: "blur(0px)", duration: 0.55, ease: "power3.out" }, 12.8);
+        tl.fromTo("#s4-b", { opacity: 0, y: 30, filter: "blur(8px)" }, { opacity: 1, y: 0, filter: "blur(0px)", duration: 0.55, ease: "power3.out" }, 13.4);
+        // slow push toward timer + state
+        var push = { t0: 12.9, d: 3.5, s1: 1.22, ease: "sine.inOut" };
+        tl.fromTo("#live-cam", { scale: 1 }, { scale: push.s1, duration: push.d, ease: push.ease }, push.t0);
+        // mark a moment
+        tl.fromTo("#press-flash", { opacity: 0 }, { opacity: 1, duration: 0.08, immediateRender: false }, 14.7);
+        tl.to("#press-flash", { opacity: 0, duration: 0.4 }, 14.85);
+        tl.fromTo("#press-ring", { opacity: 1, scale: 0.4 }, { opacity: 0, scale: 1.6, duration: 0.6, ease: "power2.out", immediateRender: false }, 14.7);
+        // flag launches from the button, flies to its place on the Insights chart
+        var eIO = gsap.parseEase(push.ease);
+        function camScaleAt(t) { var u = Math.min(1, Math.max(0, (t - push.t0) / push.d)); return 1 + (push.s1 - 1) * eIO(u); }
+        var origin = { x: 0.25 * plateW, y: 0.32 * plateH }, btn = { x: 1001.7 / 1340 * plateW, y: 527.7 / 846 * plateH };
+        var sL = camScaleAt(14.9);
+        var launch = { x: 520 + origin.x + (btn.x - origin.x) * sL, y: 118 + origin.y + (btn.y - origin.y) * sL };
+        var mark1 = { x: -37 + 0.239 * 2000, y: 143 + 0.187 * 1262 - 8 }; // flag head on the chart
+        var poleLen = (0.44 - 0.187) * 1262;
+        tl.fromTo("#flag", { x: launch.x, y: launch.y - 30, scale: 0, opacity: 1, height: 60 },
+          { scale: 1, opacity: 1, y: launch.y - 70, duration: 0.3, ease: "back.out(2)", immediateRender: false }, 14.85);
+        tl.to("#flag", { x: mark1.x, duration: 1.2, ease: "power2.inOut" }, 15.3);
+        tl.to("#flag", { y: mark1.y, height: poleLen, duration: 1.2, ease: "power3.inOut" }, 15.3); // beat-locked: lands 16.50
+        tl.to("#s4-a, #s4-b, #s4-kick", { opacity: 0, x: -30, duration: 0.4, ease: "power2.in" }, 15.7);
+        tl.to("#live-wrap", { opacity: 0, filter: "blur(6px)", duration: 0.5, ease: "power2.in" }, 16.0);
+        tl.to("#live-reflect", { opacity: 0, duration: 0.5 }, 16.0);
+
+        // ═════════ S5 · Insights (16.5 – 22.6) — hero ═════════
+        tl.fromTo("#ins-wrap", { opacity: 0 }, { opacity: 1, duration: 0.45, ease: "power1.out" }, 16.15);
+        tl.fromTo("#flash", { opacity: 0.35 }, { opacity: 0, duration: 0.7, immediateRender: false }, 16.5);
+        var wr = { t0: 16.7, d: 4.2, f0: 0.064, f1: 0.945 };
+        tl.fromTo("#playhead", { x: wr.f0 * 2000, opacity: 0 }, { opacity: 1, duration: 0.2 }, wr.t0 - 0.1);
+        tl.to("#playhead", { x: wr.f1 * 2000, duration: wr.d, ease: "none" }, wr.t0);
+        tl.fromTo("#ins-full", { clipPath: "inset(0% " + ((1 - wr.f0) * 100).toFixed(2) + "% 0% 0%)" },
+          { clipPath: "inset(0% " + ((1 - wr.f1) * 100).toFixed(2) + "% 0% 0%)", duration: wr.d, ease: "none" }, wr.t0);
+        tl.to("#playhead", { opacity: 0, duration: 0.35 }, wr.t0 + wr.d);
+        // markers ping as the playhead passes them
+        [0.239, 0.378, 0.598, 0.696].forEach(function (f, i) {
+          var t = wr.t0 + wr.d * (f - wr.f0) / (wr.f1 - wr.f0);
+          tl.fromTo("#pg" + i, { opacity: 1, scale: 0.2 }, { opacity: 0, scale: 1.5, duration: 0.8, ease: "power2.out", immediateRender: false }, t);
+          if (i === 0) tl.to("#flag", { opacity: 0, duration: 0.3 }, t);
+        });
+        tl.fromTo("#stat-bar", { scaleX: 0, opacity: 1 }, { scaleX: 1, opacity: 1, duration: 0.6, ease: "power3.out", immediateRender: false }, 20.95);
+        tl.fromTo("#ins-cam", { scale: 1 }, { scale: 1.05, duration: 5.0, ease: "sine.inOut" }, 17.6);
+        tl.fromTo("#s5-scrim", { opacity: 0 }, { opacity: 1, duration: 0.6 }, 19.6);
+        tl.fromTo("#s5-head", { opacity: 0, y: 26, filter: "blur(8px)" }, { opacity: 1, y: 0, filter: "blur(0px)", duration: 0.6, ease: "power3.out" }, 19.9);
+        tl.to("#s5-head", { opacity: 0, duration: 0.3 }, 22.25);
+
+        // ═════════ S6 · the line lifts out and becomes a loop (22.3 – 25.6) ═════════
+        var K = 241, cs = 1.05, co = { x: 960, y: 531 };
+        var shapeW = [], shapeF = [], shapeC = [], shapeS = [];
+        for (var i = 0; i < K; i++) {
+          var f = i / (K - 1), xp = (0.064 + f * 0.869) * 2000;
+          var m = f * 45;
+          var bump = Math.exp(-Math.pow(m - 17, 2) / 6) + 0.7 * Math.exp(-Math.pow(m - 33, 2) / 3);
+          var hrv = 71 + 3 * Math.sin(m / 3) + 15 * bump;
+          var yp = (0.286 - (hrv - 68) / 22 * 0.085) * 1262;
+          shapeW.push([co.x + (xp - 997) * cs, co.y + (yp - 388) * cs]);
+          shapeF.push([360 + f * 1200, 470]);
+          var a = Math.PI / 2 + f * Math.PI * 2; // start at bottom, curl up and around
+          shapeC.push([960 - Math.sin(a - Math.PI / 2) * 190 * (f < 0.5 ? 1 : 1), 470 + Math.cos(a - Math.PI / 2) * 190]);
+          var sl = 140 * 1.15, ang = 13.7 * Math.PI / 180;
+          shapeS.push([PD[0] + (f - 0.5) * sl * Math.cos(ang), PD[1] + (f - 0.5) * sl * Math.sin(ang)]);
+        }
+        var dW = pathFrom(shapeW), dF = pathFrom(shapeF), dC = pathFrom(shapeC), dS = pathFrom(shapeS);
+        tl.set("#trace", { attr: { d: dW } }, 0);
+        tl.set("#comet", { attr: { d: dC } }, 0);
+        tl.fromTo("#trace", { opacity: 0 }, { opacity: 1, duration: 0.3, immediateRender: false }, 22.3);
+        tl.to("#ins-wrap", { opacity: 0, filter: "brightness(0.3) blur(4px)", duration: 0.5, ease: "power2.in" }, 22.3);
+        tl.to("#trace", { attr: { d: dF }, duration: 0.7, ease: "power2.inOut" }, 22.7);
+        tl.to("#trace", { attr: { d: dC }, duration: 1.0, ease: "power3.inOut" }, 23.4);
+        var circ = 2 * Math.PI * 190;
+        $("#comet").setAttribute("stroke-dasharray", "140 " + (circ + 400).toFixed(0));
+        tl.fromTo("#comet", { opacity: 0, attr: { "stroke-dashoffset": 0 } }, { opacity: 1, duration: 0.3, immediateRender: false }, 24.3);
+        tl.to("#comet", { attr: { "stroke-dashoffset": -circ * 1.25 }, duration: 1.2, ease: "power1.inOut" }, 24.3);
+        tl.to("#comet", { opacity: 0, duration: 0.25 }, 25.25);
+        tl.fromTo("#s6-a", { opacity: 0, y: 26, filter: "blur(8px)" }, { opacity: 1, y: 0, filter: "blur(0px)", duration: 0.5, ease: "power3.out" }, 22.85);
+        tl.to("#s6-a", { opacity: 0, y: -16, filter: "blur(6px)", duration: 0.3, ease: "power2.in" }, 24.05);
+        tl.fromTo("#s6-b", { opacity: 0, y: 26, filter: "blur(8px)" }, { opacity: 1, y: 0, filter: "blur(0px)", duration: 0.5, ease: "power3.out" }, 24.25);
+        tl.to("#s6-b", { opacity: 0, y: -16, duration: 0.3, ease: "power2.in" }, 25.3);
+
+        // ═════════ S7 · the loop becomes the status light (25.5 – 28.5) ═════════
+        tl.to("#trace", { attr: { d: dS }, strokeWidth: 7, duration: 0.55, ease: "power3.inOut" }, 25.45); // beat-locked: lands 26.0
+        tl.set("#band", Object.assign(bandAt(PD, 1.15, 0), { filter: "brightness(0.25)" }), 25.4);
+        tl.set("#line-bloom", { x: PD[0] - 450, y: PD[1] - 120, scale: 0.4, opacity: 0 }, 25.4);
+        tl.to("#band", { opacity: 1, filter: "brightness(1)", duration: 1.0, ease: "power2.out" }, 25.8);
+        tl.fromTo("#line-bloom", { opacity: 0 }, { opacity: 0.7, duration: 0.4, immediateRender: false }, 25.95);
+        tl.to("#line-bloom", { opacity: 0.35, duration: 1.0 }, 26.4);
+        tl.to("#trace", { opacity: 0, duration: 0.5 }, 26.35);
+        tl.fromTo("#band", { scale: 1.15 }, { scale: 1.19, duration: 2.5, ease: "sine.out", immediateRender: false }, 26.0);
+        tl.fromTo("#s7-scrim", { opacity: 0 }, { opacity: 1, duration: 0.8 }, 25.8);
+        wordIn("#s7-word", 26.05, 0.8);
+        tl.fromTo("#s7-tag", { opacity: 0, y: 18 }, { opacity: 1, y: 0, duration: 0.6, ease: "power3.out" }, 26.55);
+
+        window.__timelines["main"] = tl;
+      })();
+    </script>
+  </body>
+</html>
