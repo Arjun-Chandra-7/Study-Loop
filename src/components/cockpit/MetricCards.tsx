@@ -73,7 +73,7 @@ export function EdaCard() {
       chip={session.baseline ? "vs base" : "µS"}
       chipTone={d != null && d > 0.22 ? "action" : !on ? "muted" : session.baseline ? "measured" : "unit"}
       offline={!on}
-      foot={on && reading.eda != null ? `${reading.eda.toFixed(2)} µS` : "Skin conductance"}
+      foot={on && reading.eda != null ? `${reading.eda.toFixed(2)} µS` : "Skin conductance"}
     >
       {session.baseline ? (
         <AnimatedNumber value={d != null ? d * 100 : null} signed suffix="%" className="metric__num" />
@@ -122,7 +122,7 @@ export function BaselineCard() {
       label={live ? "Elapsed" : "Baseline"}
       chip={phase === "baseline" ? "Capturing" : b ? "Set" : "Not set"}
       chipTone={phase === "baseline" ? "action" : b ? "measured" : "muted"}
-      foot={b ? `${Math.round(b.hr)} bpm · ${b.eda.toFixed(2)} µS` : "Set at session start"}
+      foot={b ? `${Math.round(b.hr)} bpm · ${b.eda.toFixed(2)} µS` : "Set at session start"}
     >
       {live ? (
         <span className="metric__num tnum">{clock(session.elapsedMs)}</span>

@@ -80,7 +80,7 @@ export function Cockpit() {
           <StatusCapsule />
         </header>
 
-        <motion.main
+        <motion.div
           className="main"
           ref={stageRef}
           aria-live="off"
@@ -108,7 +108,7 @@ export function Cockpit() {
               </motion.div>
             </AnimatePresence>
           </div>
-        </motion.main>
+        </motion.div>
 
         <div className="main-foot">
           <AnimatePresence mode="wait" initial={false}>
