@@ -45,6 +45,9 @@ export function Flow() {
         gsap.set(q(".flow__rail-fill"), { scaleX: p });
       };
 
+      // Always say where you are: step 1 is current before the first scroll update.
+      setStage(0);
+
       const mm = gsap.matchMedia();
       mm.add("(prefers-reduced-motion: no-preference)", () => {
         ScrollTrigger.create({
@@ -83,11 +86,13 @@ export function Flow() {
 
       <div className="flow__stage">
         <DotCanvas scene={flowScene} param={progress} label="A session signal being written from connect to review" />
-        {STEPS.map((s) => (
-          <span key={s.n} className="flow__tag" style={{ left: `${s.at * 100}%` }}>
-            {s.title}
-          </span>
-        ))}
+        <div className="flow__tags">
+          {STEPS.map((s) => (
+            <span key={s.n} className="flow__tag" style={{ "--at": s.at } as React.CSSProperties}>
+              {s.title}
+            </span>
+          ))}
+        </div>
         <span className="flow__rail" aria-hidden>
           <span className="flow__rail-fill" />
         </span>
