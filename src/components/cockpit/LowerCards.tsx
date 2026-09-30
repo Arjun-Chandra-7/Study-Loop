@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "motion/react";
+import { initials, useAuth } from "@/lib/auth";
 import { clock } from "@/lib/format";
 import { engine, useStudyLoop } from "@/lib/useStudyLoop";
 import { Sparkline } from "../charts/Sparkline";
@@ -124,7 +125,7 @@ export function TrendCard() {
   return (
     <section className="card trend" aria-label="Recent signal">
       <header className="card__head">
-        <p className="card__title">Signal · 5 min</p>
+        <p className="card__title">Signal · 5 min</p>
         <StateBadge state={s.physio} />
       </header>
       <div className="trend__body">
@@ -139,7 +140,7 @@ export function TrendCard() {
         <dl className="trend__facts">
           <div>
             <dt>Goal</dt>
-            <dd>{s.session.config.minutes} min</dd>
+            <dd>{s.session.config.minutes} min</dd>
           </div>
           <div>
             <dt>Mode</dt>
@@ -207,12 +208,13 @@ export function wavePath(w: number, h: number, cycles: number, amp = 0.36) {
 /** Bottom-left: who is studying and which band is on their wrist. */
 export function ProfilePill() {
   const { reading } = useStudyLoop();
+  const { user } = useAuth();
   const conn = reading.connection;
   return (
-    <button type="button" className="profile-pill" onClick={() => engine.setTab("profile")} aria-label="Open profile and band settings">
-      <span className="avatar">AR</span>
+    <button type="button" className="profile-pill" onClick={() => engine.setTab("profile")} title="Open profile and band settings">
+      <span className="avatar">{initials(user)}</span>
       <span className="profile-pill__text">
-        <span className="profile-pill__name">Alex Rivera</span>
+        <span className="profile-pill__name">{user?.displayName ?? user?.email ?? "Signed in"}</span>
         <span className="profile-pill__band">
           {conn === "connected" ? `Band SL-01 · ${reading.battery ?? "—"}%` : conn === "connecting" ? "Pairing band…" : "Band not connected"}
         </span>

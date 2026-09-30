@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { AnimatePresence, motion, useDragControls, useInView, type Variants } from "motion/react";
 import { useIntroDone } from "@/lib/intro";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { ThinkingOrb, type OrbState } from "thinking-orbs";
 import { BASELINE_MS, type Tab } from "@/lib/engine";
 import { clock, signedPercent } from "@/lib/format";
@@ -15,6 +15,7 @@ import { subjectCode } from "../cockpit/LowerCards";
 import { orbFor } from "../orb/orbState";
 import { StateOrb } from "../orb/StateOrb";
 import { Icon } from "../ui/Icon";
+import { Logo } from "../ui/Logo";
 import { StateBadge } from "../ui/StateBadge";
 import { InsightsFoot, InsightsView } from "../views/InsightsView";
 import { ProfileFoot, ProfileView } from "../views/ProfileView";
@@ -129,7 +130,7 @@ function TopRow() {
         className={`m-island ${open ? "is-open" : ""}`}
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
-        aria-label={`System: ${orb.label}`}
+        aria-label={`${live ? clock(s.session.config.minutes * 60_000 - s.session.elapsedMs) : PHYSIO_LABEL[s.physio]} — system ${orb.label.toLowerCase()}`}
         transition={{ type: "spring", stiffness: 380, damping: 30 }}
       >
         <motion.span layout className="m-island__orb">
@@ -207,7 +208,7 @@ function LiveCard() {
     return (
       <>
         <div className="m-main__img">
-          <Image src="/media/studyloop-band.png" alt="The StudyLoop band" fill sizes="60vw" priority />
+          <Image src="/media/studyloop-band.png" alt="The StudyLoop band" fill sizes="60vw" preload />
         </div>
         <p className="serif m-main__serif">designed for deeper focus</p>
       </>
@@ -226,7 +227,7 @@ function LiveCard() {
     <motion.div className="m-main" variants={main}>
       <div className="m-main__body">{body}</div>
       {phase !== "baseline" && (
-        <motion.button type="button" className="btn btn--primary btn--sm m-main__btn" whileTap={{ scale: 0.94 }} onClick={action}>
+        <motion.button type="button" className="btn btn--primary m-main__btn" whileTap={{ scale: 0.94 }} onClick={action}>
           {phase === "active" ? "Pause" : phase === "paused" ? "Resume" : "Start"}
           <Icon name={phase === "active" ? "pause" : "play"} size={14} />
         </motion.button>
@@ -308,7 +309,6 @@ function Sheet() {
 
 export function MobileApp() {
   const s = useStudyLoop();
-  const [active, setActive] = useState(0);
   const root = useRef<HTMLDivElement>(null);
   const on = s.reading.connection === "connected";
   const { config } = s.session;
@@ -317,19 +317,8 @@ export function MobileApp() {
   const phase = s.session.phase;
   const running = phase === "active";
 
-  useEffect(() => {
-    const secs = root.current?.querySelectorAll<HTMLElement>(".m-sec");
-    if (!secs) return;
-    const io = new IntersectionObserver(
-      (entries) => entries.forEach((e) => e.isIntersecting && setActive(Number(e.target.getAttribute("data-sec")))),
-      { rootMargin: "-45% 0px -45% 0px" },
-    );
-    secs.forEach((el) => io.observe(el));
-    return () => io.disconnect();
-  }, []);
-
   const values = [
-    `HR ${on && s.reading.hr != null ? Math.round(s.reading.hr) : "—"} bpm`,
+    `HR ${on && s.reading.hr != null ? Math.round(s.reading.hr) : "—"} bpm`,
     `EDA ${d != null ? signedPercent(d) : "—"}`,
     `Signal ${on ? s.reading.quality : "none"}`,
     `State ${PHYSIO_LABEL[s.physio]}`,
@@ -347,7 +336,7 @@ export function MobileApp() {
           {on ? `Live · SL-01 · ${s.reading.battery ?? "—"}%` : s.reading.connection === "connecting" ? "Pairing…" : "Band offline"}
         </motion.span>
         <motion.div className="m-bar" variants={bar}>
-          <span className="wordmark">StudyLoop</span>
+          <Logo />
           <StateBadge state={s.physio} />
         </motion.div>
         <motion.p className="m-note" variants={note}>
@@ -384,12 +373,12 @@ export function MobileApp() {
           </motion.button>
         </motion.div>
         <motion.p className="m-note" variants={note}>
-          Goal {config.minutes} min. {clock(s.session.elapsedMs)} studied so far.
+          Goal {config.minutes} min. {clock(s.session.elapsedMs)} studied so far.
         </motion.p>
         <div className="m-tri">
           <Thumb dir={-1} orb="searching" value={on ? s.reading.quality : "—"} label="signal" tone={s.reading.quality === "poor" ? "#FF6B5A" : "#14B8A6"} />
           <motion.div className="m-main m-main--chart" variants={main}>
-            <p className="label">EDA · last 5 min</p>
+            <p className="label">EDA · last 5 min</p>
             <div className="m-main__chart">
               <Sparkline values={s.history.slice(-300).map((x) => x.eda)} baseline={s.session.baseline?.eda} height={120} pad={0.25} />
             </div>
@@ -407,7 +396,7 @@ export function MobileApp() {
           <div className="marquee__track">
             {[0, 1].map((k) => (
               <span key={k} className="marquee__group">
-                {["Research layer " + (s.research ? "on" : "off"), "40 Hz", "Experimental", "Not a treatment", "Tap to toggle"].map((m, i) => (
+                {["Research layer " + (s.research ? "on" : "off"), "40 Hz", "Experimental", "Not a treatment", "Tap to toggle"].map((m, i) => (
                   <span key={i}>
                     {m}
                     <i />
@@ -436,7 +425,7 @@ export function MobileApp() {
         <div className="m-tri">
           <Thumb dir={-1} orb="shaping" value={`${Math.round((last?.stableShare ?? 0) * 100)}%`} label="near base" />
           <motion.div className="m-main m-main--chart" variants={main}>
-            <p className="label">{last?.minutes} min session</p>
+            <p className="label">{last?.minutes} min session</p>
             <div className="m-main__chart">
               <Sparkline values={(last?.samples ?? []).map((x) => x.hr)} baseline={last?.baseline?.hr} height={60} />
               <Sparkline values={(last?.samples ?? []).map((x) => x.eda)} baseline={last?.baseline?.eda} height={60} />
@@ -447,12 +436,6 @@ export function MobileApp() {
         </div>
         <Marquee items={["Not a medical device", "Measures HR + EDA", "No brain reading", "No stress score"]} />
       </Section>
-
-      <nav className="m-pager" aria-hidden>
-        {[0, 1, 2].map((i) => (
-          <motion.span key={i} animate={{ width: i === active ? 20 : 6, opacity: i === active ? 1 : 0.4 }} transition={{ type: "spring", stiffness: 400, damping: 30 }} />
-        ))}
-      </nav>
 
       <div className="m-dock">
         <Dock />

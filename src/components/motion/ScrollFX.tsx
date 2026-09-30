@@ -22,10 +22,20 @@ export function ScrollFX() {
     mm.add("(prefers-reduced-motion: no-preference)", () => {
       document.querySelectorAll<HTMLElement>("[data-split]").forEach((el) => {
         const byWords = el.dataset.split === "words";
+        // aria-label is only valid on headings. Other elements hide the split pieces
+        // and keep one clean screen-reader copy of the sentence next to them.
+        const heading = /^H[1-6]$/.test(el.tagName);
+        if (!heading && !el.previousElementSibling?.classList.contains("sr-only")) {
+          const copy = document.createElement("span");
+          copy.className = "sr-only";
+          copy.textContent = (el.textContent || "").trim();
+          el.before(copy);
+        }
         SplitText.create(el, {
           type: byWords ? "lines,words" : "lines,chars",
           mask: "lines",
           autoSplit: true,
+          aria: heading ? "auto" : "hidden",
           onSplit(self) {
             return gsap.from(byWords ? self.words : self.chars, {
               yPercent: 110,

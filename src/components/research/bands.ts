@@ -14,7 +14,7 @@ export const BANDS: Band[] = [
   {
     id: "theta",
     name: "Theta",
-    range: "4–8 Hz",
+    range: "4–8 Hz",
     hz: 6,
     line: "associated with memory encoding",
     body: "Frontal-midline theta is often observed during working-memory and sustained-attention tasks.",
@@ -22,7 +22,7 @@ export const BANDS: Band[] = [
   {
     id: "alpha",
     name: "Alpha",
-    range: "8–12 Hz",
+    range: "8–12 Hz",
     hz: 10,
     line: "associated with relaxed wakefulness",
     body: "Alpha activity is studied as a marker of how attention is gated — rising when the eyes close or the mind idles.",
@@ -30,18 +30,18 @@ export const BANDS: Band[] = [
   {
     id: "gamma",
     name: "Gamma",
-    range: "30–100 Hz",
+    range: "30–100 Hz",
     hz: 38,
     line: "associated with binding & attention",
     body: "Fast gamma rhythms are explored in research on how the brain combines features into a single perception.",
   },
   {
     id: "40hz",
-    name: "40 Hz",
+    name: "40 Hz",
     range: "experimental",
     hz: 40,
     line: "gamma-entrainment research",
-    body: "Early studies are investigating whether 40 Hz light and sound can entrain gamma rhythms. Findings are preliminary and it is not a treatment.",
+    body: "Early studies are investigating whether 40 Hz light and sound can entrain gamma rhythms. Findings are preliminary and it is not a treatment.",
     experimental: true,
   },
 ];
