@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { Icon } from "@/components/ui/Icon";
 import { Logo } from "@/components/ui/Logo";
 import { useAuth } from "@/lib/auth";
 
@@ -80,36 +81,73 @@ export default function LoginPage() {
 
   return (
     <main className="login">
+      <div className="login__visual">
+        <Image src="/media/studyloop-band.png" alt="" fill sizes="(max-width: 759px) 100vw, 55vw" preload className="login__img" />
+        <div className="login__logo">
+          <Logo />
+        </div>
+        <ul className="login__facts" aria-label="What the band measures">
+          <li>
+            <Icon name="heart" size={16} />
+            <span>
+              <b>PPG</b> heart rate
+            </span>
+          </li>
+          <li>
+            <Icon name="eda" size={16} />
+            <span>
+              <b>EDA</b> skin conductance
+            </span>
+          </li>
+          <li>
+            <Icon name="band" size={16} />
+            <span>
+              <b>One button</b> no screen
+            </span>
+          </li>
+        </ul>
+      </div>
+
       <div className="login__panel">
-        <Logo />
         <div className="login__body">
           <p className="eyebrow">
             <span className="eyebrow__rule" aria-hidden />
             Sign in
           </p>
-          <h1 className="display display--md">Sign in to start studying.</h1>
-          <p className="body muted">
-            Your Google account keeps sessions, baselines and insights under your name. StudyLoop reads only
-            your name, email and profile photo.
-          </p>
-          <button
-            type="button"
-            className="btn btn--primary login__cta"
-            onClick={start}
-            disabled={busy || !configured}
-            aria-describedby={error ? "login-error" : undefined}
-          >
-            <GoogleMark />
-            {busy ? "Opening Google…" : "Continue with Google"}
-          </button>
-          <p id="login-error" className="small login__error" role="alert">
-            {error}
-          </p>
+          <h1 className="display login__title">Study with a signal.</h1>
+          <p className="serif login__serif">Your sessions, under your name.</p>
+
+          <div className="login__card">
+            <button
+              type="button"
+              className="btn btn--primary btn--lg login__cta"
+              onClick={start}
+              disabled={busy || !configured}
+              aria-describedby={error ? "login-error" : undefined}
+            >
+              <GoogleMark />
+              {busy ? "Opening Google…" : "Continue with Google"}
+            </button>
+            <p id="login-error" className="small login__error" role="alert">
+              {error}
+            </p>
+            <ul className="login__notes">
+              <li>
+                <Icon name="user" size={16} />
+                StudyLoop reads only your name, email and profile photo.
+              </li>
+              <li>
+                <Icon name="baseline" size={16} />
+                Sessions, baselines and insights stay under your account.
+              </li>
+              <li>
+                <Icon name="check" size={16} />
+                Sign out any time from your profile.
+              </li>
+            </ul>
+          </div>
         </div>
         <p className="small muted login__fine">StudyLoop is a study tool, not a medical device.</p>
-      </div>
-      <div className="login__visual" aria-hidden>
-        <Image src="/media/studyloop-band.png" alt="" fill sizes="50vw" preload className="login__img" />
       </div>
     </main>
   );

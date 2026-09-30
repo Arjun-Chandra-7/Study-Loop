@@ -119,35 +119,121 @@ p {
   margin-bottom: var(--s-4);
 }
 
-/* Login: editorial split — sign-in on the left axis, the real band on the right. */
+/* Login: the band on the left, one sign-in card on the right. */
 .login {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+  gap: var(--s-3);
   min-height: 100svh;
+  padding: var(--s-3);
 }
+
+/* ── Visual ── */
+.login__visual {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--r-chassis);
+  background: var(--chassis);
+  box-shadow: inset 0 0 0 1px var(--line-1), var(--shadow-lift);
+  isolation: isolate;
+}
+.login__img {
+  z-index: -1;
+  object-fit: cover;
+  object-position: 40% 50%;
+}
+.login__visual::after {
+  /* Light falls off toward the caption so it stays legible. */
+  content: "";
+  position: absolute;
+  inset: 45% 0 0;
+  z-index: -1;
+  background: linear-gradient(180deg, rgba(6, 8, 8, 0), rgba(6, 8, 8, 0.85));
+}
+.login__logo {
+  position: absolute;
+  top: var(--s-6);
+  left: var(--s-6);
+}
+.login__logo .logo {
+  height: 40px;
+}
+.login__facts {
+  position: absolute;
+  left: var(--s-6);
+  right: var(--s-6);
+  bottom: var(--s-6);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.login__facts li {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  height: 40px;
+  padding: 0 var(--s-4) 0 var(--s-3);
+  border-radius: var(--r-pill);
+  background: rgba(10, 17, 17, 0.72);
+  -webkit-backdrop-filter: blur(var(--blur-glass));
+  backdrop-filter: blur(var(--blur-glass));
+  box-shadow: inset 0 0 0 1px var(--line-2);
+  font-size: var(--fs-small);
+  color: var(--text-2);
+}
+.login__facts svg {
+  color: var(--measured);
+}
+.login__facts b {
+  font-weight: 500;
+  color: var(--text-1);
+}
+
+/* ── Form ── */
 .login__panel {
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  gap: var(--s-9);
-  padding: var(--s-6) var(--page-x);
-}
-.login__panel > .logo {
-  align-self: flex-start;
+  justify-content: center;
+  gap: var(--s-8);
+  padding: var(--s-8) clamp(var(--s-5), 4vw, var(--s-9));
 }
 .login__body {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: var(--s-4);
-  max-width: 560px;
+  width: 100%;
+  max-width: 440px;
+  margin: auto 0;
 }
-.login__body .body {
-  max-inline-size: 46ch;
+.login__body .eyebrow {
   margin-bottom: var(--s-4);
 }
+.login__title {
+  font-size: clamp(32px, 3vw, 44px);
+  line-height: 1.05;
+}
+.login__body .login__serif {
+  margin: var(--s-3) 0 var(--s-6);
+  line-height: 1.3;
+  font-size: var(--fs-title);
+  color: var(--text-2);
+}
+.login__card {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  padding: var(--s-5);
+  border-radius: var(--r-panel);
+  background:
+    radial-gradient(90% 70% at 50% 0%, rgba(20, 184, 166, 0.06), transparent 70%),
+    var(--surface-1);
+  box-shadow: inset 0 0 0 1px var(--line-2), var(--highlight), var(--shadow-rest);
+}
 .login__cta {
-  min-width: 264px;
+  width: 100%;
 }
 .login__cta:disabled {
   cursor: progress;
@@ -155,39 +241,93 @@ p {
 .g-mark {
   display: grid;
   place-items: center;
-  width: 24px;
-  height: 24px;
+  width: 28px;
+  height: 28px;
   border-radius: var(--r-pill);
   background: #fff;
 }
 .login__error {
-  min-height: 1.5em;
-  max-inline-size: 46ch;
+  min-height: 0;
   margin: 0;
   color: var(--coral-300);
+}
+.login__error:not(:empty) {
+  margin-top: var(--s-3);
+}
+.login__notes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  margin: var(--s-5) 0 0;
+  padding: var(--s-5) 0 0;
+  border-top: 1px solid var(--line-1);
+  list-style: none;
+  font-size: var(--fs-small);
+  line-height: 1.45;
+  color: var(--text-2);
+}
+.login__notes li {
+  display: grid;
+  grid-template-columns: 16px 1fr;
+  gap: var(--s-3);
+  align-items: start;
+}
+.login__notes svg {
+  margin-top: 1px;
+  color: var(--text-3);
 }
 .login__fine {
   margin: 0;
 }
-.login__visual {
-  position: relative;
-  margin: var(--s-3);
-  border-radius: var(--r-chassis);
-  overflow: hidden;
-  box-shadow: inset 0 0 0 1px var(--line-1);
-}
-.login__img {
-  object-fit: cover;
-}
-@media (max-width: 759px) {
+
+/* Portrait tablets and phones stack: the band as a banner, the card below it. */
+@media (max-width: 1023px) {
   .login {
     grid-template-columns: 1fr;
+    align-content: start;
   }
   .login__visual {
+    aspect-ratio: 16 / 10;
+  }
+  .login__panel {
+    align-items: center;
+  }
+  .login__body {
+    margin: 0;
+  }
+}
+@media (max-width: 759px) {
+  .login__visual {
+    aspect-ratio: 5 / 4;
+  }
+  .login__facts li:last-child {
     display: none;
   }
-  .login__cta {
-    width: 100%;
+  .login__panel {
+    align-items: stretch;
+  }
+  .login__logo {
+    top: var(--s-4);
+    left: var(--s-4);
+  }
+  .login__logo .logo {
+    height: 32px;
+  }
+  .login__facts {
+    left: var(--s-4);
+    right: var(--s-4);
+    bottom: var(--s-4);
+  }
+  .login__facts li {
+    height: 32px;
+    padding: 0 var(--s-3) 0 var(--s-2);
+  }
+  .login__panel {
+    gap: var(--s-6);
+    padding: var(--s-5) var(--s-2) var(--s-4);
+  }
+  .login__card {
+    padding: var(--s-4);
   }
 }
 
