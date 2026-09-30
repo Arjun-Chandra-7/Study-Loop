@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Instrument_Serif, Michroma } from "next/font/google";
+import { AuthProvider } from "@/lib/auth";
 import "./globals.css";
 
 // Editorial accent — taglines, research statements, transitions.
@@ -47,7 +48,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700&display=swap"
         />
       </head>
-      <body>{children}</body>
+      <body>
+        <AuthProvider>{children}</AuthProvider>
+      </body>
     </html>
   );
 }
