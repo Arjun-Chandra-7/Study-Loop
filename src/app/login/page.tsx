@@ -48,6 +48,23 @@ export default function LoginPage() {
     if (status === "signed-in") router.replace("/");
   }, [status, router]);
 
+  // Firebase can take ~12s to report a closed popup. When focus comes back to this
+  // page and nobody signed in, hand the button back right away; a sign-in that
+  // completes later still redirects through the auth state above.
+  useEffect(() => {
+    if (!pending) return;
+    let timer: number | undefined;
+    const onFocus = () => {
+      window.clearTimeout(timer);
+      timer = window.setTimeout(() => setPending(false), 1500);
+    };
+    window.addEventListener("focus", onFocus);
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      window.clearTimeout(timer);
+    };
+  }, [pending]);
+
   const start = async () => {
     setError(null);
     setPending(true);
