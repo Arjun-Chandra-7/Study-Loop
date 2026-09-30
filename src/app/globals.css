@@ -212,14 +212,14 @@ button:disabled {
   font-size: clamp(48px, 5vw, 80px);
 }
 
-.wordmark {
-  font-family: var(--font-display);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  font-size: 13px;
+.logo {
+  display: block;
+  width: auto;
+  height: 40px;
+  flex-shrink: 0;
 }
-.wordmark--sm {
-  font-size: 11px;
+.logo--sm {
+  height: 40px;
 }
 
 /* ═════════════════════════════════════════════════════════════
@@ -695,8 +695,8 @@ button:disabled {
   display: flex;
   align-items: center;
   gap: var(--s-2);
-  height: 28px;
-  padding: 0 var(--s-3);
+  min-height: 28px;
+  padding: var(--s-1) var(--s-3);
   border-radius: var(--r-pill);
   background: rgba(244, 241, 234, 0.06);
   box-shadow: inset 0 0 0 1px var(--line-1);

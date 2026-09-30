@@ -15,6 +15,7 @@ import { subjectCode } from "../cockpit/LowerCards";
 import { orbFor } from "../orb/orbState";
 import { StateOrb } from "../orb/StateOrb";
 import { Icon } from "../ui/Icon";
+import { Logo } from "../ui/Logo";
 import { StateBadge } from "../ui/StateBadge";
 import { InsightsFoot, InsightsView } from "../views/InsightsView";
 import { ProfileFoot, ProfileView } from "../views/ProfileView";
@@ -347,7 +348,7 @@ export function MobileApp() {
           {on ? `Live · SL-01 · ${s.reading.battery ?? "—"}%` : s.reading.connection === "connecting" ? "Pairing…" : "Band offline"}
         </motion.span>
         <motion.div className="m-bar" variants={bar}>
-          <span className="wordmark">StudyLoop</span>
+          <Logo />
           <StateBadge state={s.physio} />
         </motion.div>
         <motion.p className="m-note" variants={note}>
