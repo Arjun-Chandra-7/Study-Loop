@@ -227,7 +227,7 @@ function LiveCard() {
     <motion.div className="m-main" variants={main}>
       <div className="m-main__body">{body}</div>
       {phase !== "baseline" && (
-        <motion.button type="button" className="btn btn--primary btn--sm m-main__btn" whileTap={{ scale: 0.94 }} onClick={action}>
+        <motion.button type="button" className="btn btn--primary m-main__btn" whileTap={{ scale: 0.94 }} onClick={action}>
           {phase === "active" ? "Pause" : phase === "paused" ? "Resume" : "Start"}
           <Icon name={phase === "active" ? "pause" : "play"} size={14} />
         </motion.button>
@@ -311,6 +311,8 @@ export function MobileApp() {
   const s = useStudyLoop();
   const [active, setActive] = useState(0);
   const root = useRef<HTMLDivElement>(null);
+  // The pager only means something while the app sections sit under the middle of the screen.
+  const inApp = useInView(root, { margin: "-50% 0px -50% 0px" });
   const on = s.reading.connection === "connected";
   const { config } = s.session;
   const d = edaDelta(s.reading.eda, s.session.baseline);
@@ -449,7 +451,7 @@ export function MobileApp() {
         <Marquee items={["Not a medical device", "Measures HR + EDA", "No brain reading", "No stress score"]} />
       </Section>
 
-      <nav className="m-pager" aria-hidden>
+      <nav className="m-pager" aria-hidden data-hidden={inApp ? undefined : ""}>
         {[0, 1, 2].map((i) => (
           <motion.span key={i} animate={{ width: i === active ? 20 : 6, opacity: i === active ? 1 : 0.4 }} transition={{ type: "spring", stiffness: 400, damping: 30 }} />
         ))}
