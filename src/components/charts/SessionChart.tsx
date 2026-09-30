@@ -194,7 +194,7 @@ export function SessionChart({ samples, events, baseline, durationMs }: Props) {
             transform: `translate(${Math.min(w - 176, Math.max(0, xAt(hovered.at) + 12))}px, 8px)`,
           }}
         >
-          <span className="chart__tip-time">{(hovered.at / 60_000).toFixed(1)} min</span>
+          <span className="chart__tip-time">{(hovered.at / 60_000).toFixed(1)} min</span>
           <span>
             <b>{hovered.hr != null ? Math.round(hovered.hr) : "—"}</b> bpm
           </span>

@@ -55,8 +55,7 @@ export function HomeView({ stageRef }: { stageRef: React.RefObject<HTMLDivElemen
             src="/media/studyloop-band.png"
             alt=""
             fill
-            priority
-            loading="eager"
+            preload
             sizes="(max-width: 1023px) 100vw, 80vw"
             className="hero__img"
           />

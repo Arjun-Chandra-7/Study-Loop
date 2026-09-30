@@ -108,6 +108,15 @@ export function Intro() {
         .to(q(".intro__skeleton"), { opacity: 0, duration: 0.5 }, "open+=1.9")
         .call(() => setGone(true));
 
+      // A branded reveal earns ~2s once per visit: same choreography at 2×,
+      // and repeat loads in the same session run at skip speed.
+      let seen = false;
+      try {
+        seen = sessionStorage.getItem("sl-intro-seen") === "1";
+        sessionStorage.setItem("sl-intro-seen", "1");
+      } catch {}
+      tl.timeScale(seen ? 5 : 2);
+
       whenLoaded().then(() => {
         loaded = true;
         if (atPause) tl.play();

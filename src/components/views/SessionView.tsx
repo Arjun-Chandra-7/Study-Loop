@@ -228,7 +228,7 @@ function LiveSession() {
             {clock(remaining)}
           </p>
           <p className="small muted">
-            {paused ? "Paused" : "Remaining"} · {config.minutes} min {config.mode.toLowerCase()}
+            {paused ? "Paused" : "Remaining"} · {config.minutes} min {config.mode.toLowerCase()}
           </p>
         </div>
         <div className="live__state" aria-live="polite">

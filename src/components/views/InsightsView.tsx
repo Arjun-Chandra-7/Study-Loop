@@ -32,7 +32,7 @@ export function InsightsView() {
         <dl className="stat-row stat-row--compact">
           <div>
             <dt>Length</dt>
-            <dd className="tnum">{sel.minutes} min</dd>
+            <dd className="tnum">{sel.minutes} min</dd>
           </div>
           <div>
             <dt>Near baseline</dt>
@@ -87,7 +87,7 @@ export function InsightsFoot() {
             <span className="history__meta">
               <span>{x.topic}</span>
               <span className="muted">
-                {x.dateLabel} · {x.minutes} min
+                {x.dateLabel} · {x.minutes} min
               </span>
             </span>
             <span className="history__bar" aria-label={`${Math.round(x.stableShare * 100)}% near baseline`}>
