@@ -1,5 +1,6 @@
 "use client";
 
+import { initials, useAuth } from "@/lib/auth";
 import { useStudyLoop } from "@/lib/useStudyLoop";
 
 const CONN_LABEL = { connected: "SL-01", connecting: "Pairing…", disconnected: "No band" } as const;
@@ -7,6 +8,7 @@ const CONN_LABEL = { connected: "SL-01", connecting: "Pairing…", disconnected:
 /** Lives in the top-right notch: link · battery · account. */
 export function StatusCapsule() {
   const { reading } = useStudyLoop();
+  const { user } = useAuth();
   const battery = reading.battery;
   const low = battery != null && battery <= 15;
   const status =
@@ -32,7 +34,7 @@ export function StatusCapsule() {
         </span>
       </span>
       <span className="avatar avatar--sm" aria-hidden>
-        AR
+        {initials(user)}
       </span>
     </div>
   );

@@ -119,6 +119,78 @@ p {
   margin-bottom: var(--s-4);
 }
 
+/* Login: editorial split — sign-in on the left axis, the real band on the right. */
+.login {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  min-height: 100svh;
+}
+.login__panel {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: var(--s-9);
+  padding: var(--s-6) var(--page-x);
+}
+.login__panel > .logo {
+  align-self: flex-start;
+}
+.login__body {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--s-4);
+  max-width: 560px;
+}
+.login__body .body {
+  max-inline-size: 46ch;
+  margin-bottom: var(--s-4);
+}
+.login__cta {
+  min-width: 264px;
+}
+.login__cta:disabled {
+  cursor: progress;
+}
+.g-mark {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--r-pill);
+  background: #fff;
+}
+.login__error {
+  min-height: 1.5em;
+  max-inline-size: 46ch;
+  margin: 0;
+  color: var(--coral-300);
+}
+.login__fine {
+  margin: 0;
+}
+.login__visual {
+  position: relative;
+  margin: var(--s-3);
+  border-radius: var(--r-chassis);
+  overflow: hidden;
+  box-shadow: inset 0 0 0 1px var(--line-1);
+}
+.login__img {
+  object-fit: cover;
+}
+@media (max-width: 759px) {
+  .login {
+    grid-template-columns: 1fr;
+  }
+  .login__visual {
+    display: none;
+  }
+  .login__cta {
+    width: 100%;
+  }
+}
+
 .sr-only {
   position: absolute;
   width: 1px;
