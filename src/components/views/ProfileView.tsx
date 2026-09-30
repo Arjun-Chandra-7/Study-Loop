@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { motion } from "motion/react";
 import { useSyncExternalStore } from "react";
+import { useAuth } from "@/lib/auth";
 import { isBluetoothAvailable } from "@/lib/sensors/bluetooth";
 import { engine, useStudyLoop } from "@/lib/useStudyLoop";
 import { SimPanel } from "../cockpit/SimPanel";
@@ -12,6 +13,7 @@ const noopSubscribe = () => () => {};
 
 export function ProfileView() {
   const s = useStudyLoop();
+  const { user, signOut } = useAuth();
   const r = s.reading;
   const bt = useSyncExternalStore(noopSubscribe, isBluetoothAvailable, () => false);
 
@@ -53,11 +55,20 @@ export function ProfileView() {
               <dt>Source</dt>
               <dd>{s.providerKind === "mock" ? "Simulated" : "Bluetooth LE"}</dd>
             </div>
+            <div>
+              <dt>Account</dt>
+              <dd>{user?.email ?? "—"}</dd>
+            </div>
           </dl>
-          <button type="button" className="btn btn--ghost btn--sm" onClick={engine.toggleConnection}>
-            <Icon name={r.connection === "disconnected" ? "link" : "unlink"} size={16} />
-            {r.connection === "disconnected" ? "Connect" : "Disconnect"}
-          </button>
+          <div className="btn-row">
+            <button type="button" className="btn btn--ghost btn--sm" onClick={engine.toggleConnection}>
+              <Icon name={r.connection === "disconnected" ? "link" : "unlink"} size={16} />
+              {r.connection === "disconnected" ? "Connect" : "Disconnect"}
+            </button>
+            <button type="button" className="btn btn--ghost btn--sm" onClick={signOut}>
+              Sign out
+            </button>
+          </div>
           {s.providerError && (
             <p className="small notice notice--inline" role="alert">
               <Icon name="alert" size={14} /> {s.providerError}
