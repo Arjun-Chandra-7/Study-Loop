@@ -13,6 +13,7 @@ import { SessionFoot, SessionView } from "../views/SessionView";
 import { Dock } from "./Dock";
 import { PlayerCard, ProfilePill, ResearchCard, TrendCard } from "./LowerCards";
 import { BaselineCard, EdaCard, HeartRateCard, SignalCard } from "./MetricCards";
+import { Logo } from "../ui/Logo";
 import { StatusCapsule } from "./StatusCapsule";
 import { TopCapsule } from "./TopCapsule";
 
@@ -75,7 +76,7 @@ export function Cockpit() {
 
         {/* Mobile header replaces the top capsule + notch composition. */}
         <header className="m-header">
-          <span className="wordmark">StudyLoop</span>
+          <Logo />
           <StatusCapsule />
         </header>
 
@@ -88,7 +89,7 @@ export function Cockpit() {
           transition={{ delay: 0.05, duration: 1.1, ease: [0.65, 0, 0.35, 1] }}
         >
           <div className="main__chip">
-            <span className="wordmark wordmark--sm">StudyLoop</span>
+            <Logo size="sm" />
             {live && <span className="rec" aria-label="Session live">Live</span>}
           </div>
 
