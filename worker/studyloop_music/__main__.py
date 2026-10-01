@@ -100,6 +100,7 @@ def main() -> None:
     signal.signal(signal.SIGINT, stop)
 
     backoff = cfg.poll_interval_s
+    announced = False
     last_sweep = time.monotonic()
     while not stopping:
         if time.monotonic() - last_sweep > 600:
@@ -107,6 +108,10 @@ def main() -> None:
             last_sweep = time.monotonic()
         try:
             worked = run_one(cfg, api, separator, pipeline)
+            if backoff != cfg.poll_interval_s or not announced:
+                log("waiting_for_jobs", api=cfg.api_url,
+                    note="Connected. Leave this running; tracks you process in StudyLoop will be picked up here.")
+                announced = True
             backoff = cfg.poll_interval_s
         except ApiUnavailable as e:
             log("api_unavailable", detail=str(e), retry_in_s=backoff)
