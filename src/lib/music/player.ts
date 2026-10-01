@@ -206,6 +206,10 @@ export class MusicPlayer {
     a.load();
   }
 
+  pause() {
+    if (this.audio && !this.audio.paused) this.audio.pause();
+  }
+
   toggle() {
     const a = this.audio;
     if (!a || !this.state.track) return;

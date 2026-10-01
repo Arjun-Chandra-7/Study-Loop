@@ -4767,6 +4767,68 @@ html.lenis body {
   min-height: 0;
 }
 
+/* Study beats */
+.beats {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+.beats__row {
+  display: flex;
+  gap: var(--s-2);
+  align-items: center;
+}
+.beats__select {
+  flex: 1;
+  min-width: 0;
+  appearance: none;
+  cursor: pointer;
+}
+.beats__card {
+  height: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+}
+.beats__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-4);
+}
+.beats__meta {
+  min-width: 0;
+}
+.beats__summary {
+  margin: var(--s-1) 0 0;
+  font-size: var(--fs-body);
+  line-height: 1.4;
+}
+.beats__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.beats__state {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: var(--fs-small);
+}
+.beats__state b {
+  font-weight: 500;
+}
+.beats__note {
+  margin: 0;
+}
+
 /* Queue */
 .mqueue {
   display: grid;

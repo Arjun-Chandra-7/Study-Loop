@@ -9,6 +9,8 @@ const api = vi.hoisted(() => ({
   addTrack: vi.fn(),
   importSpotify: vi.fn(),
   spotifyConfig: vi.fn(),
+  playlists: vi.fn(),
+  vibe: vi.fn(),
   process: vi.fn(),
   job: vi.fn(),
   versions: vi.fn(),
@@ -64,16 +66,75 @@ beforeAll(() => {
 });
 beforeEach(() => {
   Object.values(api).forEach((f) => f.mockReset());
+  api.playlists.mockResolvedValue([]);
 });
 afterEach(cleanup);
 
+/** The Music view opens on Study beats; most tests work in the Library tab. */
+async function renderLibrary() {
+  render(<MusicView />);
+  await userEvent.click(screen.getByRole("tab", { name: "Library" }));
+}
+
 const card = (title = "Weightless") => screen.getByText(title).closest("li")!;
+
+const vibeProfile = {
+  summary: "Warm Hindi indie with acoustic guitar and soft Punjabi grooves",
+  moods: ["romantic", "nostalgic"],
+  tempoBpm: 84,
+  key: "D",
+  mode: "minor",
+  progression: [1, 6, 4, 5],
+  drumFeel: "dholak_groove",
+  palette: ["acoustic_guitar", "sitar"],
+  energy: 0.4,
+  warmth: 0.7,
+  swing: 0.3,
+};
+
+describe("Study beats", () => {
+  it("opens first, and asks for a playlist when there isn't one", async () => {
+    api.tracks.mockResolvedValue([]);
+    render(<MusicView />);
+    expect(screen.getByRole("tab", { name: "Study beats" }).getAttribute("aria-selected")).toBe("true");
+    expect(await screen.findByText(/Import a Spotify playlist in Library first/)).toBeTruthy();
+  });
+
+  it("shows the playlist's vibe and what the beat is doing", async () => {
+    api.tracks.mockResolvedValue([]);
+    api.playlists.mockResolvedValue([{ name: "💏", count: 44 }, { name: "Gym", count: 12 }]);
+    api.vibe.mockResolvedValue({ profile: vibeProfile, source: "ai", playlistName: "💏", trackCount: 44 });
+    render(<MusicView />);
+    expect(await screen.findByText(vibeProfile.summary)).toBeTruthy();
+    expect(api.vibe).toHaveBeenCalledWith("💏", false);
+    const card = screen.getByRole("region", { name: "Study beats" });
+    for (const chip of ["84 BPM", "D minor", "Dholak groove", "acoustic guitar", "sitar", "romantic"]) {
+      expect(within(card).getByText(chip)).toBeTruthy();
+    }
+    expect(within(card).getByRole("button", { name: "Play study beats" })).toBeTruthy();
+    expect(card.querySelector(".beats__state")?.textContent).toMatch(/·/); // state word · what the beat is doing
+
+    await userEvent.selectOptions(screen.getByLabelText("Playlist"), "Gym");
+    expect(api.vibe).toHaveBeenLastCalledWith("Gym", false);
+    await userEvent.click(screen.getByRole("button", { name: "New take" }));
+    expect(api.vibe).toHaveBeenLastCalledWith("Gym", true);
+  });
+
+  it("says when it's using the basic reading", async () => {
+    api.tracks.mockResolvedValue([]);
+    api.playlists.mockResolvedValue([{ name: "💏", count: 44 }]);
+    api.vibe.mockResolvedValue({ profile: vibeProfile, source: "basic", playlistName: "💏", trackCount: 44 });
+    render(<MusicView />);
+    expect(await screen.findByText("Basic vibe")).toBeTruthy();
+    expect(screen.getByText(/smart vibe reading isn't switched on yet/)).toBeTruthy();
+  });
+});
 
 describe("MusicView", () => {
   it("shows a loading state, then the empty state", async () => {
     let resolve!: (t: TrackView[]) => void;
     api.tracks.mockReturnValue(new Promise((r) => (resolve = r)));
-    render(<MusicView />);
+    await renderLibrary();
     expect(screen.getByText("Loading your music…").getAttribute("role")).toBe("status");
     await act(async () => resolve([]));
     expect(screen.getByText(/Nothing here yet/)).toBeTruthy();
@@ -83,7 +144,7 @@ describe("MusicView", () => {
   it("explains a failed load and retries", async () => {
     api.tracks.mockRejectedValueOnce(new MusicApiError(503, "storage_unavailable", "Your music library is unavailable right now."));
     api.tracks.mockResolvedValueOnce([base]);
-    render(<MusicView />);
+    await renderLibrary();
     expect((await screen.findByRole("alert")).textContent).toContain("Your music library is unavailable right now.");
     await userEvent.click(screen.getByRole("button", { name: "Try again" }));
     expect(await screen.findByText("Weightless")).toBeTruthy();
@@ -100,7 +161,7 @@ describe("MusicView", () => {
   ] as const)("labels the %s state with words, not just colour", async (_n, track, label, progress) => {
     api.tracks.mockResolvedValue([track]);
     api.job.mockResolvedValue(track.job);
-    render(<MusicView />);
+    await renderLibrary();
     const li = await screen.findByText(label).then((el) => el.closest("li")!);
     const bar = within(li).queryByRole("progressbar");
     if (progress === null) expect(bar).toBeNull();
@@ -120,7 +181,7 @@ describe("MusicView", () => {
   it("warns when nothing is processing the queue", async () => {
     api.tracks.mockResolvedValue([withAudio({ job: job({ status: "queued", workerOnline: false }) })]);
     api.job.mockResolvedValue(job({ status: "queued", workerOnline: false }));
-    render(<MusicView />);
+    await renderLibrary();
     expect(await screen.findByText(/processing service is offline/)).toBeTruthy();
   });
 
@@ -131,7 +192,7 @@ describe("MusicView", () => {
       onProgress(0.4);
       return new Promise((r) => (finishUpload = r));
     });
-    render(<MusicView />);
+    await renderLibrary();
     await screen.findByText("Needs audio");
 
     const input = card().querySelector<HTMLInputElement>('input[type="file"]')!;
@@ -156,7 +217,7 @@ describe("MusicView", () => {
   it("shows upload rejections from the server", async () => {
     api.tracks.mockResolvedValue([base]);
     api.upload.mockRejectedValue(new MusicApiError(415, "unsupported_format", "That file type isn't supported. Use MP3, WAV, M4A or FLAC."));
-    render(<MusicView />);
+    await renderLibrary();
     await screen.findByText("Needs audio");
     await userEvent.upload(card().querySelector<HTMLInputElement>('input[type="file"]')!, new File(["x"], "a.mp3", { type: "audio/mpeg" }));
     expect((await within(card()).findByRole("alert")).textContent).toContain("That file type isn't supported");
@@ -166,7 +227,7 @@ describe("MusicView", () => {
   it("imports a playlist and reports what was added", async () => {
     api.tracks.mockResolvedValue([]);
     api.importSpotify.mockResolvedValue({ added: 2, total: 2, playlistName: "Deep Focus", tracks: [base, { ...base, id: "t2", title: "Nuvole Bianche" }] });
-    render(<MusicView />);
+    await renderLibrary();
     await screen.findByText(/Nothing here yet/);
     await userEvent.type(screen.getByLabelText(/Spotify playlist, album or track link/), "https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M");
     await userEvent.click(screen.getByRole("button", { name: "Import" }));
@@ -177,7 +238,7 @@ describe("MusicView", () => {
   it("offers Connect Spotify when a playlist needs it", async () => {
     api.tracks.mockResolvedValue([]);
     api.importSpotify.mockRejectedValue(new MusicApiError(409, "spotify_login_required", "Connect Spotify to import “💏”."));
-    render(<MusicView />);
+    await renderLibrary();
     await screen.findByText(/Nothing here yet/);
     await userEvent.type(screen.getByLabelText(/Spotify playlist, album or track link/), "https://open.spotify.com/playlist/3otkFuN9NnmLTHUgX8qe2z?si=4aedb68e77884c50");
     await userEvent.click(screen.getByRole("button", { name: "Import" }));
@@ -188,7 +249,7 @@ describe("MusicView", () => {
   it("adds a track by name when it isn't on Spotify", async () => {
     api.tracks.mockResolvedValue([]);
     api.addTrack.mockResolvedValue({ ...base, id: "t9", title: "My recording", artist: "Me", spotifyUrl: null });
-    render(<MusicView />);
+    await renderLibrary();
     await screen.findByText(/Nothing here yet/);
     await userEvent.click(screen.getByRole("button", { name: /Add a track by name/ }));
     await userEvent.type(screen.getByLabelText("Track name"), "My recording");
@@ -201,7 +262,7 @@ describe("MusicView", () => {
   it("plays a track and switches study versions from the player", async () => {
     api.tracks.mockResolvedValue([withAudio({ job: job({ status: "completed", progress: 1 }) })]);
     api.versions.mockResolvedValue(versions(true));
-    render(<MusicView />);
+    await renderLibrary();
     await screen.findByText("Ready to study");
     await userEvent.click(screen.getByRole("button", { name: "Play Weightless" }));
 
@@ -237,7 +298,7 @@ describe("MusicView", () => {
     const t = (id: string, title: string) => withAudio({ id, title, job: job({ id: `j${id}`, status: "completed", progress: 1 }) });
     api.tracks.mockResolvedValue([t("q1", "First"), t("q2", "Second"), t("q3", "Third")]);
     api.versions.mockImplementation(async (id: string) => ({ ...versions(true), trackId: id }));
-    render(<MusicView />);
+    await renderLibrary();
     await userEvent.click(await screen.findByRole("button", { name: "Play First" }));
     const region = screen.getByRole("region", { name: "Now playing" });
     await within(region).findByText("First");
@@ -262,7 +323,7 @@ describe("MusicView", () => {
   it("locks the separated versions until a track is processed", async () => {
     api.tracks.mockResolvedValue([{ ...withAudio(), id: "t3", title: "Unprocessed" }]);
     api.versions.mockResolvedValue({ ...versions(false), trackId: "t3" });
-    render(<MusicView />);
+    await renderLibrary();
     await userEvent.click(await screen.findByRole("button", { name: "Play Unprocessed" }));
     const playerRegion = screen.getByRole("region", { name: "Now playing" });
     await within(playerRegion).findByText("Unprocessed");

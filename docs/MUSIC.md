@@ -12,6 +12,28 @@ The **Music** tab lets a signed-in student bring their own music and listen to i
 Spotify is used for **metadata only** (titles, artists, album art, durations). The audio always comes from a
 file the user uploads. StudyLoop never requests, streams, downloads or modifies Spotify audio.
 
+## Study beats (the default tab)
+
+Paste a Spotify playlist and get **original, lyric-free beats in its style that react to stress**, with no
+song audio involved, so it works for any playlist with nothing to upload.
+
+- **Vibe reading** (`src/lib/music/server/vibe.ts`): Spotify's API no longer returns tempo, key, energy or
+  genres for new apps (verified: 403/404 or fields absent), so a model reads the playlist's titles and
+  artists through the Vercel AI Gateway (`anthropic/claude-sonnet-5.5`, structured output validated by
+  `VibeProfileSchema`) and returns tempo, key/mode, chord progression, drum feel (lo-fi / dholak groove /
+  boom-bap / downtempo / ambient), instrument palette, energy, warmth and swing. Cached per exact track list
+  (one call per playlist). If the gateway is unavailable, a keyword-based **basic vibe** is used (not cached)
+  and the UI says so. **The AI Gateway needs a credit card on the Vercel team** (it unlocks free credits);
+  until then every playlist gets the basic vibe.
+- **Beat engine** (`src/lib/music/vibe/engine.ts`, Tone.js, all in the browser): chords on the playlist's
+  progression, bass, plucked guitar/sitar arpeggios, a sparse pentatonic lead (flute/bells/piano), and drums
+  per feel (including a two-tone dholak pattern), through a master filter → reverb → compressor.
+- **Stress adaptation** (`beatParams` in `src/lib/music/vibe/profile.ts`): follows the band's state
+  (relative to the session baseline). Elevated: tempo ×0.82, drums ×0.3, darker (cutoff ×0.55), softer,
+  more space. Recovering: halfway back. Changes glide over 6 s. Without a running session the band reads
+  Calm, so the beat simply follows the playlist. Verified in a browser with the band simulator: 80 → 66 BPM
+  under stress, drums 62% → 19%, cutoff 2.5 → 1.4 kHz, back to 72 BPM on recovery.
+
 ## Flow
 
 ```
@@ -116,10 +138,11 @@ longer installs, hence `--no-deps`; torchaudio is only imported (FFmpeg does all
 ## Tests
 
 ```bash
-npm test                      # API on in-process Postgres (PGlite) + in-memory Blob, worker API, Spotify, player, Music view
+npm test                      # API on in-process Postgres (PGlite) + in-memory Blob, worker API, Spotify, vibe, player, Music view
 npm run music:test-worker     # worker pipeline: real FFmpeg, real HTTP to a fake StudyLoop, stand-in separator
 MUSIC_TEST_DEMUCS=1 npm run music:test-worker                     # + real Demucs on a synthetic mix with known parts
 MUSIC_TEST_SPOTIFY_URL=<share link> npx vitest run spotify.live   # real Spotify API
+MUSIC_TEST_VIBE=1 npx vitest run vibe.live                         # real AI Gateway on your newest imported playlist
 ```
 
 ## Measured performance

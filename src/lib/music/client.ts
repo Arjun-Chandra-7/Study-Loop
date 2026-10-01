@@ -2,6 +2,7 @@
 
 import { getFirebaseAuth } from "../firebase";
 import type { JobView, TrackView, VersionsView } from "./types";
+import type { VibeProfile } from "./vibe/profile";
 
 export class MusicApiError extends Error {
   constructor(
@@ -41,6 +42,11 @@ export const musicApi = {
   tracks: () => call<{ tracks: TrackView[] }>("/api/music/tracks").then((r) => r.tracks),
   addTrack: (title: string, artist: string) =>
     call<{ track: TrackView }>("/api/music/tracks", { method: "POST", body: JSON.stringify({ title, artist }) }).then((r) => r.track),
+  playlists: () => call<{ playlists: { name: string; count: number }[] }>("/api/music/vibe?list=1").then((r) => r.playlists),
+  vibe: (playlist: string | null, refresh = false) =>
+    call<{ profile: VibeProfile; source: "ai" | "basic"; playlistName: string | null; trackCount: number }>(
+      `/api/music/vibe?${new URLSearchParams({ ...(playlist ? { playlist } : {}), ...(refresh ? { refresh: "1" } : {}) })}`,
+    ),
   spotifyConfig: () => call<{ clientId: string | null }>("/api/music/spotify/config"),
   importSpotify: (url: string, spotifyToken?: string | null) =>
     call<{ added: number; total: number; playlistName: string | null; tracks: TrackView[] }>("/api/music/import", {

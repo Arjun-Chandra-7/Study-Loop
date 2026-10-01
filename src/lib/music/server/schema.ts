@@ -78,6 +78,15 @@ export const SCHEMA: string[] = [
      created_at  DOUBLE PRECISION NOT NULL,
      UNIQUE (job_id, kind, name)
    )`,
+  // A playlist's vibe profile (from titles/artists), cached per exact track list.
+  `CREATE TABLE IF NOT EXISTS music_vibes (
+     user_id       TEXT NOT NULL,
+     key           TEXT NOT NULL,
+     playlist_name TEXT,
+     profile_json  TEXT NOT NULL,
+     created_at    DOUBLE PRECISION NOT NULL,
+     PRIMARY KEY (user_id, key)
+   )`,
   // Worker liveness, so the app can tell "waiting in line" from "nobody is processing".
   `CREATE TABLE IF NOT EXISTS music_workers (
      id      TEXT PRIMARY KEY,

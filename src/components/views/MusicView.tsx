@@ -10,6 +10,7 @@ import { trackStatus } from "@/lib/music/status";
 import { STUDY_MODES, type TrackView } from "@/lib/music/types";
 import { useMusicLibrary } from "@/lib/music/useMusicLibrary";
 import { Icon } from "../ui/Icon";
+import { StudyBeats } from "./StudyBeats";
 
 /** What the file picker offers; the server re-checks content, not just the name. */
 const ACCEPT = ".mp3,.wav,.m4a,.flac,audio/mpeg,audio/wav,audio/x-wav,audio/mp4,audio/x-m4a,audio/flac";
@@ -23,7 +24,7 @@ type Library = ReturnType<typeof useMusicLibrary>;
 export function MusicView() {
   const lib = useMusicLibrary();
   const p = usePlayer();
-  const [view, setView] = useState<"library" | "queue">("library");
+  const [view, setView] = useState<"beats" | "library" | "queue">("beats");
   const upNext = Math.max(0, p.queue.length - p.index - 1);
 
   return (
@@ -35,10 +36,10 @@ export function MusicView() {
         </h2>
         <div className="music__bar">
           <div className="seg music__tabs" role="tablist" aria-label="Music">
-            {(["library", "queue"] as const).map((v) => (
+            {(["beats", "library", "queue"] as const).map((v) => (
               <button key={v} id={`music-tab-${v}`} type="button" role="tab" aria-selected={view === v} aria-controls="music-panel" onClick={() => setView(v)}>
                 {view === v && <span className="seg__thumb" aria-hidden />}
-                <span>{v === "library" ? "Library" : `Up next${upNext ? ` · ${upNext}` : ""}`}</span>
+                <span>{v === "beats" ? "Study beats" : v === "library" ? "Library" : `Up next${upNext ? ` · ${upNext}` : ""}`}</span>
               </button>
             ))}
           </div>
@@ -53,7 +54,9 @@ export function MusicView() {
           </div>
         </div>
         <div id="music-panel" className="music__panel" role="tabpanel" aria-labelledby={`music-tab-${view}`}>
-          {view === "library" ? (
+          {view === "beats" ? (
+            <StudyBeats />
+          ) : view === "library" ? (
             <>
               <ImportBar lib={lib} />
               <TrackList lib={lib} currentId={p.track?.id ?? null} audible={p.playing} />
