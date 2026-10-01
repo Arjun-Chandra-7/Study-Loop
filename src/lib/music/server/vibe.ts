@@ -1,13 +1,24 @@
 import "server-only";
 import { createHash } from "node:crypto";
+import { google } from "@ai-sdk/google";
 import { generateText, Output, type LanguageModel } from "ai";
 import { VibeProfileSchema, type VibeProfile } from "../vibe/profile";
 import { q } from "./db";
 import { ApiError } from "./http";
 import { log } from "./log";
 
-/** Through the Vercel AI Gateway (OIDC on Vercel; VERCEL_OIDC_TOKEN / AI_GATEWAY_API_KEY locally). */
-const MODEL = "anthropic/claude-sonnet-5.5";
+/**
+ * Which model reads the vibe: Google Gemini directly when GOOGLE_GENERATIVE_AI_API_KEY is set (free tier
+ * works), otherwise the Vercel AI Gateway. Returns [model, id used in the cache key].
+ */
+function vibeModel(): [LanguageModel, string] {
+  if (modelOverride) return [modelOverride, "test"];
+  if (process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
+    const id = process.env.MUSIC_VIBE_GEMINI_MODEL || "gemini-3.8-flash";
+    return [google(id), `google/${id}`];
+  }
+  return ["anthropic/claude-sonnet-5.5", "gateway/anthropic/claude-sonnet-5.5"];
+}
 const MAX_TRACKS = 60;
 
 let modelOverride: LanguageModel | null = null;
@@ -37,7 +48,8 @@ export async function playlistVibe(uid: string, playlist: string | null, refresh
   );
   if (!tracks.length) throw new ApiError(409, "no_tracks", "Import a Spotify playlist first.");
   const list = tracks.map((t) => `${t.title} — ${t.artist}`);
-  const key = createHash("sha256").update(JSON.stringify([MODEL, list])).digest("hex");
+  const [model, modelId] = vibeModel();
+  const key = createHash("sha256").update(JSON.stringify([modelId, list])).digest("hex");
 
   if (!refresh) {
     const hit = await q.get<{ profile_json: string }>("SELECT profile_json FROM music_vibes WHERE user_id = ? AND key = ?", uid, key);
@@ -48,7 +60,7 @@ export async function playlistVibe(uid: string, playlist: string | null, refresh
   let profile: VibeProfile;
   try {
     const { output } = await generateText({
-      model: modelOverride ?? MODEL,
+      model,
       output: Output.object({ schema: VibeProfileSchema }),
       system:
         "You are a music producer designing an original, lyric-free study beat that carries the feel of a listener's playlist. " +
@@ -60,7 +72,7 @@ export async function playlistVibe(uid: string, playlist: string | null, refresh
     profile = output;
   } catch (e) {
     // Keep the music playing: a simpler reading from keywords, not cached so the AI one replaces it later.
-    log("vibe_failed", { error: (e as Error).name, detail: (e as Error).message.slice(0, 200) });
+    log("vibe_failed", { model: modelId, error: (e as Error).name, detail: (e as Error).message.slice(0, 200) });
     return { profile: basicVibe(list), source: "basic", playlistName: playlist, trackCount: tracks.length, cached: false };
   }
   await q.run(
@@ -68,7 +80,7 @@ export async function playlistVibe(uid: string, playlist: string | null, refresh
      ON CONFLICT (user_id, key) DO UPDATE SET profile_json = excluded.profile_json, created_at = excluded.created_at`,
     uid, key, playlist, JSON.stringify(profile), Date.now(),
   );
-  log("vibe_generated", { tracks: tracks.length, ms: Date.now() - t0 });
+  log("vibe_generated", { model: modelId, tracks: tracks.length, ms: Date.now() - t0 });
   return { profile, source: "ai", playlistName: playlist, trackCount: tracks.length, cached: false };
 }
 

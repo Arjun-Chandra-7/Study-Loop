@@ -12,6 +12,7 @@
     "music:test-worker": "cd worker && .venv/bin/python -m unittest discover -s tests -t ."
   },
   "dependencies": {
+    "@ai-sdk/google": "^4.0.87",
     "@gsap/react": "^2.1.2",
     "@neondatabase/serverless": "^1.1.0",
     "@vercel/blob": "^2.8.0",
