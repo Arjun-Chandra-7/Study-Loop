@@ -25,8 +25,8 @@ function hex(c: string) {
 
 export function DotCanvas({
   scene,
-  tint = "#14B8A6",
-  accent = "#FF6B5A",
+  tint = "#D7FF3A",
+  accent = "#FF5A1F",
   param,
   speed = 1,
   fps = 30,

@@ -1,6 +1,6 @@
 /* ─────────────────────────────────────────────────────────────
    STUDYLOOP design tokens
-   Teal = measured energy · Coral = action/research · Ink = structure
+   Volt = measured energy · Blaze = action/research · Graphite = structure
    ───────────────────────────────────────────────────────────── */
 
 @font-face {
@@ -15,44 +15,44 @@
 
 :root {
   /* ── Colour primitives ── */
-  --teal-500: #14b8a6;
-  --teal-300: #5fd9cb;
-  --teal-900: #0f2a2a;
-  --teal-950: #102524;
-  --coral-500: #ff6b5a;
-  --coral-300: #ff9a8d;
-  --ink-900: #0b0d0f;
-  --ivory: #f4f1ea;
-  --muted: #b7c4c1;
+  --volt-500: #d7ff3a;
+  --volt-300: #e5ff8a;
+  --volt-900: #242424;
+  --volt-950: #202020;
+  --blaze-500: #ff5a1f;
+  --blaze-300: #ff9666;
+  --ink-900: #0a0a0a;
+  --ivory: #f4f4f0;
+  --muted: #b4b4ae;
 
   /* ── Semantic surfaces (the 60%) ── */
-  --room: #060808;
-  --chassis: #0a0d0e;
-  --surface-main: #0b1413;
-  --surface-1: #0d1716;
-  --surface-2: #122120;
-  --surface-3: #183130;
+  --room: #080808;
+  --chassis: #0c0c0c;
+  --surface-main: #121212;
+  --surface-1: #151515;
+  --surface-2: #1e1e1e;
+  --surface-3: #2c2c2c;
 
   /* ── Semantic ink ── */
   --text-1: var(--ivory);
   --text-2: var(--muted);
-  --text-3: #8a9695;
-  --text-on-coral: var(--ink-900);
-  --text-on-teal: #04110f;
+  --text-3: #8b8b86;
+  --text-on-blaze: var(--ink-900);
+  --text-on-volt: #0a0a0a;
 
   /* ── Meaning ── */
-  --measured: var(--teal-500);
-  --measured-soft: rgba(20, 184, 166, 0.14);
-  --measured-line: rgba(20, 184, 166, 0.32);
-  --action: var(--coral-500);
-  --action-soft: rgba(255, 107, 90, 0.14);
-  --action-line: rgba(255, 107, 90, 0.36);
+  --measured: var(--volt-500);
+  --measured-soft: rgba(215, 255, 58, 0.14);
+  --measured-line: rgba(215, 255, 58, 0.32);
+  --action: var(--blaze-500);
+  --action-soft: rgba(255, 90, 31, 0.14);
+  --action-line: rgba(255, 90, 31, 0.36);
 
   /* ── Hairlines ── */
-  --line-1: rgba(244, 241, 234, 0.06);
-  --line-2: rgba(244, 241, 234, 0.1);
-  --line-3: rgba(244, 241, 234, 0.18);
-  --highlight: inset 0 1px 0 rgba(244, 241, 234, 0.045);
+  --line-1: rgba(244, 244, 240, 0.06);
+  --line-2: rgba(244, 244, 240, 0.1);
+  --line-3: rgba(244, 244, 240, 0.18);
+  --highlight: inset 0 1px 0 rgba(244, 244, 240, 0.045);
 
   /* ── Space (8px system; 4/12 for optical tuning only) ── */
   --s-1: 4px;

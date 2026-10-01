@@ -5,6 +5,7 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
 import { useRef, useState } from "react";
 import { BANDS } from "../research/bands";
+import { Papers } from "../research/Papers";
 import { DotCanvas } from "../motion/DotCanvas";
 import { ribbonScene } from "../motion/scenes";
 
@@ -19,7 +20,7 @@ const ease = (x: number) => (x < 0.5 ? 4 * x * x * x : 1 - (-2 * x + 2) ** 3 / 2
 
 /**
  * Pinned: each band holds, then the ribbon morphs into the next frequency.
- * theta → alpha → gamma → 40 Hz (experimental, coral).
+ * theta → alpha → gamma → 40 Hz (experimental, blaze).
  */
 export function Frequencies() {
   const root = useRef<HTMLElement>(null);
@@ -108,7 +109,7 @@ export function Frequencies() {
         </header>
 
         <div className="sig__wave">
-          <DotCanvas scene={ribbonScene} param={cycles} tint={exp ? "#FF6B5A" : "#14B8A6"} label="Oscillation at the selected frequency" />
+          <DotCanvas scene={ribbonScene} param={cycles} tint={exp ? "#FF5A1F" : "#D7FF3A"} label="Oscillation at the selected frequency" />
         </div>
 
         <ol className="sig__bands">
@@ -128,6 +129,7 @@ export function Frequencies() {
             <div key={b.id} className="sig__body" data-active={i === 0 || undefined}>
               <p className="serif serif--lg">{b.line}</p>
               <p className="body muted">{b.body}</p>
+              <Papers papers={b.papers} compact />
             </div>
           ))}
           <p className="small sig__note">

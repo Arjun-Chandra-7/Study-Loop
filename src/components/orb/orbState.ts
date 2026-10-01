@@ -11,9 +11,9 @@ export interface OrbSpec {
   label: string;
 }
 
-const TEAL = "#14B8A6";
-const CORAL = "#FF6B5A";
-const IVORY = "#B7C4C1";
+const VOLT = "#D7FF3A";
+const BLAZE = "#FF5A1F";
+const IVORY = "#B4B4AE";
 
 /**
  * The orb shows SYSTEM STATE — connection, calibration, and how the measured
@@ -27,23 +27,23 @@ export function orbFor(input: {
 }): OrbSpec {
   const { connection, phase, physio, research } = input;
   if (connection === "disconnected") return { state: "breathing", speed: 0.3, color: IVORY, label: "Band offline" };
-  if (connection === "connecting") return { state: "connecting", speed: 0.8, color: TEAL, label: "Pairing with band" };
+  if (connection === "connecting") return { state: "connecting", speed: 0.8, color: VOLT, label: "Pairing with band" };
   if (physio === "poor") return { state: "searching", speed: 0.6, color: IVORY, label: "Looking for a clean signal" };
-  if (phase === "baseline") return { state: "connecting", speed: 0.55, color: TEAL, label: "Capturing baseline" };
+  if (phase === "baseline") return { state: "connecting", speed: 0.55, color: VOLT, label: "Capturing baseline" };
   if (phase === "paused") return { state: "breathing", speed: 0.25, color: IVORY, label: "Session paused" };
-  if (phase === "complete") return { state: "breathing", speed: 0.35, color: TEAL, label: "Session complete" };
+  if (phase === "complete") return { state: "breathing", speed: 0.35, color: VOLT, label: "Session complete" };
   if (phase === "active") {
-    if (research) return { state: "listening", speed: 0.7, color: CORAL, label: "Research protocol layer active" };
+    if (research) return { state: "listening", speed: 0.7, color: BLAZE, label: "Research protocol layer active" };
     switch (physio) {
       case "elevated":
-        return { state: "working", speed: 1.05, color: CORAL, label: "Signals elevated" };
+        return { state: "working", speed: 1.05, color: BLAZE, label: "Signals elevated" };
       case "changing":
-        return { state: "working", speed: 0.75, color: TEAL, label: "Signals changing" };
+        return { state: "working", speed: 0.75, color: VOLT, label: "Signals changing" };
       case "recovering":
-        return { state: "breathing", speed: 0.6, color: TEAL, label: "Signals recovering" };
+        return { state: "breathing", speed: 0.6, color: VOLT, label: "Signals recovering" };
       default:
-        return { state: "working", speed: 0.5, color: TEAL, label: "Signals stable" };
+        return { state: "working", speed: 0.5, color: VOLT, label: "Signals stable" };
     }
   }
-  return { state: "breathing", speed: 0.45, color: TEAL, label: "Ready" };
+  return { state: "breathing", speed: 0.45, color: VOLT, label: "Ready" };
 }

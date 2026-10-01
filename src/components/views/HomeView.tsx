@@ -85,7 +85,7 @@ export function HomeView({ stageRef }: { stageRef: React.RefObject<HTMLDivElemen
           Cognitive performance system
         </p>
         <h1 className="display hero__title">StudyLoop</h1>
-        <p className="serif hero__serif">designed for deeper focus</p>
+        <p className="serif hero__serif">Designed for deeper focus</p>
         <p className="body hero__body">
           A wearable and adaptive study interface built to understand how your physiology changes while you learn.
         </p>
@@ -121,7 +121,7 @@ export function HomeFoot() {
               : "Band on wrist · ready for baseline"
             : conn === "connecting"
               ? "Pairing with band…"
-              : "Pair your band from the top bar to begin"}
+              : "Start a session now, or pair your band from the top bar"}
         </span>
       </div>
       <p className="foot__spec">

@@ -103,7 +103,7 @@ export function Flow() {
           <li key={s.n} className="flow__step">
             <Tilt className="flow__card" max={6}>
               <div className="flow__orb">
-                <ThinkingOrb state={s.orb} size={64} theme="dark" color="#14B8A6" speed={0.7} aria-label={`${s.title} state`} />
+                <ThinkingOrb state={s.orb} size={64} theme="dark" color="#D7FF3A" speed={0.7} aria-label={`${s.title} state`} />
               </div>
               <span className="flow__n tnum">{s.n}</span>
               <h3 className="h-section">{s.title}</h3>

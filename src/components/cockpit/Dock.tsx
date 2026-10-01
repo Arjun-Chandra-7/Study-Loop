@@ -32,7 +32,7 @@ const SPRING = { mass: 0.1, stiffness: 170, damping: 13 };
 /**
  * Floating dock with macOS-style magnification (the pattern popularised by
  * Aceternity UI's Floating Dock / Build UI's magnified dock): items swell by
- * cursor distance on springs, the coral active tile glides between them, and
+ * cursor distance on springs, the blaze active tile glides between them, and
  * a click gives a small launch bounce.
  */
 export function Dock() {

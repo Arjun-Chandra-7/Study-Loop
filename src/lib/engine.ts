@@ -6,6 +6,7 @@ import {
   type PhysioState,
   type Sample,
 } from "./sensors/classify";
+import { MockSensorProvider } from "./sensors/mock";
 import type { SensorProvider, SensorReading } from "./sensors/types";
 import { EMPTY_READING } from "./sensors/types";
 
@@ -59,6 +60,8 @@ export interface SessionState {
 
 export interface Snapshot {
   reading: SensorReading;
+  /** "mock" = the simulated test band; "bluetooth" = a real paired band */
+  providerKind: "mock" | "bluetooth";
   providerError: string | null;
   /** rolling 1 Hz history, last 10 minutes */
   history: Sample[];
@@ -130,7 +133,8 @@ type Listener = () => void;
 
 export class StudyLoopEngine {
   private listeners = new Set<Listener>();
-  private provider: SensorProvider = new BluetoothSensorProvider();
+  private sim = new MockSensorProvider();
+  private provider: SensorProvider = this.sim;
   private unsubProvider: (() => void) | null = null;
   private loop: ReturnType<typeof setInterval> | null = null;
   private lastLoop = 0;
@@ -142,6 +146,7 @@ export class StudyLoopEngine {
 
   private snap: Snapshot = {
     reading: { ...EMPTY_READING },
+    providerKind: "mock",
     providerError: null,
     history: [],
     physio: "none",
@@ -188,7 +193,20 @@ export class StudyLoopEngine {
   toggleResearch = () => this.set({ research: !this.snap.research });
   setResearch = (research: boolean) => this.set({ research });
 
+  /** Connect band: for testing this simulates a connected band (no hardware needed). */
   connect = async () => {
+    this.useProvider("mock");
+    this.set({ providerError: null });
+    try {
+      await this.provider.connect();
+    } catch (e) {
+      this.set({ providerError: e instanceof Error ? e.message : "Could not connect." });
+    }
+  };
+
+  /** Pair a real StudyLoop band over Web Bluetooth. */
+  connectBluetooth = async () => {
+    this.useProvider("bluetooth");
     this.set({ providerError: null });
     try {
       await this.provider.connect();
@@ -205,20 +223,20 @@ export class StudyLoopEngine {
   };
 
 
-
   configure = (patch: Partial<SessionConfig>) => {
     const s = this.snap.session;
     const minutes = patch.minutes != null ? Math.max(5, Math.min(180, patch.minutes)) : undefined;
     this.setSession({ config: { ...s.config, ...patch, ...(minutes ? { minutes } : {}) } });
   };
 
+  /** With a band: capture a baseline first. Without one: go straight to a timer-only session. */
   beginSession = () => {
-    if (this.snap.reading.connection !== "connected") return;
+    const banded = this.snap.reading.connection === "connected";
     this.baselineStart = Date.now();
     this.baselineSamples = [];
     this.setSession({
       ...idleSession(this.snap.session.config),
-      phase: "baseline",
+      phase: banded ? "baseline" : "active",
     });
     this.set({ tab: "session" });
   };
@@ -259,6 +277,15 @@ export class StudyLoopEngine {
   };
 
   // ── internals ──────────────────────────────────────────────
+
+  private useProvider(kind: "mock" | "bluetooth") {
+    if (kind === this.snap.providerKind) return;
+    this.provider.disconnect();
+    if (this.provider !== this.sim) this.provider.dispose();
+    this.provider = kind === "mock" ? this.sim : new BluetoothSensorProvider();
+    this.attach(this.provider);
+    this.set({ providerKind: kind, reading: this.provider.getReading() });
+  }
 
   private attach(p: SensorProvider) {
     this.unsubProvider?.();
@@ -317,7 +344,7 @@ export class StudyLoopEngine {
         const baseline = computeBaseline(this.baselineSamples) ?? session.baseline;
         session = { ...session, phase: "active", baseline, baselineProgress: 1 };
       }
-    } else if (session.phase === "active" && r.connection === "connected") {
+    } else if (session.phase === "active") {
       const physio = patch.physio ?? this.snap.physio;
       session = {
         ...session,

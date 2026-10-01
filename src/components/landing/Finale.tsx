@@ -17,10 +17,10 @@ gsap.registerPlugin(ScrollTrigger, useGSAP);
 
 /** The loop the product is named for — it runs forever once you arrive. */
 const LOOP: { label: string; state: OrbState; speed: number; color: string }[] = [
-  { label: "Idle", state: "breathing", speed: 0.4, color: "#B7C4C1" },
-  { label: "Baseline", state: "connecting", speed: 0.6, color: "#14B8A6" },
-  { label: "Study", state: "working", speed: 0.6, color: "#14B8A6" },
-  { label: "Recover", state: "breathing", speed: 0.8, color: "#5FD9CB" },
+  { label: "Idle", state: "breathing", speed: 0.4, color: "#B4B4AE" },
+  { label: "Baseline", state: "connecting", speed: 0.6, color: "#D7FF3A" },
+  { label: "Study", state: "working", speed: 0.6, color: "#D7FF3A" },
+  { label: "Recover", state: "breathing", speed: 0.8, color: "#E5FF8A" },
 ];
 const STEP_MS = 3200;
 

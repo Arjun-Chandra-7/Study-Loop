@@ -69,7 +69,7 @@ function Section({ id, children }: { id: number; children: React.ReactNode }) {
   );
 }
 
-function Thumb({ orb, value, label, tone = "#14B8A6", dir }: { orb: OrbState; value: React.ReactNode; label: string; tone?: string; dir: 1 | -1 }) {
+function Thumb({ orb, value, label, tone = "#D7FF3A", dir }: { orb: OrbState; value: React.ReactNode; label: string; tone?: string; dir: 1 | -1 }) {
   return (
     <motion.div className={`m-side ${dir < 0 ? "m-side--l" : "m-side--r"}`} variants={side(dir)}>
       <div className="m-thumb">
@@ -211,7 +211,7 @@ function LiveCard() {
         <div className="m-main__img">
           <Image src="/media/studyloop-band.png" alt="The StudyLoop band" fill sizes="60vw" preload />
         </div>
-        <p className="serif m-main__serif">designed for deeper focus</p>
+        <p className="serif m-main__serif">Designed for deeper focus</p>
       </>
     );
   })();
@@ -378,7 +378,7 @@ export function MobileApp() {
           Goal {config.minutes} min. {clock(s.session.elapsedMs)} studied so far.
         </motion.p>
         <div className="m-tri">
-          <Thumb dir={-1} orb="searching" value={on ? s.reading.quality : "—"} label="signal" tone={s.reading.quality === "poor" ? "#FF6B5A" : "#14B8A6"} />
+          <Thumb dir={-1} orb="searching" value={on ? s.reading.quality : "—"} label="signal" tone={s.reading.quality === "poor" ? "#FF5A1F" : "#D7FF3A"} />
           <motion.div className="m-main m-main--chart" variants={main}>
             <p className="label">EDA · last 5 min</p>
             <div className="m-main__chart">
@@ -434,7 +434,7 @@ export function MobileApp() {
             </div>
             <p className="small muted">HR above · EDA below</p>
           </motion.div>
-          <Thumb dir={1} orb="composing" value={last?.elevatedMoments ?? 0} label="elevated" tone="#FF6B5A" />
+          <Thumb dir={1} orb="composing" value={last?.elevatedMoments ?? 0} label="elevated" tone="#FF5A1F" />
         </div>
         <Marquee items={["Not a medical device", "Measures HR + EDA", "No brain reading", "No stress score"]} />
       </Section>

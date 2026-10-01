@@ -3,6 +3,7 @@
 import { AnimatePresence, motion } from "motion/react";
 import { useState } from "react";
 import { BANDS } from "../research/bands";
+import { Papers } from "../research/Papers";
 import { wavePath } from "../cockpit/LowerCards";
 
 export function ResearchView() {
@@ -43,25 +44,28 @@ export function ResearchView() {
       </div>
 
       <div className="research__stage" role="tabpanel">
-        <div className={`osc ${band.experimental ? "osc--exp" : ""}`} aria-hidden>
-          <AnimatePresence mode="popLayout" initial={false}>
-            <motion.div
-              key={band.id}
-              className="osc__track"
-              style={{ ["--dur" as string]: `${Math.max(2.5, 10 - band.hz / 6)}s` }}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.5 }}
-            >
-              {[0, 1].map((i) => (
-                <svg key={i} viewBox="0 0 400 120" preserveAspectRatio="none">
-                  <path d={wavePath(400, 120, cycles, 0.34)} />
-                </svg>
-              ))}
-            </motion.div>
-          </AnimatePresence>
-          <span className="osc__axis" />
+        <div className="research__side">
+          <div className={`osc ${band.experimental ? "osc--exp" : ""}`} aria-hidden>
+            <AnimatePresence mode="popLayout" initial={false}>
+              <motion.div
+                key={band.id}
+                className="osc__track"
+                style={{ ["--dur" as string]: `${Math.max(2.5, 10 - band.hz / 6)}s` }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.5 }}
+              >
+                {[0, 1].map((i) => (
+                  <svg key={i} viewBox="0 0 400 120" preserveAspectRatio="none">
+                    <path d={wavePath(400, 120, cycles, 0.34)} />
+                  </svg>
+                ))}
+              </motion.div>
+            </AnimatePresence>
+            <span className="osc__axis" />
+          </div>
+          <Papers key={band.id} papers={band.papers} />
         </div>
         <AnimatePresence mode="wait" initial={false}>
           <motion.div
@@ -87,11 +91,11 @@ export function ResearchFoot() {
     <div className="foot foot--legend">
       <p>
         <span className="legend__swatch legend__swatch--measured" aria-hidden />
-        <b>Measured by the band</b> heart rate · skin conductance
+        <b>Measured by the band</b> Heart rate · skin conductance
       </p>
       <p>
         <span className="legend__swatch legend__swatch--action" aria-hidden />
-        <b>Explored in research</b> neural oscillations — StudyLoop does not read brain activity
+        <b>Explored in research</b> Neural oscillations — StudyLoop does not read brain activity
       </p>
     </div>
   );

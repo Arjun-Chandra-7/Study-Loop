@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { motion } from "motion/react";
 import { useRef, useState, useSyncExternalStore } from "react";
 import { useAuth } from "@/lib/auth";
@@ -8,6 +7,7 @@ import { uploadProfilePhoto } from "@/lib/profilePhoto";
 import { isBluetoothAvailable } from "@/lib/sensors/bluetooth";
 import { engine, useStudyLoop } from "@/lib/useStudyLoop";
 import { Avatar } from "../ui/Avatar";
+import { BandSpec } from "../ui/BandSpec";
 import { Icon } from "../ui/Icon";
 
 const noopSubscribe = () => () => {};
@@ -77,18 +77,21 @@ export function ProfileView() {
             </p>
           )}
         </div>
+        <div className="profile__render">
+          <BandSpec live={r.connection === "connected"} />
+        </div>
       </section>
 
       <section className="profile__band">
-        <div className="profile__render" aria-hidden>
-          <Image src="/media/studyloop-band.png" alt="" fill sizes="320px" className="profile__img" />
-        </div>
         <div className="profile__facts">
           <p className="eyebrow">
             <span className="eyebrow__rule" aria-hidden />
             Your band
           </p>
-          <h2 className="h-section">{r.deviceName ?? "StudyLoop SL-01"}</h2>
+          <h2 className="h-section">
+            {r.deviceName ?? "StudyLoop SL-01"}
+            {s.providerKind === "mock" && r.connection !== "disconnected" && <span className="chip chip--outline">Simulated</span>}
+          </h2>
           <dl className="spec-list">
             <div>
               <dt>Link</dt>
@@ -115,14 +118,22 @@ export function ProfileView() {
             </div>
           </dl>
           <div className="btn-row">
-            <button type="button" className="btn btn--solid btn--sm" onClick={engine.toggleConnection} disabled={!bt && r.connection === "disconnected"}>
-              <Icon name={r.connection === "disconnected" ? "bluetooth" : "unlink"} size={16} />
+            <button
+              type="button"
+              className="btn btn--solid btn--sm"
+              onClick={engine.toggleConnection}
+              title="Testing build: connects a simulated SL-01 with live heart rate and EDA"
+            >
+              <Icon name={r.connection === "disconnected" ? "band" : "unlink"} size={16} />
               {r.connection === "disconnected" ? "Pair your band" : "Disconnect"}
             </button>
+            {bt && r.connection === "disconnected" && (
+              <button type="button" className="btn btn--ghost btn--sm" onClick={() => void engine.connectBluetooth()}>
+                <Icon name="bluetooth" size={16} />
+                Use a real band
+              </button>
+            )}
           </div>
-          {!bt && (
-            <p className="small muted">Pairing works in Chrome or Edge on desktop and Android. Open StudyLoop there to connect your band.</p>
-          )}
           {s.providerError && (
             <p className="small notice notice--inline" role="alert">
               <Icon name="alert" size={14} /> {s.providerError}
@@ -134,7 +145,7 @@ export function ProfileView() {
       <section className="profile__settings">
         <div className="toggles">
           <Toggle label="Quiet mode" hint="Dims everything except the timer and state." on={s.quiet} onChange={engine.toggleQuiet} />
-          <Toggle label="Research layer" hint="Shows experimental context in coral." on={s.research} onChange={engine.toggleResearch} />
+          <Toggle label="Research layer" hint="Shows experimental context in orange." on={s.research} onChange={engine.toggleResearch} />
         </div>
       </section>
     </div>

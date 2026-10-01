@@ -30,13 +30,12 @@ export function PlayerCard() {
   const total = config.minutes * 60_000;
   const progress = phase === "complete" ? 1 : Math.min(1, elapsedMs / total);
   const running = phase === "active";
-  const canStart = s.reading.connection === "connected";
 
   const primary = () => {
     if (phase === "idle" || phase === "complete") {
       if (phase === "complete") engine.newSession();
       engine.setTab("session");
-      if (canStart) engine.beginSession();
+      engine.beginSession();
     } else engine.togglePause();
   };
   const primaryLabel =
@@ -50,7 +49,7 @@ export function PlayerCard() {
             state={running ? "working" : phase === "baseline" ? "connecting" : "breathing"}
             size={32}
             theme="dark"
-            color="#5FD9CB"
+            color="#E5FF8A"
             speed={running ? 0.8 : 0.4}
           />
         </span>
@@ -77,7 +76,7 @@ export function PlayerCard() {
             className="play-btn"
             aria-label={primaryLabel}
             onClick={primary}
-            disabled={phase === "baseline" || (!canStart && (phase === "idle" || phase === "complete"))}
+            disabled={phase === "baseline"}
             whileTap={{ scale: 0.94 }}
             data-running={running || undefined}
           >
@@ -153,7 +152,7 @@ export function TrendCard() {
   );
 }
 
-/** Right vertical card — the research layer, always coral, always labelled experimental. */
+/** Right vertical card — the research layer, always blaze, always labelled experimental. */
 export function ResearchCard() {
   const s = useStudyLoop();
   return (
@@ -172,7 +171,7 @@ export function ResearchCard() {
           </svg>
         </div>
         <span className="research-card__orb">
-          <ThinkingOrb state="weaving" size={32} theme="dark" color="#FF6B5A" speed={s.research ? 1 : 0.35} />
+          <ThinkingOrb state="weaving" size={32} theme="dark" color="#FF5A1F" speed={s.research ? 1 : 0.35} />
         </span>
         <span className="research-card__hz">
           40<small>Hz</small>

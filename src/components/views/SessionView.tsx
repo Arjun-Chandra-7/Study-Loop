@@ -306,7 +306,7 @@ export function SessionFoot() {
             ? "Band ready · keep your wrist still for the baseline"
             : s.reading.connection === "connecting"
               ? "Pairing with your band…"
-              : "Your band isn’t connected"}
+              : "No band — you can still run a timed session"}
         </p>
         {s.reading.connection === "disconnected" && (
           <button type="button" className="btn btn--ghost" onClick={engine.connect}>
@@ -315,8 +315,8 @@ export function SessionFoot() {
           </button>
         )}
         <Magnetic>
-          <button type="button" className="btn btn--primary" disabled={!ready} onClick={engine.beginSession}>
-            Begin baseline
+          <button type="button" className="btn btn--primary" disabled={s.reading.connection === "connecting"} onClick={engine.beginSession}>
+            {ready ? "Begin baseline" : "Start without band"}
             <Icon name="arrow" size={16} />
           </button>
         </Magnetic>

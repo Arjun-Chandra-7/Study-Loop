@@ -32,7 +32,7 @@ function MetricCard({
             state={orb}
             size={20}
             theme="dark"
-            color={offline ? "#8A9695" : chipTone === "action" ? "#FF6B5A" : "#5FD9CB"}
+            color={offline ? "#8B8B86" : chipTone === "action" ? "#FF5A1F" : "#E5FF8A"}
             speed={offline ? 0.3 : 0.8}
             paused={offline}
           />
