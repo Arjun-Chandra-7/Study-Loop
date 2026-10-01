@@ -7,6 +7,7 @@ import { useIntroDone } from "@/lib/intro";
 import { useEngineLifecycle, useStudyLoop } from "@/lib/useStudyLoop";
 import { HomeFoot, HomeView } from "../views/HomeView";
 import { InsightsFoot, InsightsView } from "../views/InsightsView";
+import { MusicFoot, MusicView } from "../views/MusicView";
 import { ProfileFoot, ProfileView } from "../views/ProfileView";
 import { ResearchFoot, ResearchView } from "../views/ResearchView";
 import { SessionFoot, SessionView } from "../views/SessionView";
@@ -36,6 +37,7 @@ const FOOTS: Record<Tab, () => React.ReactNode> = {
   session: SessionFoot,
   insights: InsightsFoot,
   research: ResearchFoot,
+  music: MusicFoot,
   profile: ProfileFoot,
 };
 
@@ -104,6 +106,7 @@ export function Cockpit() {
                 {s.tab === "session" && <SessionView />}
                 {s.tab === "insights" && <InsightsView />}
                 {s.tab === "research" && <ResearchView />}
+                {s.tab === "music" && <MusicView />}
                 {s.tab === "profile" && <ProfileView />}
               </motion.div>
             </AnimatePresence>

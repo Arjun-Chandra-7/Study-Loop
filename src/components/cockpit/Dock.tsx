@@ -20,6 +20,7 @@ const ITEMS: { id: Tab; label: string; icon: IconName }[] = [
   { id: "session", label: "Session", icon: "session" },
   { id: "insights", label: "Insights", icon: "insights" },
   { id: "research", label: "Research", icon: "research" },
+  { id: "music", label: "Music", icon: "music" },
   { id: "profile", label: "Profile", icon: "user" },
 ];
 

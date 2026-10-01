@@ -1,0 +1,15 @@
+# StudyLoop music worker. Install PyTorch first for your hardware (https://pytorch.org/get-started/locally/),
+# then:  pip install -r requirements.txt
+#
+# Demucs 4.0.1 pins torchaudio<2.1 on PyPI, which no longer installs on current Python/PyTorch, so it is
+# installed with --no-deps alongside the packages it actually imports:
+#   pip install --no-deps demucs==4.0.1 openunmix==1.3.0
+# torchaudio is imported (not used for I/O — FFmpeg handles that); the last release, 2.11, imports fine
+# against torch 2.11–2.13. Use the wheel matching your CUDA/CPU build, e.g.
+#   pip install --no-deps "torchaudio==2.11.0" --index-url https://download.pytorch.org/whl/cpu
+numpy>=1.26
+pyyaml>=6
+tqdm>=4.66
+einops>=0.7
+julius>=0.2.7
+dora-search>=0.1.12

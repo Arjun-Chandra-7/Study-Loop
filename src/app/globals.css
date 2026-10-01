@@ -1890,6 +1890,7 @@ p {
 .complete,
 .insights,
 .research,
+.music,
 .profile,
 .empty {
   position: absolute;
@@ -2710,6 +2711,7 @@ p {
   .complete,
   .insights,
   .research,
+  .music,
   .profile,
   .empty,
   .hero {
@@ -4721,5 +4723,396 @@ html.lenis body {
 @media (prefers-reduced-motion: reduce) {
   .intro__word .c {
     transform: none;
+  }
+}
+
+/* ═════════════════════════════════════════════════════════════
+   MUSIC — study versions of your own tracks
+   ═════════════════════════════════════════════════════════════ */
+
+.music {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(280px, 1fr);
+  gap: var(--s-6);
+  padding-top: 56px;
+}
+.music__lib {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  min-height: 0;
+}
+.music__head .h-section {
+  margin-top: var(--s-2);
+  font-size: var(--fs-title);
+}
+.music__list {
+  flex: 1;
+  min-height: 0;
+  margin: 0;
+  padding: 0 var(--s-1) var(--s-2) 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-3) transparent;
+}
+
+/* Import */
+.music-import {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+.music-import__row {
+  display: flex;
+  gap: var(--s-2);
+}
+.music-import__row .input {
+  flex: 1;
+  min-width: 0;
+}
+.music-import__toggle {
+  padding: 0 var(--s-4);
+}
+.music-import__note {
+  display: flex;
+  align-items: center;
+  gap: var(--s-1);
+  color: var(--text-2);
+}
+.music-import__note:empty {
+  display: none;
+}
+.is-error {
+  color: var(--coral-300);
+}
+
+.music-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--s-2);
+  padding: var(--s-5);
+  border-radius: var(--r-card);
+  box-shadow: inset 0 0 0 1px var(--line-1);
+  color: var(--text-2);
+  max-width: 460px;
+}
+
+/* Track row */
+.mtrack {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr) auto;
+  grid-template-areas:
+    "art meta actions"
+    "art status status";
+  align-items: center;
+  column-gap: var(--s-3);
+  row-gap: var(--s-1);
+  padding: var(--s-3);
+  border-radius: var(--r-tile);
+  background: var(--surface-1);
+  box-shadow: inset 0 0 0 1px var(--line-1), var(--highlight);
+  transition: box-shadow var(--dur-2) var(--ease-out);
+}
+.mtrack[data-playing] {
+  box-shadow: inset 0 0 0 1px rgba(244, 241, 234, 0.4), var(--highlight);
+}
+.mtrack__art {
+  grid-area: art;
+  align-self: start;
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border-radius: var(--r-chip);
+  background: var(--surface-3);
+  color: var(--text-3);
+}
+.mtrack__art img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.mtrack__meta {
+  grid-area: meta;
+  min-width: 0;
+}
+.mtrack__meta .card__title {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mtrack__spotify {
+  color: var(--text-2);
+  text-decoration: underline;
+  text-decoration-color: var(--line-3);
+  text-underline-offset: 2px;
+}
+.mtrack__spotify:hover {
+  color: var(--text-1);
+}
+.mtrack__status {
+  grid-area: status;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.mtrack__state {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: var(--fs-small);
+  color: var(--text-2);
+}
+.mtrack__pct {
+  margin-left: auto;
+  color: var(--text-1);
+}
+.state-word--processing,
+.state-word--finalizing,
+.state-word--uploading {
+  color: var(--text-1);
+}
+.state-word--completed {
+  color: var(--measured);
+}
+.state-word--failed {
+  color: var(--coral-300);
+}
+.mtrack__bar {
+  overflow: hidden;
+}
+.mtrack__detail {
+  margin: 0;
+}
+.mtrack__actions {
+  grid-area: actions;
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+}
+.mtrack__play {
+  width: 36px;
+  height: 36px;
+}
+
+/* State-based activity when there's no number to show: a sweep, never a made-up percentage. */
+.progress--indeterminate .progress__fill {
+  width: 30%;
+  animation: music-sweep 1.4s var(--ease-in-out) infinite;
+}
+@keyframes music-sweep {
+  from {
+    translate: -100% 0;
+  }
+  to {
+    translate: 340% 0;
+  }
+}
+
+/* Now playing */
+.music-player {
+  height: auto;
+  align-self: start;
+  max-height: 100%;
+  overflow-y: auto;
+  scrollbar-width: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+}
+.music-player--empty {
+  gap: var(--s-2);
+}
+.music-player__name {
+  margin: 0;
+  font-size: var(--fs-title);
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+}
+.music-player__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-4);
+}
+.music-player__title {
+  min-width: 0;
+}
+.music-player__name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mode-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--s-2);
+}
+.mode-grid__label,
+.mode-grid__hint {
+  grid-column: 1 / -1;
+}
+.mode {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  height: 40px;
+  padding: 0 var(--s-3);
+  border-radius: var(--r-tile);
+  text-align: left;
+  color: var(--text-2);
+  box-shadow: inset 0 0 0 1px var(--line-2);
+  transition:
+    color var(--dur-2),
+    background var(--dur-2),
+    box-shadow var(--dur-2),
+    transform var(--dur-1);
+}
+.mode:hover:not(:disabled) {
+  color: var(--text-1);
+  box-shadow: inset 0 0 0 1px var(--line-3);
+}
+.mode:active:not(:disabled) {
+  transform: scale(0.98);
+}
+.mode:disabled {
+  opacity: var(--o-disabled);
+}
+/* Selected is state: ivory ring + filled dot, the same language as .choice. */
+.mode[aria-checked="true"] {
+  background: rgba(244, 241, 234, 0.1);
+  color: var(--text-1);
+  box-shadow: inset 0 0 0 1px rgba(244, 241, 234, 0.5);
+}
+.mode__dot {
+  flex: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1.5px currentColor;
+}
+.mode[aria-checked="true"] .mode__dot {
+  background: var(--ivory);
+  box-shadow: inset 0 0 0 1.5px var(--ivory), 0 0 0 3px rgba(244, 241, 234, 0.12);
+}
+.mode__name {
+  font-size: var(--fs-small);
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.music-player__transport {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+}
+.music-player__seek {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+}
+
+/* Scrubber: a thin track with a teal fill up to the playhead. */
+.scrub {
+  -webkit-appearance: none;
+  appearance: none;
+  flex: 1;
+  min-width: 0;
+  height: 20px;
+  background: transparent;
+  cursor: pointer;
+}
+.scrub:disabled {
+  cursor: default;
+  opacity: var(--o-disabled);
+}
+.scrub::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--measured) var(--pct, 0%), var(--line-2) var(--pct, 0%));
+}
+.scrub::-moz-range-track {
+  height: 4px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--measured) var(--pct, 0%), var(--line-2) var(--pct, 0%));
+}
+.scrub::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  margin-top: -5px;
+  border-radius: 50%;
+  background: var(--ivory);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+}
+.scrub::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--ivory);
+}
+
+@media (max-width: 1023px) {
+  .music {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--s-5);
+  }
+  .music__list {
+    overflow: visible;
+    padding-right: 0;
+  }
+  .music-player {
+    max-height: none;
+    overflow: visible;
+  }
+  /* Once something is loaded, the controls come first. */
+  .music[data-has-track] .music-player {
+    order: -1;
+  }
+}
+
+@media (max-width: 759px) {
+  .music {
+    padding-top: var(--s-2);
+  }
+  .mtrack {
+    grid-template-columns: 48px minmax(0, 1fr);
+    grid-template-areas:
+      "art meta"
+      "status status"
+      "actions actions";
+  }
+  .mtrack__actions {
+    flex-wrap: wrap;
+  }
+  .music-import__row {
+    flex-wrap: wrap;
+  }
+  .music-import__row .input {
+    flex-basis: 100%;
+  }
+  .music-import__row .btn {
+    flex: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .progress--indeterminate .progress__fill {
+    animation: none;
+    width: 100%;
+    opacity: 0.5;
   }
 }

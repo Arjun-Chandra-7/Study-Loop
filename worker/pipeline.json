@@ -1,0 +1,15 @@
+{
+  "//": "Processing identity shared by the Next.js API (cache keys) and the worker (what it runs). Changing anything here produces new cache keys, so existing tracks are re-processed on request.",
+  "pipelineVersion": 1,
+  "model": "htdemucs",
+  "modelVersion": "demucs-4.0.1:955717e8",
+  "modelSignatures": ["955717e8"],
+  "params": {
+    "shifts": 1,
+    "overlap": 0.25,
+    "sampleRate": 44100,
+    "channels": 2,
+    "codec": "aac",
+    "bitrate": "192k"
+  }
+}

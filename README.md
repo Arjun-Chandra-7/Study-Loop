@@ -32,6 +32,21 @@ To swap in real hardware, switch **Profile → Data source → Bluetooth band**;
 The **simulator** (sliders icon in the top capsule) drives the mock through normal / elevated / recovery /
 poor signal / low battery / disconnected.
 
+## Music for study
+
+The **Music** tab imports Spotify playlist metadata, takes audio the user supplies, separates it with Demucs in a
+background Python worker, and plays it as **Original / No Lyrics / Vocals Only / Beats Only**. It needs FFmpeg and
+the worker running alongside the app:
+
+```bash
+npm run dev            # app + API
+npm run music:worker   # separation worker (setup: docs/MUSIC.md)
+npm test               # app/API tests
+```
+
+Architecture, setup, environment variables, measured performance and known limitations:
+[`docs/MUSIC.md`](docs/MUSIC.md).
+
 ## Fonts
 
 - **Satoshi** loads from Fontshare.

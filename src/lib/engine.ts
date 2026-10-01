@@ -10,7 +10,7 @@ import { MockSensorProvider } from "./sensors/mock";
 import type { MockScenario, SensorProvider, SensorReading } from "./sensors/types";
 import { EMPTY_READING } from "./sensors/types";
 
-export type Tab = "home" | "session" | "insights" | "research" | "profile";
+export type Tab = "home" | "session" | "insights" | "research" | "music" | "profile";
 export type SessionPhase = "idle" | "baseline" | "active" | "paused" | "complete";
 export type StudyMode = "Deep work" | "Review" | "Practice";
 

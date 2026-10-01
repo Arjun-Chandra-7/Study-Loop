@@ -93,6 +93,14 @@ const PATHS = {
   link: <path d="M9.5 14.5 14.5 9.5M8 12l-2 2a3 3 0 0 0 4.2 4.2l2-2M16 12l2-2A3 3 0 0 0 13.8 5.8l-2 2" />,
   unlink: <path d="M8 12l-2 2a3 3 0 0 0 4.2 4.2l2-2M16 12l2-2A3 3 0 0 0 13.8 5.8l-2 2M4 4l16 16" />,
   close: <path d="M6 6l12 12M18 6 6 18" />,
+  music: (
+    <>
+      <path d="M9 17.5V6.5l10-2v11" />
+      <circle cx="6.5" cy="17.5" r="2.5" />
+      <circle cx="16.5" cy="15.5" r="2.5" />
+    </>
+  ),
+  upload: <path d="M12 16V5M7.5 9.5 12 5l4.5 4.5M5 15v3.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V15" />,
   recover: <path d="M4 8c3 0 3 8 6 8s3-5 5-5 3 2 5 2" />,
   rise: <path d="M4 18c4 0 5-4 8-8s4-5 8-5M16 5h4v4" />,
 } as const;

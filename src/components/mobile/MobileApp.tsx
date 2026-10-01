@@ -18,6 +18,7 @@ import { Icon } from "../ui/Icon";
 import { Logo } from "../ui/Logo";
 import { StateBadge } from "../ui/StateBadge";
 import { InsightsFoot, InsightsView } from "../views/InsightsView";
+import { MusicFoot, MusicView } from "../views/MusicView";
 import { ProfileFoot, ProfileView } from "../views/ProfileView";
 import { ResearchFoot, ResearchView } from "../views/ResearchView";
 import { SessionFoot, SessionView } from "../views/SessionView";
@@ -244,6 +245,7 @@ function Sheet() {
     session: [<SessionView key="v" />, <SessionFoot key="f" />],
     insights: [<InsightsView key="v" />, <InsightsFoot key="f" />],
     research: [<ResearchView key="v" />, <ResearchFoot key="f" />],
+    music: [<MusicView key="v" />, <MusicFoot key="f" />],
     profile: [<ProfileView key="v" />, <ProfileFoot key="f" />],
   };
   const live = session.phase === "active" || session.phase === "baseline";
