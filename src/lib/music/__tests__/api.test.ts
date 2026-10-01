@@ -13,7 +13,7 @@ import { setTestVerifier } from "../server/auth";
 import { closeDb, newId, q } from "../server/db";
 import { signFile } from "../server/files";
 import { route } from "../server/http";
-import { resetSpotifyToken } from "../server/spotify";
+import { parseSpotifyUrl, resetSpotifyToken } from "../server/spotify";
 import type { JobView, TrackView, VersionsView } from "../types";
 import { ctx, fixtures, fixturesDir, makeAudio, req, testVerifier } from "./helpers";
 
@@ -360,6 +360,16 @@ describe("Spotify import", () => {
       expect((await res.json()).error.code).toBe("invalid_spotify_link");
     },
   );
+
+  it.each([
+    ["https://open.spotify.com/playlist/3otkFuN9NnmLTHUgX8qe2z?si=4aedb68e77884c50", "playlist", "3otkFuN9NnmLTHUgX8qe2z"],
+    ["  https://open.spotify.com/intl-de/playlist/3otkFuN9NnmLTHUgX8qe2z?si=x  ", "playlist", "3otkFuN9NnmLTHUgX8qe2z"],
+    ["spotify:playlist:3otkFuN9NnmLTHUgX8qe2z", "playlist", "3otkFuN9NnmLTHUgX8qe2z"],
+    ["https://open.spotify.com/album/4aawyAB9vmqN3uQ7FjRGTy?si=1", "album", "4aawyAB9vmqN3uQ7FjRGTy"],
+    ["https://open.spotify.com/track/11dFghVXANMlKmJXsNCbNl", "track", "11dFghVXANMlKmJXsNCbNl"],
+  ])("understands share links like %s", (url, kind, id) => {
+    expect(parseSpotifyUrl(url)).toEqual({ kind, id });
+  });
 
   it("explains private or unknown playlists", async () => {
     mockSpotify();
