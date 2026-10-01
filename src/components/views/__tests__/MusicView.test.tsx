@@ -8,6 +8,7 @@ const api = vi.hoisted(() => ({
   tracks: vi.fn(),
   addTrack: vi.fn(),
   importSpotify: vi.fn(),
+  spotifyConfig: vi.fn(),
   process: vi.fn(),
   job: vi.fn(),
   versions: vi.fn(),
@@ -171,6 +172,17 @@ describe("MusicView", () => {
     await userEvent.click(screen.getByRole("button", { name: "Import" }));
     expect(await screen.findByText("Added 2 tracks from Deep Focus.")).toBeTruthy();
     expect(screen.getByText("Nuvole Bianche")).toBeTruthy();
+  });
+
+  it("offers Connect Spotify when a playlist needs it", async () => {
+    api.tracks.mockResolvedValue([]);
+    api.importSpotify.mockRejectedValue(new MusicApiError(409, "spotify_login_required", "Connect Spotify to import “💏”."));
+    render(<MusicView />);
+    await screen.findByText(/Nothing here yet/);
+    await userEvent.type(screen.getByLabelText(/Spotify playlist, album or track link/), "https://open.spotify.com/playlist/3otkFuN9NnmLTHUgX8qe2z?si=4aedb68e77884c50");
+    await userEvent.click(screen.getByRole("button", { name: "Import" }));
+    expect(await screen.findByText("Connect Spotify to import “💏”.")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Connect Spotify" })).toBeTruthy();
   });
 
   it("adds a track by name when it isn't on Spotify", async () => {

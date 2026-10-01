@@ -4846,6 +4846,22 @@ html.lenis body {
 .music-import__note:empty {
   display: none;
 }
+.music-import__connect {
+  align-self: flex-start;
+}
+.spotify-callback {
+  min-height: 100svh;
+  display: grid;
+  place-items: center;
+  padding: var(--s-5);
+  text-align: center;
+}
+.spotify-callback [role="alert"] {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s-4);
+}
 .is-error {
   color: var(--coral-300);
 }

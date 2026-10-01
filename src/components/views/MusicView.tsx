@@ -1,9 +1,11 @@
 "use client";
 
-import { useId, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
+import { useEffect, useId, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import { clock } from "@/lib/format";
 import { MusicApiError } from "@/lib/music/client";
+import { musicApi } from "@/lib/music/client";
 import { player, usePlayer } from "@/lib/music/player";
+import { startSpotifyLogin, takePendingImport } from "@/lib/music/spotifyAuth";
 import { trackStatus } from "@/lib/music/status";
 import { STUDY_MODES, type TrackView } from "@/lib/music/types";
 import { useMusicLibrary } from "@/lib/music/useMusicLibrary";
@@ -69,32 +71,60 @@ export function MusicView() {
 function ImportBar({ lib }: { lib: Library }) {
   const [url, setUrl] = useState("");
   const [busy, setBusy] = useState(false);
-  const [note, setNote] = useState<{ ok: boolean; text: string } | null>(null);
+  const [note, setNote] = useState<{ ok: boolean; text: string; connect?: boolean } | null>(null);
   const [manual, setManual] = useState(false);
   const [title, setTitle] = useState("");
   const [artist, setArtist] = useState("");
   const id = useId();
 
-  const run = async (e: FormEvent, fn: () => Promise<string>) => {
-    e.preventDefault();
+  const run = async (e: FormEvent | null, fn: () => Promise<string>) => {
+    e?.preventDefault();
     setBusy(true);
     setNote(null);
     try {
       setNote({ ok: true, text: await fn() });
     } catch (err) {
-      setNote({ ok: false, text: err instanceof MusicApiError ? err.message : "Something went wrong. Try again." });
+      const apiErr = err instanceof MusicApiError ? err : null;
+      setNote({
+        ok: false,
+        text: apiErr?.message ?? "Something went wrong. Try again.",
+        connect: apiErr?.code === "spotify_login_required",
+      });
     } finally {
       setBusy(false);
     }
   };
 
-  const doImport = (e: FormEvent) =>
+  const importLink = (link: string, e: FormEvent | null = null) =>
     run(e, async () => {
-      const r = await lib.importSpotify(url);
+      const r = await lib.importSpotify(link);
       setUrl("");
       const from = r.playlistName ? ` from ${r.playlistName}` : "";
       return r.added ? `Added ${r.added} track${r.added === 1 ? "" : "s"}${from}.` : `Those tracks are already in your music.`;
     });
+
+  const doImport = (e: FormEvent) => importLink(url, e);
+
+  // Back from "Connect Spotify": finish the import that asked for it.
+  useEffect(() => {
+    const pending = takePendingImport(); // read-and-clear, so this runs once per return
+    if (!pending) return;
+    void Promise.resolve().then(() => {
+      setUrl(pending);
+      return importLink(pending);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once on mount; importLink is recreated every render
+  }, []);
+
+  const connectSpotify = async () => {
+    try {
+      const { clientId } = await musicApi.spotifyConfig();
+      if (!clientId) throw new Error();
+      await startSpotifyLogin(clientId, url.trim() || null);
+    } catch {
+      setNote({ ok: false, text: "Spotify isn't set up on this server yet." });
+    }
+  };
 
   const doAdd = (e: FormEvent) =>
     run(e, async () => {
@@ -154,6 +184,11 @@ function ImportBar({ lib }: { lib: Library }) {
         {note && !note.ok && <Icon name="alert" size={14} />}
         {note?.text}
       </p>
+      {note?.connect && (
+        <button type="button" className="btn btn--sm btn--primary music-import__connect" onClick={() => void connectSpotify()}>
+          Connect Spotify
+        </button>
+      )}
     </div>
   );
 }

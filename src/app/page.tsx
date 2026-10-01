@@ -8,6 +8,7 @@ import { ProductStory } from "@/components/landing/ProductStory";
 import { Intro } from "@/components/intro/Intro";
 import { MobileApp } from "@/components/mobile/MobileApp";
 import { MotionPrefs } from "@/components/motion/MotionPrefs";
+import { MusicReturn } from "@/components/music/MusicReturn";
 import { ScrollFX } from "@/components/motion/ScrollFX";
 import { SmoothScroll } from "@/components/motion/SmoothScroll";
 
@@ -15,6 +16,7 @@ export default function Home() {
   return (
     <AuthGate>
       <MotionPrefs>
+        <MusicReturn />
         <SmoothScroll />
         <Intro />
         <a className="skip" href="#cockpit">

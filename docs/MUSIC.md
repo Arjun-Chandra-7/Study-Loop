@@ -119,7 +119,7 @@ last release) imports fine against torch 2.13.
 ## Tests
 
 ```bash
-npm test                                   # API, player, Music view (70 tests, ~6 s)
+npm test                                   # API, player, Music view (75 tests, ~6 s)
 npm run music:test-worker                  # worker pipeline with real FFmpeg + stand-in separator (12 tests)
 MUSIC_TEST_DEMUCS=1 npm run music:test-worker          # + real Demucs on a synthetic mix with known parts
 MUSIC_TEST_WORKER=1 npx vitest run worker.integration  # API → queue → real worker → playback links
@@ -179,7 +179,17 @@ Known limitations (normal for source separation; no output was listened to by a 
   Without it, every Web API call returns 403 "Active premium subscription required for the owner of the
   app" (verified 1 Oct 2026 with real credentials), and the app shows "Spotify import is unavailable right
   now". After subscribing, Spotify says it can take a few hours before requests are allowed.
-- Import uses Spotify's Web API with the **client-credentials** flow, so only public playlists, albums and
+- **Playlists need "Connect Spotify".** Verified live (1 Oct 2026): with app-only credentials Spotify
+  returns a playlist's name but refuses its songs ("Valid user authentication required"). So playlist
+  import asks the listener to connect Spotify once (Authorization Code + PKCE in the browser, scopes
+  `playlist-read-private playlist-read-collaborative`, token kept in sessionStorage and sent only with the
+  import request, never stored server-side). Albums and single tracks import without connecting.
+  Register these redirect URIs in the Spotify dashboard (Spotify rejects `localhost`, so use 127.0.0.1
+  locally and add 127.0.0.1 to Firebase's authorised domains):
+  `https://study-loop-alpha.vercel.app/music/spotify-callback` and
+  `http://127.0.0.1:3000/music/spotify-callback`. While the Spotify app is in Development mode, only
+  Spotify accounts added under **User Management** in the dashboard can connect.
+- Import uses Spotify's Web API with the **client-credentials** flow for albums/tracks, so only public playlists, albums and
   tracks are readable. Up to 100 tracks per import. Local files and podcast episodes are skipped. Spotify has
   restricted some endpoints for new/dev-mode apps; if playlist reads are refused the user sees "Spotify
   couldn't share that link". The live check is opt-in:

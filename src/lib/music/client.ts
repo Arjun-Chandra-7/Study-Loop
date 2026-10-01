@@ -41,10 +41,11 @@ export const musicApi = {
   tracks: () => call<{ tracks: TrackView[] }>("/api/music/tracks").then((r) => r.tracks),
   addTrack: (title: string, artist: string) =>
     call<{ track: TrackView }>("/api/music/tracks", { method: "POST", body: JSON.stringify({ title, artist }) }).then((r) => r.track),
-  importSpotify: (url: string) =>
+  spotifyConfig: () => call<{ clientId: string | null }>("/api/music/spotify/config"),
+  importSpotify: (url: string, spotifyToken?: string | null) =>
     call<{ added: number; total: number; playlistName: string | null; tracks: TrackView[] }>("/api/music/import", {
       method: "POST",
-      body: JSON.stringify({ url }),
+      body: JSON.stringify({ url, ...(spotifyToken ? { spotifyToken } : {}) }),
     }),
   process: (trackId: string) => call<{ job: JobView }>(`/api/music/tracks/${trackId}/process`, { method: "POST" }).then((r) => r.job),
   job: (jobId: string) => call<{ job: JobView }>(`/api/music/jobs/${jobId}`).then((r) => r.job),

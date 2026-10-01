@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { MusicApiError, musicApi } from "./client";
 import { player } from "./player";
+import { spotifyToken } from "./spotifyAuth";
 import type { JobView, StudyMode, TrackView } from "./types";
 
 const POLL_MS = 1500;
@@ -84,7 +85,7 @@ export function useMusicLibrary(api = musicApi) {
   }, [activeJobs, api]);
 
   const importSpotify = async (url: string) => {
-    const r = await api.importSpotify(url);
+    const r = await api.importSpotify(url, await spotifyToken());
     setTracks(r.tracks);
     return r;
   };

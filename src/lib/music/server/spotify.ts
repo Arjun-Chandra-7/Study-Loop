@@ -68,11 +68,15 @@ async function accessToken(): Promise<string> {
   return token.value;
 }
 
-async function get<T>(url: string): Promise<T> {
+/** `userToken`: the listener's own Spotify token (needed for playlist contents). */
+async function get<T>(url: string, userToken?: string): Promise<T> {
   const res = await fetch(url.startsWith("http") ? url : `${API}${url}`, {
-    headers: { Authorization: `Bearer ${await accessToken()}` },
+    headers: { Authorization: `Bearer ${userToken ?? (await accessToken())}` },
     cache: "no-store",
   });
+  if (userToken && res.status === 401) {
+    throw new ApiError(409, "spotify_login_required", "Your Spotify connection expired. Connect Spotify again to import this playlist.");
+  }
   if (res.status === 403) {
     // Spotify refuses developer-mode apps whose owner lacks Premium, for every endpoint.
     const reason = await res.text().catch(() => "");
@@ -121,7 +125,21 @@ function mapTrack(t: SpTrack, album?: SpTrack["album"]): ImportedTrack | null {
   };
 }
 
-export async function fetchSpotify(ref: SpotifyRef): Promise<{ name: string | null; tracks: ImportedTrack[] }> {
+async function readPlaylistPages(first: string, userToken: string, tracks: ImportedTrack[]) {
+  let next: string | null = first;
+  while (next && tracks.length < MAX_TRACKS) {
+    // Newer responses call the entry `item`, older ones `track`.
+    const page: Page<{ item?: SpTrack | null; track?: SpTrack | null }> = await get(next, userToken);
+    for (const it of page.items) {
+      const t = it.item ?? it.track;
+      const m = t && mapTrack(t);
+      if (m) tracks.push(m);
+    }
+    next = page.next;
+  }
+}
+
+export async function fetchSpotify(ref: SpotifyRef, userToken?: string): Promise<{ name: string | null; tracks: ImportedTrack[] }> {
   if (ref.kind === "track") {
     const t = mapTrack(await get<SpTrack>(`/tracks/${ref.id}`));
     return { name: null, tracks: t ? [t] : [] };
@@ -140,14 +158,21 @@ export async function fetchSpotify(ref: SpotifyRef): Promise<{ name: string | nu
     return { name: al.name, tracks: tracks.slice(0, MAX_TRACKS) };
   }
   const pl = await get<{ name: string }>(`/playlists/${ref.id}?fields=name`);
-  let next: string | null = `/playlists/${ref.id}/tracks?limit=50&additional_types=track`;
-  while (next && tracks.length < MAX_TRACKS) {
-    const page: Page<{ track: SpTrack | null }> = await get(next);
-    for (const it of page.items) {
-      const m = it.track && mapTrack(it.track);
-      if (m) tracks.push(m);
-    }
-    next = page.next;
+  // Spotify only lists a playlist's songs to a signed-in Spotify user, not to an app on its own.
+  if (!userToken) {
+    throw new ApiError(409, "spotify_login_required", `Connect Spotify to import “${pl.name.slice(0, 80)}”. Spotify only shares a playlist's songs with a signed-in listener.`);
+  }
+  try {
+    await readPlaylistPages(`/playlists/${ref.id}/items?limit=50&additional_types=track`, userToken, tracks);
+  } catch (e) {
+    // Older API surface: same data under /tracks.
+    if (!(e instanceof ApiError) || e.code !== "spotify_not_found") throw e;
+    await readPlaylistPages(`/playlists/${ref.id}/tracks?limit=50&additional_types=track`, userToken, tracks).catch((e2) => {
+      if (e2 instanceof ApiError && e2.code === "spotify_not_found") {
+        throw new ApiError(403, "spotify_playlist_forbidden", "Spotify didn't let StudyLoop read this playlist's songs. Try a playlist you created, or import its albums or tracks.");
+      }
+      throw e2;
+    });
   }
   return { name: pl.name, tracks: tracks.slice(0, MAX_TRACKS) };
 }
@@ -155,4 +180,9 @@ export async function fetchSpotify(ref: SpotifyRef): Promise<{ name: string | nu
 /** Tests only. */
 export function resetSpotifyToken() {
   token = null;
+}
+
+/** Public Spotify app id, for the browser's PKCE login (the secret never leaves the server). */
+export function spotifyClientId(): string | null {
+  return musicConfig().spotify.clientId;
 }
