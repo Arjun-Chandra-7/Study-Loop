@@ -1,29 +1,30 @@
 import "server-only";
-import { execFile } from "node:child_process";
 import { createHash } from "node:crypto";
-import { createWriteStream, statfsSync } from "node:fs";
-import { mkdir, rename, rm } from "node:fs/promises";
 import path from "node:path";
-import { promisify } from "node:util";
 import { musicConfig } from "./config";
+import { newId } from "./db";
 import { ApiError } from "./http";
+import { signTicket, verifyTicket } from "./sign";
+import { getStorage } from "./storage";
 
-const run = promisify(execFile);
-
-/** What we accept. Every check below must agree on one of these. */
+/** What we accept. Extension, declared type and the file's own bytes must all agree on one of these. */
 export const FORMATS = {
-  mp3: { exts: [".mp3"], mimes: ["audio/mpeg", "audio/mp3", "audio/mpeg3", "audio/x-mpeg-3"], probe: "mp3", codecs: ["mp3"], mime: "audio/mpeg" },
-  wav: { exts: [".wav", ".wave"], mimes: ["audio/wav", "audio/x-wav", "audio/wave", "audio/vnd.wave"], probe: "wav", codecs: ["pcm_"], mime: "audio/wav" },
-  flac: { exts: [".flac"], mimes: ["audio/flac", "audio/x-flac"], probe: "flac", codecs: ["flac"], mime: "audio/flac" },
-  m4a: { exts: [".m4a"], mimes: ["audio/mp4", "audio/x-m4a", "audio/m4a"], probe: "m4a", codecs: ["aac", "alac"], mime: "audio/mp4" },
+  mp3: { exts: [".mp3"], mimes: ["audio/mpeg", "audio/mp3", "audio/mpeg3", "audio/x-mpeg-3"], mime: "audio/mpeg" },
+  wav: { exts: [".wav", ".wave"], mimes: ["audio/wav", "audio/x-wav", "audio/wave", "audio/vnd.wave"], mime: "audio/wav" },
+  flac: { exts: [".flac"], mimes: ["audio/flac", "audio/x-flac"], mime: "audio/flac" },
+  m4a: { exts: [".m4a"], mimes: ["audio/mp4", "audio/x-m4a", "audio/m4a"], mime: "audio/mp4" },
 } as const;
 export type Container = keyof typeof FORMATS;
 
 /** Browsers often send these for audio they don't recognise; the content checks still apply. */
 const GENERIC_MIMES = ["", "application/octet-stream"];
-export const ACCEPT_ATTR = Object.values(FORMATS).flatMap((f) => [...f.exts, ...f.mimes]).join(",");
-
 const HEAD_BYTES = 64 * 1024;
+const TICKET_TTL_S = 15 * 60;
+
+const unsupported = () =>
+  new ApiError(415, "unsupported_format", "That file type isn't supported. Use MP3, WAV, M4A or FLAC.");
+const tooLarge = (max: number) =>
+  new ApiError(413, "too_large", `That file is too large. The limit is ${Math.round(max / 1048576)} MB.`);
 
 export function formatFor(fileName: string, mime: string): Container {
   const ext = path.extname(path.basename(fileName)).toLowerCase();
@@ -48,136 +49,77 @@ export function sniff(head: Uint8Array): Container | "id3" | null {
   return null;
 }
 
-const unsupported = () =>
-  new ApiError(415, "unsupported_format", "That file type isn't supported. Use MP3, WAV, M4A or FLAC.");
-const corrupted = () =>
-  new ApiError(422, "corrupted_audio", "This file couldn't be read as audio. Try exporting it again.");
+interface UploadTicket {
+  uid: string;
+  trackId: string;
+  pathname: string;
+  container: Container;
+}
 
-function toolsMissing(e: unknown): never {
-  if ((e as { code?: string }).code === "ENOENT") {
-    throw new ApiError(503, "audio_tools_unavailable", "Audio processing isn't available on this server.");
+export interface UploadStart {
+  /** PUT the file here with `Content-Type: contentType`. */
+  uploadUrl: string;
+  contentType: string;
+  /** Hand back to finish the upload. */
+  ticket: string;
+}
+
+/** Step 1: check what the browser says it's sending and hand out a one-file upload URL. */
+export async function beginUpload(uid: string, trackId: string, file: { name?: unknown; type?: unknown; size?: unknown }): Promise<UploadStart> {
+  const { maxUploadBytes } = musicConfig();
+  if (typeof file.name !== "string" || typeof file.size !== "number" || !Number.isFinite(file.size)) {
+    throw new ApiError(400, "bad_request", "Choose an audio file to upload.");
   }
-  throw corrupted();
+  const container = formatFor(file.name, typeof file.type === "string" ? file.type : "");
+  if (file.size <= 0) throw new ApiError(400, "upload_failed", "That file is empty.");
+  if (file.size > maxUploadBytes) throw tooLarge(maxUploadBytes);
+  const pathname = `sources/${newId()}.${container}`;
+  const contentType = FORMATS[container].mime;
+  const uploadUrl = await getStorage().presignPut(pathname, { contentType, maxBytes: maxUploadBytes, ttlS: TICKET_TTL_S });
+  return { uploadUrl, contentType, ticket: signTicket<UploadTicket>({ uid, trackId, pathname, container }, TICKET_TTL_S) };
 }
 
 export interface ReceivedAudio {
-  tmpFile: string;
+  pathname: string;
   sha256: string;
   sizeBytes: number;
   container: Container;
   mime: string;
-  codec: string;
-  sampleRate: number;
-  channels: number;
-  durationS: number;
 }
 
-/** Stream the request body to a private temp file, enforcing the size cap while hashing. */
-async function receive(body: ReadableStream<Uint8Array>, tmpFile: string, maxBytes: number) {
-  const hash = createHash("sha256");
-  const out = createWriteStream(tmpFile, { flags: "wx", mode: 0o600 });
-  const head = new Uint8Array(HEAD_BYTES);
-  let size = 0;
-  let headLen = 0;
-  const reader = body.getReader();
-  try {
-    for (;;) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      size += value.byteLength;
-      if (size > maxBytes) {
-        await reader.cancel();
-        throw new ApiError(413, "too_large", `That file is too large. The limit is ${Math.round(maxBytes / 1048576)} MB.`);
-      }
-      if (headLen < HEAD_BYTES) {
-        const n = Math.min(HEAD_BYTES - headLen, value.byteLength);
-        head.set(value.subarray(0, n), headLen);
-        headLen += n;
-      }
-      hash.update(value);
-      if (!out.write(value)) await new Promise<void>((r) => out.once("drain", () => r()));
-    }
-    await new Promise<void>((resolve, reject) => out.end((err?: Error | null) => (err ? reject(err) : resolve())));
-  } catch (e) {
-    out.destroy();
-    if ((e as { code?: string }).code === "ENOSPC") {
-      throw new ApiError(507, "disk_full", "The server is out of space for uploads right now. Try again later.");
-    }
-    if (e instanceof ApiError) throw e;
-    throw new ApiError(400, "upload_failed", "The upload was interrupted. Try again.");
-  }
-  return { sha256: hash.digest("hex"), size, head: head.subarray(0, headLen) };
-}
-
-export async function receiveAudio(req: Request, fileName: string, declaredMime: string): Promise<ReceivedAudio> {
-  const cfg = musicConfig();
-  const container = formatFor(fileName, declaredMime);
-  const declared = Number(req.headers.get("content-length") ?? NaN);
-  if (declared > cfg.maxUploadBytes) {
-    throw new ApiError(413, "too_large", `That file is too large. The limit is ${Math.round(cfg.maxUploadBytes / 1048576)} MB.`);
-  }
-  if (!req.body) throw new ApiError(400, "upload_failed", "No audio was received.");
-
-  const tmpDir = path.join(cfg.dataDir, "tmp");
-  await mkdir(tmpDir, { recursive: true });
-  const fs = statfsSync(tmpDir);
-  if (fs.bavail * fs.bsize < (Number.isFinite(declared) ? declared : cfg.maxUploadBytes) + 256 * 1048576) {
-    throw new ApiError(507, "disk_full", "The server is out of space for uploads right now. Try again later.");
-  }
-  const tmpFile = path.join(tmpDir, `upload-${crypto.randomUUID()}.part`);
-  try {
-    const { sha256, size, head } = await receive(req.body, tmpFile, cfg.maxUploadBytes);
-    if (size === 0) throw new ApiError(400, "upload_failed", "No audio was received.");
-
-    const sniffed = sniff(head);
-    if (sniffed === null || (sniffed === "id3" ? !["mp3", "flac"].includes(container) : sniffed !== container)) {
-      throw unsupported();
-    }
-
-    // Decoder's view of the file must agree too.
-    let probe: { format?: { format_name?: string; duration?: string }; streams?: { codec_type?: string; codec_name?: string; sample_rate?: string; channels?: number }[] };
-    try {
-      const { stdout } = await run("ffprobe", ["-v", "error", "-print_format", "json", "-show_format", "-show_streams", tmpFile], { timeout: 30_000, maxBuffer: 4 * 1048576 });
-      probe = JSON.parse(stdout);
-    } catch (e) {
-      toolsMissing(e);
-    }
-    const stream = probe.streams?.find((s) => s.codec_type === "audio");
-    const formats = (probe.format?.format_name ?? "").split(",");
-    const spec = FORMATS[container];
-    if (!stream || !formats.includes(spec.probe)) throw corrupted();
-    if (!spec.codecs.some((c) => stream.codec_name?.startsWith(c))) throw unsupported();
-    const durationS = Number(probe.format?.duration);
-    if (!Number.isFinite(durationS) || durationS < 1) throw corrupted();
-    if (durationS > cfg.maxDurationS) {
-      throw new ApiError(413, "too_long", `That track is too long. The limit is ${Math.round(cfg.maxDurationS / 60)} minutes.`);
-    }
-    // Decode the whole audio stream once: proves it's playable, not just well-labelled.
-    try {
-      await run("ffmpeg", ["-nostdin", "-v", "error", "-xerror", "-i", tmpFile, "-map", "0:a:0", "-f", "null", "-"], { timeout: 120_000, maxBuffer: 1048576 });
-    } catch (e) {
-      toolsMissing(e);
-    }
-    return {
-      tmpFile, sha256, sizeBytes: size, container, mime: spec.mime, codec: stream.codec_name ?? "",
-      sampleRate: Number(stream.sample_rate ?? 0), channels: stream.channels ?? 0, durationS,
-    };
-  } catch (e) {
-    await rm(tmpFile, { force: true });
+/**
+ * Step 2: the file is in storage. Check it's really there, really this format (its own bytes, not
+ * the label), and fingerprint it. Full decoding happens in the worker, which has FFmpeg.
+ */
+export async function finishUpload(uid: string, trackId: string, ticket: unknown): Promise<ReceivedAudio> {
+  const t = verifyTicket<UploadTicket>(ticket);
+  if (t.uid !== uid || t.trackId !== trackId) throw new ApiError(400, "upload_expired", "That upload expired. Choose the file again.");
+  const storage = getStorage();
+  const { maxUploadBytes } = musicConfig();
+  const meta = await storage.head(t.pathname);
+  if (!meta) throw new ApiError(400, "upload_failed", "The upload didn't finish. Try again.");
+  const reject = async (e: ApiError) => {
+    await storage.remove(t.pathname);
     throw e;
-  }
-}
+  };
+  if (meta.size > maxUploadBytes) return reject(tooLarge(maxUploadBytes));
+  if (meta.size === 0) return reject(new ApiError(400, "upload_failed", "That file is empty."));
 
-/** Move a validated upload into persistent storage under a server-generated name. */
-export async function storeSource(tmpFile: string, sourceId: string, container: Container): Promise<string> {
-  const rel = path.join("sources", `${sourceId}.${container}`);
-  const dest = path.join(musicConfig().dataDir, rel);
-  try {
-    await mkdir(path.dirname(dest), { recursive: true });
-    await rename(tmpFile, dest);
-  } catch {
-    await rm(tmpFile, { force: true });
-    throw new ApiError(507, "storage_failed", "We couldn't save your audio. Try again later.");
+  const head = await storage.readRange(t.pathname, 0, Math.min(HEAD_BYTES, meta.size) - 1);
+  const sniffed = sniff(head);
+  if (sniffed === null || (sniffed === "id3" ? !["mp3", "flac"].includes(t.container) : sniffed !== t.container)) {
+    return reject(unsupported());
   }
-  return rel;
+
+  const hash = createHash("sha256");
+  const reader = (await storage.read(t.pathname)).getReader();
+  let size = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    size += value.byteLength;
+    hash.update(value);
+  }
+  if (size !== meta.size) return reject(new ApiError(400, "upload_failed", "The upload was interrupted. Try again."));
+  return { pathname: t.pathname, sha256: hash.digest("hex"), sizeBytes: size, container: t.container, mime: FORMATS[t.container].mime };
 }

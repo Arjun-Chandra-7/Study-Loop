@@ -11,6 +11,6 @@ type Ctx = { params: Promise<{ id: string }> };
 export const POST = route<Ctx>("tracks.process", async (req, { params }) => {
   const uid = await requireUser(req);
   const { id } = await params;
-  const { job, created } = requestProcessing(uid, id);
+  const { job, created } = await requestProcessing(uid, id);
   return Response.json({ job_id: job.id, status: job.status, job }, { status: created ? 202 : 200 });
 });

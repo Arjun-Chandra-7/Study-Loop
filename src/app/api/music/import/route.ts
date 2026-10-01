@@ -12,6 +12,6 @@ export const POST = route("music.import", async (req) => {
   const userToken = typeof spotifyToken === "string" && /^[A-Za-z0-9_-]{20,1000}$/.test(spotifyToken) ? spotifyToken : undefined;
   const { name, tracks } = await fetchSpotify(parseSpotifyUrl(url), userToken);
   if (!tracks.length) throw new ApiError(404, "spotify_empty", "That link has no tracks StudyLoop can import.");
-  const result = importTracks(uid, name, tracks);
-  return Response.json({ ...result, playlistName: name, tracks: listTracks(uid) });
+  const result = await importTracks(uid, name, tracks);
+  return Response.json({ ...result, playlistName: name, tracks: await listTracks(uid) });
 });

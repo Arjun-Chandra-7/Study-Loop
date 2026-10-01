@@ -10,7 +10,6 @@ from dataclasses import dataclass
 from pathlib import Path
 
 WORKER_DIR = Path(__file__).resolve().parent.parent
-REPO_DIR = WORKER_DIR.parent
 
 
 def load_pipeline() -> dict:
@@ -20,37 +19,44 @@ def load_pipeline() -> dict:
 
 @dataclass(frozen=True)
 class Config:
-    data_dir: Path
+    #: StudyLoop's base URL, e.g. https://study-loop-alpha.vercel.app (the worker only talks to its API)
+    api_url: str
+    #: Shared secret matching MUSIC_WORKER_TOKEN on the server
+    worker_token: str
+    #: Scratch space for one job at a time (downloads, stems, encodes); always cleaned up
+    work_dir: Path
     device: str  # "auto" | "cuda" | "cpu"
     job_timeout_s: float
-    stale_after_s: float
-    max_attempts: int
     min_free_bytes: int
     poll_interval_s: float
 
-    @property
-    def db_path(self) -> Path:
-        return self.data_dir / "music.db"
 
-    @property
-    def tmp_dir(self) -> Path:
-        return self.data_dir / "tmp"
+def _env_local() -> None:
+    """Local convenience: take MUSIC_* settings from the repo's .env.local unless already in the environment."""
+    path = WORKER_DIR.parent / ".env.local"
+    if not path.is_file():
+        return
+    for line in path.read_text(encoding="utf-8").splitlines():
+        key, sep, value = line.partition("=")
+        key = key.strip()
+        if sep and key.startswith("MUSIC_") and key not in os.environ:
+            os.environ[key] = value.strip().strip('"').strip("'")
 
 
 def load_config() -> Config:
-    data_dir = Path(os.environ.get("MUSIC_DATA_DIR") or REPO_DIR / ".data" / "music").resolve()
+    _env_local()
     return Config(
-        data_dir=data_dir,
+        api_url=os.environ.get("MUSIC_API_URL", "http://127.0.0.1:3000").rstrip("/"),
+        worker_token=os.environ.get("MUSIC_WORKER_TOKEN", ""),
+        work_dir=Path(os.environ.get("MUSIC_WORK_DIR") or WORKER_DIR / ".work").resolve(),
         device=os.environ.get("MUSIC_DEVICE", "auto").lower(),
         job_timeout_s=float(os.environ.get("MUSIC_JOB_TIMEOUT_S", 30 * 60)),
-        stale_after_s=float(os.environ.get("MUSIC_STALE_AFTER_S", 120)),
-        max_attempts=int(os.environ.get("MUSIC_MAX_ATTEMPTS", 2)),
         min_free_bytes=int(float(os.environ.get("MUSIC_MIN_FREE_MB", 1024)) * 1024 * 1024),
-        poll_interval_s=float(os.environ.get("MUSIC_POLL_INTERVAL_S", 1.5)),
+        poll_interval_s=float(os.environ.get("MUSIC_POLL_INTERVAL_S", 3)),
     )
 
 
 def log(event: str, **fields) -> None:
-    """One JSON object per line on stderr. Never pass audio, file names or user data."""
+    """One JSON object per line on stderr. Never pass audio, file names, URLs or user data."""
     record = {"ts": round(time.time(), 3), "svc": "music-worker", "event": event, **fields}
     print(json.dumps(record, default=str), file=sys.stderr, flush=True)

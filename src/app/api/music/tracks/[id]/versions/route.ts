@@ -8,5 +8,5 @@ type Ctx = { params: Promise<{ id: string }> };
 export const GET = route<Ctx>("tracks.versions", async (req, { params }) => {
   const uid = await requireUser(req);
   const { id } = await params;
-  return Response.json(trackVersions(uid, id), { headers: { "Cache-Control": "private, no-store" } });
+  return Response.json(await trackVersions(uid, id), { headers: { "Cache-Control": "private, no-store" } });
 });

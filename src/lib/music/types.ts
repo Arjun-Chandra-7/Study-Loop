@@ -44,7 +44,8 @@ export interface TrackView {
   durationMs: number | null;
   spotifyUrl: string | null;
   playlistName: string | null;
-  audio: { durationS: number; sizeBytes: number; container: string } | null;
+  /** durationS is null until the worker has decoded the file. */
+  audio: { durationS: number | null; sizeBytes: number; container: string } | null;
   job: JobView | null;
 }
 

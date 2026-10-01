@@ -51,28 +51,34 @@ export const musicApi = {
   job: (jobId: string) => call<{ job: JobView }>(`/api/music/jobs/${jobId}`).then((r) => r.job),
   versions: (trackId: string) => call<VersionsView>(`/api/music/tracks/${trackId}/versions`),
 
-  /** XHR rather than fetch: it reports real upload progress. */
+  /**
+   * Three steps: ask for a one-file upload URL, send the bytes straight to storage (XHR, for real
+   * progress), then hand the ticket back so the server can check and attach the file.
+   */
   async upload(trackId: string, file: File, onProgress: (fraction: number) => void, signal?: AbortSignal): Promise<TrackView> {
-    const token = await idToken();
-    return new Promise((resolve, reject) => {
+    const start = await call<{ uploadUrl: string; contentType: string; ticket: string }>(`/api/music/tracks/${trackId}/upload`, {
+      method: "POST",
+      body: JSON.stringify({ name: file.name, type: file.type, size: file.size }),
+    });
+    await new Promise<void>((resolve, reject) => {
       const xhr = new XMLHttpRequest();
-      xhr.open("PUT", `/api/music/tracks/${trackId}/audio`);
-      xhr.setRequestHeader("Authorization", `Bearer ${token}`);
-      xhr.setRequestHeader("Content-Type", file.type || "application/octet-stream");
-      xhr.setRequestHeader("X-File-Name", encodeURIComponent(file.name));
+      xhr.open("PUT", start.uploadUrl);
+      xhr.setRequestHeader("Content-Type", start.contentType);
       xhr.upload.onprogress = (e) => e.lengthComputable && onProgress(e.loaded / e.total);
       xhr.onerror = () => reject(new MusicApiError(0, "upload_failed", "The upload was interrupted. Try again."));
       xhr.onabort = () => reject(new MusicApiError(0, "aborted", "Upload cancelled."));
-      xhr.onload = () => {
-        let body: { track?: TrackView; error?: { code: string; message: string } } | null = null;
-        try {
-          body = JSON.parse(xhr.responseText);
-        } catch {}
-        if (xhr.status >= 200 && xhr.status < 300 && body?.track) resolve(body.track);
-        else reject(new MusicApiError(xhr.status, body?.error?.code ?? "upload_failed", body?.error?.message ?? "The upload failed. Try again."));
-      };
+      xhr.onload = () =>
+        xhr.status >= 200 && xhr.status < 300
+          ? resolve()
+          : reject(new MusicApiError(xhr.status, xhr.status === 403 ? "too_large" : "upload_failed",
+              xhr.status === 403 ? "Storage refused that file (too large or wrong type)." : "The upload failed. Try again."));
       signal?.addEventListener("abort", () => xhr.abort());
       xhr.send(file);
     });
+    const done = await call<{ track: TrackView }>(`/api/music/tracks/${trackId}/audio`, {
+      method: "POST",
+      body: JSON.stringify({ ticket: start.ticket }),
+    });
+    return done.track;
   },
 };

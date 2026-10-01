@@ -44,4 +44,5 @@ next-env.d.ts
 # music feature: local library data (uploads, stems, SQLite) and the worker's Python env
 /.data/
 /worker/.venv/
+/worker/.work/
 __pycache__/

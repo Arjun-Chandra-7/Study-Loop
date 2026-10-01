@@ -15,25 +15,31 @@ file the user uploads. StudyLoop never requests, streams, downloads or modifies 
 ## Flow
 
 ```
-Spotify link ─► /api/music/import ─► track metadata (SQLite)
-                                          │
-user's file ─► PUT /api/music/tracks/:id/audio
-                 stream to tmp (size cap, sha256) → extension + MIME + magic bytes + ffprobe agree
-                 → full decode check → sources/<id>.<ext>   (identical bytes stored once per user)
-                                          │
-POST /api/music/tracks/:id/process ─► cache key = sha256(source sha256 + model + model version + params)
-     ├─ same key already completed/in flight → 200, existing job (no Demucs run)
-     └─ else insert music_jobs row 'queued' → 202 { job_id, status: "queued" }
-                                          │
-Python worker (worker/, one process, model kept loaded)
-  claim job (BEGIN IMMEDIATE) → 'processing' → decode with FFmpeg (44.1 kHz stereo float)
-  → Demucs htdemucs (real chunk progress → music_jobs.progress) → validate stems (finite, shape,
-    stems re-add to the mix) → 'finalizing' → derive no_lyrics → encode 6 AAC files in parallel
-  → ffprobe each → atomic rename tmp/job-<id> → outputs/<id>/ → music_outputs rows → 'completed'
-                                          │
+Spotify link ─► POST /api/music/import ─► track metadata (Neon Postgres)
+                                                │
+user's file ─► POST /tracks/:id/upload  {name,type,size} → extension + type + size checked
+                 → presigned PUT URL (one pathname, fixed content type, size cap) + signed ticket
+             ─► browser PUTs the bytes straight to private Vercel Blob (real progress; no 4.5 MB limit)
+             ─► POST /tracks/:id/audio {ticket} → file exists, magic bytes match, sha256 → music_sources
+                                                    (identical bytes stored once per user)
+                                                │
+POST /tracks/:id/process ─► cache key = sha256(source sha256 + model + model version + params)
+     ├─ same key completed/in flight → 200, existing job (no Demucs run)
+     └─ else music_jobs row 'queued' → 202 { job_id, status: "queued" }
+                                                │
+Worker (any machine with Python + FFmpeg; talks only to the API, holds no DB/storage credentials)
+  POST /api/music/worker/claim       → recovers stale jobs, claims next (FOR UPDATE SKIP LOCKED),
+                                       returns a presigned GET for the source
+  download → ffprobe (decodable? length limit) → decode → Demucs htdemucs
+  POST …/jobs/:id/heartbeat          → real chunk progress, then "finalizing"; owned? (else abandon)
+  encode 6 AAC files → POST …/upload-urls → PUT each to its presigned URL
+  POST …/jobs/:id/complete           → server checks every file is in Blob at the reported size,
+                                       records outputs + source duration in one statement
+  POST …/jobs/:id/fail               → retryable: requeue (≤ MUSIC_MAX_ATTEMPTS), else failed + reason
+                                                │
 GET /api/music/jobs/:id  (polled every 1.5 s while active)
-GET /api/music/tracks/:id/versions → short-lived signed links → GET /api/music/files/<token> (Range)
-                                          │
+GET /tracks/:id/versions → presigned Blob CDN links (Range-capable, expire after MUSIC_URL_TTL_S)
+                                                │
 One shared <audio> element (src/lib/music/player.ts): switching version swaps src and restores
 position + play/pause. All versions come from one decode, so they line up sample-for-sample.
 ```
@@ -47,107 +53,92 @@ carries across tracks; an unprocessed track plays Original until it's processed.
 States the user sees: *Needs audio* → *Uploading audio… (real %)* → *Ready to process* → *Waiting for
 processing…* → *Separating music… (real %, from Demucs' own chunk counter)* → *Preparing study versions…*
 (activity sweep, no number) → *Ready to study*, or *Processing failed* with a plain-language reason and
-**Try again**. Every state has an icon and a word; colour is never the only signal. If no worker has checked in
-for 30 s, a queued track says the processing service is offline instead of waiting silently.
+**Try again**. If no worker has checked in for 30 s, a queued track says the processing service is offline.
 
 ## Where things live
 
 | Path | What |
 | --- | --- |
-| `src/components/views/MusicView.tsx` | The Music tab (library, import, track cards, Now playing) |
-| `src/lib/music/{client,player,status,types,useMusicLibrary}.ts` | Client API, shared player, status words, polling |
-| `src/lib/music/server/*` | Auth (Firebase ID-token check), DB, upload validation, signed files, Spotify, library logic |
-| `src/app/api/music/**/route.ts` | Thin route handlers |
-| `worker/schema.sql` | SQLite schema, shared by API and worker (both apply it idempotently) |
-| `worker/pipeline.json` | Processing identity: model, model version, params. Part of every cache key |
-| `worker/studyloop_music/` | The worker: `__main__` (loop), `pipeline`, `separate` (Demucs), `audio` (FFmpeg), `db` (queue) |
+| `src/components/views/MusicView.tsx` | The Music tab (library, import, track cards, queue, Now playing) |
+| `src/lib/music/{client,player,status,types,useMusicLibrary,spotifyAuth}.ts` | Client API, shared player, status words, polling, Connect Spotify (PKCE) |
+| `src/lib/music/server/db.ts`, `schema.ts` | Neon Postgres access + schema (applied idempotently on first use) |
+| `src/lib/music/server/storage.ts` | Private Vercel Blob: presigned GET/PUT, head, read |
+| `src/lib/music/server/{upload,library,workerApi,spotify,auth,sign}.ts` | Upload checks, library logic, worker API, Spotify, Firebase token check, signed tickets |
+| `src/app/api/music/**/route.ts` | Thin route handlers (user API + `/worker/*`) |
+| `worker/pipeline.json` | Processing identity (model, version, params): part of every cache key; bundled into the app |
+| `worker/studyloop_music/` | The worker: `__main__` (loop), `api` (HTTP client), `pipeline`, `separate` (Demucs), `audio` (FFmpeg) |
 
-### Data (`MUSIC_DATA_DIR`, default `./.data/music`, git-ignored)
+**Data.** Postgres tables `music_tracks`, `music_sources`, `music_jobs` (also the queue), `music_outputs`,
+`music_workers`. Blob pathnames: `sources/<id>.<ext>` and `outputs/<job id>/{original,no_lyrics,vocals,drums,bass,other}.m4a`
+(vocals_only/beats_only reuse the vocals/drums files). Nothing is public; no pathname comes from user input.
+The worker's scratch dir (`worker/.work`, git-ignored) is emptied after every job and swept of anything over 1 h old.
 
-```
-music.db                 SQLite (WAL). music_tracks, music_sources, music_jobs (= the queue), music_outputs, music_workers
-sources/<id>.<ext>       uploads, named by server-generated id only
-outputs/<job id>/*.m4a   original, no_lyrics, vocals, drums, bass, other (vocals_only/beats_only reuse stem files)
-tmp/                     in-progress uploads (upload-*.part) and job scratch (job-<id>/); always cleaned,
-                         and anything older than 1 h is swept by the worker
-.signing-secret          dev fallback when MUSIC_SIGNING_SECRET isn't set
-```
+## Running it
 
-No file path is ever built from user input: names come from random ids, stored paths are relative and
-resolved with a check that they stay inside the data dir.
-
-## Running it locally
-
-Requirements: Node 22+, Python 3.11+, FFmpeg/ffprobe on `PATH`, ~2 GB disk for PyTorch + weights.
+Requirements: Node 22+; for the worker, Python 3.11+, FFmpeg/ffprobe on `PATH`, ~2 GB disk for PyTorch + weights.
 
 ```bash
-# 1. Worker environment (PyTorch first — pick the build for your machine)
+# App (local): env comes from Vercel — Neon, Blob, Firebase, Spotify, worker secrets
+vercel env pull .env.local
+npm run dev                      # open http://127.0.0.1:3000 (Spotify won't redirect to "localhost")
+
+# Worker environment (once). PyTorch first — pick the build for your machine:
 python3 -m venv worker/.venv
 worker/.venv/bin/pip install torch --index-url https://download.pytorch.org/whl/cpu      # or a CUDA build
 worker/.venv/bin/pip install --no-deps "torchaudio==2.11.0" --index-url https://download.pytorch.org/whl/cpu
 worker/.venv/bin/pip install --no-deps demucs==4.0.1 openunmix==1.3.0
 worker/.venv/bin/pip install -r worker/requirements.txt
-# (If PyTorch is already installed system-wide: python3 -m venv --system-site-packages worker/.venv)
 
-# 2. App + worker, in two terminals
-npm run dev
-npm run music:worker       # first run downloads the htdemucs weights (~80 MB) to ~/.cache/torch
+# Worker against your local app (reads MUSIC_* from .env.local):
+npm run music:worker
+# …or against the live site, from any machine:
+MUSIC_API_URL=https://study-loop-alpha.vercel.app MUSIC_WORKER_TOKEN=<same as on Vercel> npm run music:worker
 ```
 
-Demucs 4.0.1 on PyPI pins `torchaudio<2.1`, which no longer installs on current Python/PyTorch, hence
-`--no-deps`. Demucs only *imports* torchaudio here; all audio I/O goes through FFmpeg. torchaudio 2.11 (its
-last release) imports fine against torch 2.13.
+The first run downloads the htdemucs weights (~80 MB). Demucs 4.0.1 on PyPI pins `torchaudio<2.1`, which no
+longer installs, hence `--no-deps`; torchaudio is only imported (FFmpeg does all audio I/O).
 
 ### Environment variables
 
-| Variable | Default | Purpose |
+| Variable | Where | Purpose |
 | --- | --- | --- |
-| `NEXT_PUBLIC_FIREBASE_PROJECT_ID` | (existing) | Also used server-side to verify Firebase ID tokens (`aud`/`iss`) |
-| `MUSIC_DATA_DIR` | `./.data/music` | Library DB + files. API and worker must point at the same place |
-| `MUSIC_SIGNING_SECRET` | random, saved in data dir | HMAC key for playback links. **Set it in production** |
-| `MUSIC_MAX_UPLOAD_MB` | `150` | Upload size cap (enforced while streaming) |
-| `MUSIC_MAX_DURATION_S` | `900` | Longest track accepted |
-| `MUSIC_URL_TTL_S` | `7200` | Playback link lifetime; the player refetches on expiry |
-| `SPOTIFY_CLIENT_ID` / `SPOTIFY_CLIENT_SECRET` | unset | Enables Spotify import (client-credentials). Unset ⇒ import says so; add-by-name still works |
-| `MUSIC_DEVICE` (worker) | `auto` | `auto` (CUDA if present), `cuda`, or `cpu` |
-| `MUSIC_JOB_TIMEOUT_S` (worker) | `1800` | Hard stop per job |
-| `MUSIC_STALE_AFTER_S` (worker) | `120` | Heartbeat age after which a job is treated as crashed |
-| `MUSIC_MAX_ATTEMPTS` (worker) | `2` | Attempts for retryable failures (crash, low disk, model load) |
-| `MUSIC_MIN_FREE_MB` (worker) | `1024` | Refuse to start a job below this free space |
-| `MUSIC_LOG=off` | | Silence API logs (used in tests) |
+| `DATABASE_URL` | app | Neon (set by the Marketplace integration) |
+| `BLOB_READ_WRITE_TOKEN` / `VERCEL_OIDC_TOKEN` | app | Private Blob store `studyloop-music` (set when the store was connected) |
+| `MUSIC_SIGNING_SECRET` | app | HMAC key for upload tickets (set on Vercel for all environments) |
+| `MUSIC_WORKER_TOKEN` | app + worker | Shared secret for `/api/music/worker/*` (set on Vercel; the worker needs the same value) |
+| `NEXT_PUBLIC_FIREBASE_PROJECT_ID` | app | Also used server-side to verify Firebase ID tokens |
+| `SPOTIFY_CLIENT_ID` / `SPOTIFY_CLIENT_SECRET` | app | Spotify import |
+| `MUSIC_MAX_UPLOAD_MB` (150), `MUSIC_MAX_DURATION_S` (900), `MUSIC_URL_TTL_S` (7200) | app | Limits and link lifetime |
+| `MUSIC_STALE_AFTER_S` (120), `MUSIC_MAX_ATTEMPTS` (2) | app | Crash recovery |
+| `MUSIC_API_URL` (`http://127.0.0.1:3000`) | worker | Which StudyLoop to work for |
+| `MUSIC_DEVICE` (`auto`), `MUSIC_JOB_TIMEOUT_S` (1800), `MUSIC_MIN_FREE_MB` (1024), `MUSIC_WORK_DIR` | worker | Hardware, timeout, disk floor, scratch dir |
 
 ## Tests
 
 ```bash
-npm test                                   # API, player, Music view (75 tests, ~6 s)
-npm run music:test-worker                  # worker pipeline with real FFmpeg + stand-in separator (12 tests)
-MUSIC_TEST_DEMUCS=1 npm run music:test-worker          # + real Demucs on a synthetic mix with known parts
-MUSIC_TEST_WORKER=1 npx vitest run worker.integration  # API → queue → real worker → playback links
-MUSIC_TEST_AUDIO=/path/song.mp3 MUSIC_TEST_WORKER=1 npx vitest run worker.integration   # with a real song
+npm test                      # API on in-process Postgres (PGlite) + in-memory Blob, worker API, Spotify, player, Music view
+npm run music:test-worker     # worker pipeline: real FFmpeg, real HTTP to a fake StudyLoop, stand-in separator
+MUSIC_TEST_DEMUCS=1 npm run music:test-worker                     # + real Demucs on a synthetic mix with known parts
+MUSIC_TEST_SPOTIFY_URL=<share link> npx vitest run spotify.live   # real Spotify API
 ```
 
 ## Measured performance
 
-Machine: 8-core laptop CPU, 22 GB RAM, RTX 3050 Laptop (4 GB). During testing other processes held ~3.3 GB
-of the GPU, so CUDA ran out of memory and every job ran on the **CPU fallback**. GPU timings were not measured.
+Machine: 8-core laptop CPU, 22 GB RAM, RTX 3050 Laptop (4 GB, mostly used by other processes, so Demucs ran on
+the **CPU fallback**; GPU timings not measured). Song: 2:33 CC0 MP3 (3.8 MB).
 
 | Measurement | Value |
 | --- | --- |
-| Model load (weights cached) | 1.5–2.3 s, once per worker process (kept loaded between jobs) |
-| First-ever model download | 80 MB, ~5 s |
-| Upload + validation (3.7 MB MP3, local) | 0.25 s via API test; 0.6 s via HTTP |
-| Decode (2:33 song) | 0.2–0.3 s |
-| Separation, CPU (2:33 song) | **67 s** (idle machine) · 119 s (machine under load, load avg 11) ≈ 0.44–0.78× real time |
-| Encode 6 AAC outputs (parallel) | 6.5 s idle · 10.8 s under load |
-| Whole job | 74 s idle · 130 s under load |
-| Cache hit (same audio again) | 50 ms, no separation |
+| Browser → Blob upload (3.8 MB, from India to iad1) | 1.8 s |
+| Worker: download / decode / Demucs (CPU) / encode / upload | 3.3 s / 0.3 s / 67–128 s / 6.5–8.1 s / 15.1 s |
+| Whole job, live (Neon + Blob + worker through the API) | 156 s (machine under load) |
+| Model load | 1.5–2.3 s, once per worker process |
+| Cache hit (same audio again) | no separation; answered from the existing job |
 | Storage per processed track | ~22.7 MB outputs (6 × ~3.8 MB @ 192 kb/s for 2:33) + the original upload |
+| API latency from this laptop to Neon (us-east) | ~1 s warm for the library list (4 queries); first call after idle ~5 s (Neon waking up) |
 
-Rule of thumb on CPU: plan on roughly half to one times the song length per job, one job at a time per
-worker. A CUDA GPU with ≥4 GB *free* should be several times faster, but that's an expectation, not a
-measurement from this machine. Run more worker processes for parallelism; each holds its own model copy
-(~1 GB RAM on CPU).
-
+Rule of thumb on CPU: plan on roughly half to one times the song length per job, one job at a time per worker.
+Run more worker processes (on more machines) for parallelism; claims never collide.
 ## Quality: what was checked, and the limits
 
 Checks run on real output (`MUSIC_TEST_WORKER=1`, plus a signal-level script on the CC0 test song
@@ -200,15 +191,17 @@ Known limitations (normal for source separation; no output was listened to by a 
   project brief's open question on Spotify licensing. This feature is built so the audio path is fully
   independent of Spotify.
 - Uploads and outputs are private to the uploader: every query is scoped by the verified Firebase uid, other
-  users' ids return the same 404 as missing ones, and playback links are HMAC-signed, expire, carry a keyed
-  hash of the owner (not the uid) and are re-checked against the database. Identical audio is de-duplicated
+  users' ids return the same 404 as missing ones, the Blob store is private, and playback/upload links are
+  presigned for one file and one operation and expire. Identical audio is de-duplicated
   and cached **per user** only, so one user's upload never serves another's request.
 - Logs carry ids, sizes and timings only: never titles, file names, tokens or audio.
 
 ## Deployment
 
-The API needs a writable disk shared with the worker, and the worker needs PyTorch + FFmpeg, so this runs on a
-**single long-lived server or VM** (`next start` + `npm run music:worker`, e.g. under systemd or Docker), not on
-Vercel Functions: their filesystem is ephemeral and they can't host the model. On the current Vercel
-deployment the rest of StudyLoop is unaffected; the Music tab will report that the library is unavailable.
-Moving to object storage + a managed queue would be the next step for multi-instance hosting.
+- **App:** Vercel (`vercel deploy --prod`). Neon and the private Blob store are connected to the project, so
+  the library, Spotify import, uploads and playback work on the live site.
+- **Worker:** runs anywhere with Python + FFmpeg (a laptop, a VM, a GPU box) and needs only `MUSIC_API_URL` +
+  `MUSIC_WORKER_TOKEN`. While no worker is running, uploads still work and tracks wait in the queue, and the
+  UI says the processing service is offline. Vercel Functions can't host it (no model, ~300 s limit).
+- Crash safety: workers heartbeat every 10 s; a job silent for `MUSIC_STALE_AFTER_S` is requeued (or failed
+  after `MUSIC_MAX_ATTEMPTS`) the next time any worker claims.

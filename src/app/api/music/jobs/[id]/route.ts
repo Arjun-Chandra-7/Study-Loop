@@ -8,5 +8,5 @@ type Ctx = { params: Promise<{ id: string }> };
 export const GET = route<Ctx>("jobs.get", async (req, { params }) => {
   const uid = await requireUser(req);
   const { id } = await params;
-  return Response.json({ job: getJob(uid, id) }, { headers: { "Cache-Control": "private, no-store" } });
+  return Response.json({ job: await getJob(uid, id) }, { headers: { "Cache-Control": "private, no-store" } });
 });

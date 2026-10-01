@@ -1,10 +1,8 @@
-"""One job, end to end: decode → separate → validate → derive study versions → encode → store."""
+"""One job, end to end: download → decode → separate → validate → derive study versions → encode → upload."""
 
 from __future__ import annotations
 
-import os
 import shutil
-import sqlite3
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -12,7 +10,8 @@ from pathlib import Path
 
 import numpy as np
 
-from . import audio, db
+from . import audio
+from .api import LostJob, WorkerApi, download, free_bytes, upload
 from .config import Config, log
 from .errors import PipelineError
 from .separate import STEMS
@@ -24,15 +23,9 @@ VERSIONS = {
     "vocals_only": ("vocals",),
     "beats_only": ("drums",),
 }
+#: The six files uploaded per job (vocals_only/beats_only are the vocals/drums files).
+OUTPUT_FILES = ("original", "no_lyrics", *STEMS)
 SILENCE_DBFS = -60.0
-
-
-def inside(base: Path, rel: str) -> Path:
-    """Resolve a stored relative path and refuse anything that escapes the data dir."""
-    p = (base / rel).resolve()
-    if base.resolve() not in p.parents:
-        raise PipelineError("source_missing", "path escapes data dir")
-    return p
 
 
 def validate_stems(mix: np.ndarray, stems: dict[str, np.ndarray]) -> dict:
@@ -51,26 +44,41 @@ def validate_stems(mix: np.ndarray, stems: dict[str, np.ndarray]) -> dict:
 
 
 class Heartbeat:
-    """Keeps the job's heartbeat fresh from a side thread while the main thread is busy."""
+    """
+    Reports status/progress to the API from a side thread every few seconds (and right away when
+    asked), so a long model run never looks like a crash. Flags `lost` if the server took the job back.
+    """
 
-    def __init__(self, cfg: Config, job_id: str, worker_id: str, interval: float = 10):
-        self.cfg, self.job_id, self.worker_id, self.interval = cfg, job_id, worker_id, interval
+    def __init__(self, api: WorkerApi, job_id: str, device: str | None, interval: float = 10):
+        self.api, self.job_id, self.interval = api, job_id, interval
+        self.state = {"status": "processing", "progress": None, "device": device}
         self.lost = False
+        self._lock = threading.Lock()
+        self._last = 0.0
         self._stop = threading.Event()
         self._thread = threading.Thread(target=self._run, daemon=True)
 
-    def _run(self):
-        conn = db.connect(self.cfg.db_path)
+    def send(self, force: bool = False, **changes):
+        with self._lock:
+            self.state.update(changes)
+            if not force and time.monotonic() - self._last < 1.5:
+                return
+            self._last = time.monotonic()
+            state = dict(self.state)
         try:
-            while not self._stop.wait(self.interval):
-                db.beat_worker(conn, self.worker_id, None)
-                if not db.touch(conn, self.job_id, self.worker_id):
-                    self.lost = True
-                    return
-        finally:
-            conn.close()
+            if not self.api.heartbeat(self.job_id, state["status"], state["progress"], state["device"]):
+                self.lost = True
+        except LostJob:
+            self.lost = True
+        except Exception as e:  # a missed beat is fine; staleness only kicks in after minutes
+            log("heartbeat_failed", job_id=self.job_id, error=type(e).__name__)
+
+    def _run(self):
+        while not self._stop.wait(self.interval):
+            self.send(force=True)
 
     def __enter__(self):
+        self.send(force=True)
         self._thread.start()
         return self
 
@@ -79,113 +87,94 @@ class Heartbeat:
         self._thread.join(timeout=5)
 
 
-def process_job(cfg: Config, conn: sqlite3.Connection, separator, job: sqlite3.Row, pipeline: dict, worker_id: str) -> None:
+def process_job(cfg: Config, api: WorkerApi, separator, job: dict, pipeline: dict) -> None:
     job_id = job["id"]
     params = pipeline["params"]
     sr, ch = params["sampleRate"], params["channels"]
     t_start = time.monotonic()
     deadline = t_start + cfg.job_timeout_s
     timings: dict[str, float] = {}
-    work = cfg.tmp_dir / f"job-{job_id}"
-    final_rel = Path("outputs") / job_id
-    final_dir = cfg.data_dir / final_rel
+    work = cfg.work_dir / f"job-{job_id}"
 
     def lap(name: str, since: float) -> float:
         timings[name] = round(time.monotonic() - since, 2)
         return time.monotonic()
 
-    def ensure_owned(**fields):
-        if not db.touch(conn, job_id, worker_id, **fields):
-            raise PipelineError("worker_crashed", "job ownership lost (recovered by another worker)")
-
     try:
-        if shutil.disk_usage(cfg.data_dir).free < cfg.min_free_bytes:
+        if free_bytes(cfg.work_dir) < cfg.min_free_bytes:
             raise PipelineError("disk_full", "below MUSIC_MIN_FREE_MB", retryable=True)
-        src = inside(cfg.data_dir, job["source_path"])
-        if not src.is_file():
-            raise PipelineError("source_missing", "source file not found")
         work.mkdir(parents=True, exist_ok=True)
 
-        with Heartbeat(cfg, job_id, worker_id) as hb:
+        with Heartbeat(api, job_id, separator.device) as hb:
+            def ensure_owned():
+                if hb.lost:
+                    raise LostJob(job_id)
+
             t = time.monotonic()
+            src = work / f"source.{job.get('container', 'bin')}"
+            size = download(job["sourceUrl"], src)
+            t = lap("download_s", t)
+
+            info = audio.probe(src)  # raises corrupted_audio if it isn't decodable audio
+            max_s = float(job.get("maxDurationS") or 0)
+            if max_s and info["duration_s"] > max_s:
+                raise PipelineError("too_long", f"{info['duration_s']:.0f}s > {max_s:.0f}s",
+                                    message=f"That track is too long to process. The limit is {round(max_s / 60)} minutes.")
             mix = audio.decode(src, sr, ch)
             t = lap("decode_s", t)
+            source_duration = round(mix.shape[1] / sr, 3)
 
             if separator.model is None:
-                ensure_owned(progress=None)
                 separator.load()
                 t = lap("model_load_s", t)
-            ensure_owned(device=separator.device, progress=0.0)
-
-            last_write = [0.0]
+            hb.send(force=True, device=separator.device, progress=0.0)
 
             def on_progress(frac: float):
-                if hb.lost:
-                    raise PipelineError("worker_crashed", "job ownership lost mid-separation")
-                if time.monotonic() - last_write[0] >= 1.0 or frac >= 1.0:
-                    last_write[0] = time.monotonic()
-                    db.touch(conn, job_id, worker_id, progress=round(min(frac, 1.0), 4))
+                ensure_owned()
+                hb.send(force=frac >= 1.0, progress=round(min(frac, 1.0), 4))
 
-            log("separation_started", job_id=job_id, device=separator.device, audio_s=round(mix.shape[1] / sr, 2))
+            log("separation_started", job_id=job_id, device=separator.device, audio_s=source_duration, source_bytes=size)
             stems = separator.separate(mix, on_progress, deadline)
             t = lap("separate_s", t)
             checks = validate_stems(mix, stems)
 
-            ensure_owned(status="finalizing", progress=None)
+            hb.send(force=True, status="finalizing", progress=None, device=separator.last_device)
+            ensure_owned()
             signals = {"original": mix, **stems, "no_lyrics": audio.peak_safe(sum(stems[s] for s in VERSIONS["no_lyrics"]))}
-            files = {"original": "original.m4a", **{s: f"{s}.m4a" for s in STEMS}, "no_lyrics": "no_lyrics.m4a"}
 
             def encode_one(name: str):
                 if time.monotonic() > deadline:
                     raise PipelineError("timeout", "encoding exceeded job timeout")
-                audio.encode(audio.peak_safe(signals[name]), work / files[name], sr, params["codec"], params["bitrate"])
-                info = audio.probe(work / files[name])
-                if abs(info["duration_s"] - mix.shape[1] / sr) > 0.25:
-                    raise PipelineError("ffmpeg_failed", f"{name}: duration {info['duration_s']} != source")
-                return name, info
+                path = work / f"{name}.m4a"
+                audio.encode(audio.peak_safe(signals[name]), path, sr, params["codec"], params["bitrate"])
+                probed = audio.probe(path)
+                if abs(probed["duration_s"] - source_duration) > 0.25:
+                    raise PipelineError("ffmpeg_failed", f"{name}: duration {probed['duration_s']} != source")
+                return name, probed
 
             with ThreadPoolExecutor(max_workers=3) as pool:
-                probed = dict(pool.map(encode_one, files))
+                probed = dict(pool.map(encode_one, OUTPUT_FILES))
             t = lap("encode_s", t)
-            if hb.lost:
-                raise PipelineError("worker_crashed", "job ownership lost while encoding")
 
-        # Persist: move the finished files into place in one rename, then record them.
-        try:
-            final_dir.parent.mkdir(parents=True, exist_ok=True)
-            if final_dir.exists():
-                shutil.rmtree(final_dir)
-            os.replace(work, final_dir)
-        except OSError as e:
-            raise PipelineError("storage_failed", f"{type(e).__name__}") from e
+            ensure_owned()
+            targets = api.upload_urls(job_id)
+            for name in OUTPUT_FILES:
+                upload(targets["urls"][name], work / f"{name}.m4a", targets["contentType"])
+            t = lap("upload_s", t)
+            ensure_owned()
 
-        def row(kind: str, name: str, source: str) -> dict:
-            info = probed[source]
-            return {
-                "kind": kind, "name": name, "file_path": str(final_rel / files[source]), "format": "m4a",
-                "codec": info["codec"], "duration_s": info["duration_s"], "sample_rate": info["sample_rate"],
-                "channels": info["channels"], "size_bytes": (final_dir / files[source]).stat().st_size,
-                "rms_dbfs": audio.rms_dbfs(signals[source]),
+        outputs = [
+            {
+                "file": name, "codec": probed[name]["codec"], "durationS": probed[name]["duration_s"],
+                "sampleRate": probed[name]["sample_rate"], "channels": probed[name]["channels"],
+                "sizeBytes": (work / f"{name}.m4a").stat().st_size, "rmsDbfs": audio.rms_dbfs(signals[name]),
             }
-
-        outputs = [row("stem", s, s) for s in STEMS]
-        outputs += [row("version", "original", "original"), row("version", "no_lyrics", "no_lyrics")]
-        outputs += [row("version", v, VERSIONS[v][0]) for v in ("vocals_only", "beats_only")]
+            for name in OUTPUT_FILES
+        ]
         timings["total_s"] = round(time.monotonic() - t_start, 2)
-        storage = sum(o["size_bytes"] for o in outputs if o["kind"] == "stem") + sum(
-            (final_dir / files[n]).stat().st_size for n in ("original", "no_lyrics"))
-        if not db.complete(conn, job_id, worker_id, outputs, timings, separator.last_device):
-            raise PipelineError("worker_crashed", "job ownership lost before completion")
-        log("job_completed", job_id=job_id, device=separator.last_device, timings=timings, storage_bytes=storage,
-            **checks, levels={o["name"]: o["rms_dbfs"] for o in outputs if o["kind"] == "stem"})
-    except BaseException:
-        if not _completed(conn, job_id):
-            shutil.rmtree(final_dir, ignore_errors=True)
-        raise
+        api.complete(job_id, device=separator.last_device, timings=timings, sourceDurationS=source_duration, outputs=outputs)
+        log("job_completed", job_id=job_id, device=separator.last_device, timings=timings,
+            storage_bytes=sum(o["sizeBytes"] for o in outputs), **checks,
+            levels={o["file"]: o["rmsDbfs"] for o in outputs if o["file"] in STEMS})
     finally:
         shutil.rmtree(work, ignore_errors=True)
-
-
-def _completed(conn: sqlite3.Connection, job_id: str) -> bool:
-    r = conn.execute("SELECT status FROM music_jobs WHERE id = ?", (job_id,)).fetchone()
-    return bool(r and r["status"] == "completed")
