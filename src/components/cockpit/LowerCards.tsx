@@ -5,6 +5,7 @@ import { useAuth } from "@/lib/auth";
 import { Avatar } from "../ui/Avatar";
 import { clock } from "@/lib/format";
 import { engine, useStudyLoop } from "@/lib/useStudyLoop";
+import { usePalette } from "@/lib/prefs";
 import { Sparkline } from "../charts/Sparkline";
 import { Icon } from "../ui/Icon";
 import { StateBadge } from "../ui/StateBadge";
@@ -26,6 +27,7 @@ export function subjectCode(subject: string) {
 /** Centre card 1 — the session "player". */
 export function PlayerCard() {
   const s = useStudyLoop();
+  const pal = usePalette();
   const { phase, config, elapsedMs } = s.session;
   const total = config.minutes * 60_000;
   const progress = phase === "complete" ? 1 : Math.min(1, elapsedMs / total);
@@ -49,7 +51,7 @@ export function PlayerCard() {
             state={running ? "working" : phase === "baseline" ? "connecting" : "breathing"}
             size={32}
             theme="dark"
-            color="#C3D6B4"
+            color={pal.measuredHi}
             speed={running ? 0.8 : 0.4}
           />
         </span>
@@ -155,6 +157,7 @@ export function TrendCard() {
 /** Right vertical card — the research layer, always cinder, always labelled experimental. */
 export function ResearchCard() {
   const s = useStudyLoop();
+  const pal = usePalette();
   return (
     <section className={`card research-card ${s.research ? "is-on" : ""}`} aria-label="Research layer">
       <header className="card__head">
@@ -171,7 +174,7 @@ export function ResearchCard() {
           </svg>
         </div>
         <span className="research-card__orb">
-          <ThinkingOrb state="weaving" size={32} theme="dark" color="#CF4F33" speed={s.research ? 1 : 0.35} />
+          <ThinkingOrb state="weaving" size={32} theme="dark" color={pal.action} speed={s.research ? 1 : 0.35} />
         </span>
         <span className="research-card__hz">
           40<small>Hz</small>

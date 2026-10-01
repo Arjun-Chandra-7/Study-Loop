@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { finalizeFrame, paintFrame, type Dot, type Line } from "thinking-orbs/engine";
+import { usePalette } from "@/lib/prefs";
 
 export interface SceneFrame {
   dots: Dot[];
@@ -25,8 +26,8 @@ function hex(c: string) {
 
 export function DotCanvas({
   scene,
-  tint = "#9DBA8E",
-  accent = "#CF4F33",
+  tint: tintProp,
+  accent: accentProp,
   param,
   speed = 1,
   fps = 30,
@@ -43,6 +44,9 @@ export function DotCanvas({
   className?: string;
   label?: string;
 }) {
+  const pal = usePalette();
+  const tint = tintProp ?? pal.measured;
+  const accent = accentProp ?? pal.action;
   const ref = useRef<HTMLCanvasElement>(null);
   const tintRef = useRef(tint);
   const sceneRef = useRef(scene);

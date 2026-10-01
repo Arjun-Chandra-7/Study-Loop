@@ -7,6 +7,7 @@ import { useGSAP } from "@gsap/react";
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import { engine } from "@/lib/useStudyLoop";
+import { usePalette } from "@/lib/prefs";
 import { StateOrb } from "../orb/StateOrb";
 import { Icon } from "../ui/Icon";
 import { Magnetic } from "../ui/Magnetic";
@@ -16,17 +17,18 @@ import type { OrbState } from "thinking-orbs";
 gsap.registerPlugin(ScrollTrigger, useGSAP);
 
 /** The loop the product is named for — it runs forever once you arrive. */
-const LOOP: { label: string; state: OrbState; speed: number; color: string }[] = [
-  { label: "Idle", state: "breathing", speed: 0.4, color: "#B6AE9F" },
-  { label: "Baseline", state: "connecting", speed: 0.6, color: "#9DBA8E" },
-  { label: "Study", state: "working", speed: 0.6, color: "#9DBA8E" },
-  { label: "Recover", state: "breathing", speed: 0.8, color: "#C3D6B4" },
+const LOOP: { label: string; state: OrbState; speed: number; tone: "idle" | "measured" | "measuredHi" }[] = [
+  { label: "Idle", state: "breathing", speed: 0.4, tone: "idle" },
+  { label: "Baseline", state: "connecting", speed: 0.6, tone: "measured" },
+  { label: "Study", state: "working", speed: 0.6, tone: "measured" },
+  { label: "Recover", state: "breathing", speed: 0.8, tone: "measuredHi" },
 ];
 const STEP_MS = 3200;
 
 const MARQUEE = ["Focus", "Baseline", "Signal", "Recover", "Measured", "Not a mind reader", "Study with feedback"];
 
 export function Finale() {
+  const pal = usePalette();
   const root = useRef<HTMLElement>(null);
   const [step, setStep] = useState(0);
   const [live, setLive] = useState(false);
@@ -109,7 +111,7 @@ export function Finale() {
             />
           </svg>
           <div className="finale__orb">
-            <StateOrb state={cur.state} speed={cur.speed} color={cur.color} size={orbSize} density={2.4} dotScale={0.8} label={`Loop: ${cur.label}`} />
+            <StateOrb state={cur.state} speed={cur.speed} color={cur.tone === "idle" ? "#B6AE9F" : pal[cur.tone]} size={orbSize} density={2.4} dotScale={0.8} label={`Loop: ${cur.label}`} />
           </div>
           {LOOP.map((l, i) => (
             <span key={l.label} className={`finale__label finale__label--${i}`} data-active={i === step || undefined}>

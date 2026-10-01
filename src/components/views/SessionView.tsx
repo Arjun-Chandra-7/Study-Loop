@@ -5,10 +5,12 @@ import { useLayoutEffect, useRef, useState } from "react";
 import { BASELINE_MS, type StudyMode } from "@/lib/engine";
 import { clock } from "@/lib/format";
 import { PHYSIO_HINT } from "@/lib/sensors/classify";
+import { useGammaBeats } from "@/lib/music/gamma";
 import { engine, useStudyLoop } from "@/lib/useStudyLoop";
 import { Sparkline } from "../charts/Sparkline";
 import { orbFor } from "../orb/orbState";
 import { StateOrb } from "../orb/StateOrb";
+import { toggleBeats } from "../session/SessionPrompts";
 import { Icon } from "../ui/Icon";
 import { Magnetic } from "../ui/Magnetic";
 import { StateBadge } from "../ui/StateBadge";
@@ -327,9 +329,12 @@ export function SessionFoot() {
     return (
       <div className="foot">
         <p className="foot__status">{orb.label}</p>
-        <button type="button" className="btn btn--ghost" onClick={engine.end}>
-          Cancel
-        </button>
+        <div className="btn-row">
+          <BeatsButton />
+          <button type="button" className="btn btn--ghost" onClick={engine.end}>
+            Cancel
+          </button>
+        </div>
       </div>
     );
   }
@@ -354,6 +359,7 @@ export function SessionFoot() {
     <div className="foot">
       <p className="foot__status">{orb.label}</p>
       <div className="btn-row">
+        <BeatsButton />
         <button type="button" className="btn btn--ghost" onClick={engine.mark} disabled={paused}>
           <Icon name="flag" size={16} />
           Mark moment
@@ -368,5 +374,23 @@ export function SessionFoot() {
         </button>
       </div>
     </div>
+  );
+}
+
+/** 40 Hz beats for this session (a placeholder for the fuller beats system). */
+function BeatsButton() {
+  const on = useGammaBeats();
+  return (
+    <button
+      type="button"
+      className={`btn ${on ? "btn--solid" : "btn--ghost"} beats-btn`}
+      aria-pressed={on}
+      onClick={toggleBeats}
+      title="Binaural on headphones, pulsed on speakers"
+    >
+      <Icon name={on ? "pause" : "wave"} size={16} />
+      {on ? "40 Hz on" : "40 Hz beats"}
+      {on && <span className="beats-btn__pulse" aria-hidden />}
+    </button>
   );
 }

@@ -10,6 +10,7 @@ import { MobileApp } from "@/components/mobile/MobileApp";
 import { MotionPrefs } from "@/components/motion/MotionPrefs";
 import { MusicReturn } from "@/components/music/MusicReturn";
 import { QuietLock } from "@/components/motion/QuietLock";
+import { SessionPrompts } from "@/components/session/SessionPrompts";
 import { ScrollFX } from "@/components/motion/ScrollFX";
 import { SmoothScroll } from "@/components/motion/SmoothScroll";
 
@@ -42,6 +43,7 @@ export default function Home() {
         </main>
         <FinePrint />
         <ScrollFX />
+        <SessionPrompts />
       </MotionPrefs>
     </AuthGate>
   );

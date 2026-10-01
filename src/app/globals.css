@@ -23,7 +23,7 @@ body {
   min-height: 100svh;
   background:
     radial-gradient(ellipse 70% 50% at 50% -10%, rgba(35, 34, 31, 0.9), transparent 70%),
-    radial-gradient(ellipse 40% 30% at 85% 10%, rgba(157, 186, 142, 0.05), transparent 70%),
+    radial-gradient(ellipse 40% 30% at 85% 10%, rgb(var(--measured-rgb) / 0.05), transparent 70%),
     var(--room);
   color: var(--text-1);
   font-family: var(--font-ui);
@@ -69,7 +69,7 @@ button:disabled {
 
 ::selection {
   background: var(--action);
-  color: var(--text-on-cinder);
+  color: var(--text-on-action);
 }
 
 /* Headlines break by meaning, paragraphs avoid one-word last lines. */
@@ -228,7 +228,7 @@ p {
   padding: var(--s-5);
   border-radius: var(--r-panel);
   background:
-    radial-gradient(90% 70% at 50% 0%, rgba(157, 186, 142, 0.06), transparent 70%),
+    radial-gradient(90% 70% at 50% 0%, rgb(var(--measured-rgb) / 0.06), transparent 70%),
     var(--surface-1);
   box-shadow: inset 0 0 0 1px var(--line-2), var(--highlight), var(--shadow-rest);
 }
@@ -249,7 +249,7 @@ p {
 .login__error {
   min-height: 0;
   margin: 0;
-  color: var(--cinder-300);
+  color: var(--a-300);
 }
 .login__error:not(:empty) {
   margin-top: var(--s-3);
@@ -349,7 +349,7 @@ p {
   padding: var(--s-2) var(--s-4);
   border-radius: var(--r-chip);
   background: var(--action);
-  color: var(--text-on-cinder);
+  color: var(--text-on-action);
   font-weight: 700;
   transition: top var(--dur-2) var(--ease-out);
 }
@@ -648,16 +648,16 @@ p {
 }
 .btn--primary {
   background: var(--action);
-  color: var(--text-on-cinder);
+  color: var(--text-on-action);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.25),
-    0 8px 24px -8px rgba(207, 79, 51, 0.5);
+    0 8px 24px -8px rgb(var(--action-rgb) / 0.5);
 }
 .btn--primary:hover:not(:disabled) {
-  background: #da6448;
+  background: var(--action-hover);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.3),
-    0 12px 32px -8px rgba(207, 79, 51, 0.6);
+    0 12px 32px -8px rgb(var(--action-rgb) / 0.6);
 }
 .btn--ghost {
   color: var(--text-1);
@@ -711,7 +711,7 @@ p {
   width: 40px;
   height: 40px;
   border-radius: var(--r-pill);
-  background: linear-gradient(145deg, var(--surface-3), var(--sage-950));
+  background: linear-gradient(145deg, var(--surface-3), var(--carbon-950));
   box-shadow: inset 0 0 0 1px var(--line-2);
   font-size: var(--fs-small);
   font-weight: 700;
@@ -775,7 +775,7 @@ p {
 .led--connected {
   background: var(--measured);
   opacity: 1;
-  box-shadow: 0 0 10px var(--measured), 0 0 2px var(--sage-300);
+  box-shadow: 0 0 10px var(--measured), 0 0 2px var(--m-300);
 }
 .led--connecting {
   background: var(--measured);
@@ -802,13 +802,13 @@ p {
   letter-spacing: 0.06em;
 }
 .state--changing {
-  color: var(--sage-300);
+  color: var(--m-300);
 }
 .state--elevated {
   color: var(--action);
 }
 .state--recovering {
-  color: var(--sage-300);
+  color: var(--m-300);
 }
 .state--poor {
   color: var(--text-1);
@@ -928,7 +928,7 @@ p {
   width: 70%;
   height: 40%;
   transform: translateX(-50%);
-  background: radial-gradient(ellipse at 50% 100%, rgba(182, 174, 159, 0.1), rgba(157, 186, 142, 0.04) 40%, transparent 70%);
+  background: radial-gradient(ellipse at 50% 100%, rgba(182, 174, 159, 0.1), rgb(var(--measured-rgb) / 0.04) 40%, transparent 70%);
   pointer-events: none;
 }
 
@@ -969,7 +969,7 @@ p {
   overflow: hidden;
   border-radius: var(--r-panel);
   background:
-    radial-gradient(90% 80% at 68% 40%, rgba(157, 186, 142, 0.07), transparent 60%),
+    radial-gradient(90% 80% at 68% 40%, rgb(var(--measured-rgb) / 0.07), transparent 60%),
     radial-gradient(60% 60% at 0% 0%, rgba(35, 34, 31, 0.7), transparent 70%),
     linear-gradient(180deg, #171613, #11100d);
   box-shadow: inset 0 0 0 1px var(--line-1);
@@ -1468,8 +1468,8 @@ html[data-quiet] .foot__scroll {
   border-radius: var(--r-tile);
   overflow: hidden;
   background:
-    radial-gradient(80% 60% at 30% 20%, rgba(157, 186, 142, 0.35), transparent 70%),
-    linear-gradient(160deg, var(--surface-3), var(--sage-950));
+    radial-gradient(80% 60% at 30% 20%, rgb(var(--measured-rgb) / 0.35), transparent 70%),
+    linear-gradient(160deg, var(--surface-3), var(--carbon-950));
   box-shadow: inset 0 0 0 1px var(--line-2);
   display: flex;
   flex-direction: column;
@@ -1599,7 +1599,7 @@ html[data-quiet] .foot__scroll {
   flex-direction: column;
   gap: var(--s-3);
   background:
-    radial-gradient(90% 50% at 50% 35%, rgba(207, 79, 51, 0.05), transparent 70%),
+    radial-gradient(90% 50% at 50% 35%, rgb(var(--action-rgb) / 0.05), transparent 70%),
     linear-gradient(180deg, rgba(236, 230, 217, 0.022), rgba(236, 230, 217, 0) 45%),
     var(--surface-1);
 }
@@ -1607,7 +1607,7 @@ html[data-quiet] .foot__scroll {
   box-shadow:
     inset 0 0 0 1px var(--action-line),
     var(--highlight),
-    0 0 40px -16px rgba(207, 79, 51, 0.4);
+    0 0 40px -16px rgb(var(--action-rgb) / 0.4);
 }
 .research-card__viz {
   position: relative;
@@ -1818,7 +1818,7 @@ html[data-quiet] .foot__scroll {
   top: 14%;
   width: 36%;
   height: 50%;
-  background: radial-gradient(closest-side, rgba(157, 186, 142, 0.16), transparent);
+  background: radial-gradient(closest-side, rgb(var(--measured-rgb) / 0.16), transparent);
   mix-blend-mode: screen;
   pointer-events: none;
 }
@@ -1890,7 +1890,7 @@ html[data-quiet] .foot__scroll {
   width: 9px;
   height: 9px;
   border-radius: 50%;
-  box-shadow: inset 0 0 0 1.5px var(--measured), 0 0 0 4px rgba(157, 186, 142, 0.12);
+  box-shadow: inset 0 0 0 1.5px var(--measured), 0 0 0 4px rgb(var(--measured-rgb) / 0.12);
 }
 .callout__text {
   display: flex;
@@ -3281,7 +3281,7 @@ html.lenis body {
   bottom: -20%;
   left: 0;
   width: 30%;
-  background: linear-gradient(100deg, transparent, rgba(195, 214, 180, 0.1) 45%, rgba(236, 230, 217, 0.12) 50%, transparent 60%);
+  background: linear-gradient(100deg, transparent, rgb(var(--measured-hi-rgb) / 0.1) 45%, rgba(236, 230, 217, 0.12) 50%, transparent 60%);
   mix-blend-mode: screen;
   transform: translateX(-120%) skewX(-12deg);
   pointer-events: none;
@@ -3302,14 +3302,14 @@ html.lenis body {
   height: 96px;
   margin: -48px 0 0 -48px;
   border-radius: 50%;
-  box-shadow: inset 0 0 0 1px var(--measured), 0 0 40px rgba(157, 186, 142, 0.35);
+  box-shadow: inset 0 0 0 1px var(--measured), 0 0 40px rgb(var(--measured-rgb) / 0.35);
   pointer-events: none;
 }
 .story__focus span {
   position: absolute;
   inset: 30%;
   border-radius: 50%;
-  box-shadow: inset 0 0 0 1px rgba(195, 214, 180, 0.6);
+  box-shadow: inset 0 0 0 1px rgb(var(--measured-hi-rgb) / 0.6);
   animation: ping 1.8s var(--ease-out) infinite;
 }
 @keyframes ping {
@@ -3446,7 +3446,7 @@ html.lenis body {
   padding: var(--s-5);
   border-radius: var(--r-panel);
   background:
-    radial-gradient(80% 60% at 50% 30%, rgba(157, 186, 142, 0.08), transparent 70%),
+    radial-gradient(80% 60% at 50% 30%, rgb(var(--measured-rgb) / 0.08), transparent 70%),
     var(--surface-1);
   box-shadow: inset 0 0 0 1px var(--line-1), var(--highlight), var(--shadow-lift);
   transform-style: preserve-3d;
@@ -3466,7 +3466,7 @@ html.lenis body {
   aspect-ratio: 11 / 9;
   border-radius: var(--r-tile);
   background:
-    radial-gradient(circle at 50% 45%, rgba(157, 186, 142, 0.08), transparent 65%),
+    radial-gradient(circle at 50% 45%, rgb(var(--measured-rgb) / 0.08), transparent 65%),
     repeating-linear-gradient(0deg, var(--line-1) 0 1px, transparent 1px 24px),
     repeating-linear-gradient(90deg, var(--line-1) 0 1px, transparent 1px 24px);
   overflow: hidden;
@@ -3513,7 +3513,7 @@ html.lenis body {
   overflow: hidden;
 }
 .sig.is-exp {
-  background: radial-gradient(ellipse 60% 50% at 50% 55%, rgba(207, 79, 51, 0.1), transparent 70%);
+  background: radial-gradient(ellipse 60% 50% at 50% 55%, rgb(var(--action-rgb) / 0.1), transparent 70%);
 }
 .sig__inner {
   width: 100%;
@@ -3620,11 +3620,11 @@ html.lenis body {
   text-transform: uppercase;
 }
 .sig__band[data-active] .sig__name {
-  text-shadow: 0 0 30px rgba(157, 186, 142, 0.45);
+  text-shadow: 0 0 30px rgb(var(--measured-rgb) / 0.45);
 }
 .sig__band--exp[data-active] .sig__name {
   color: var(--action);
-  text-shadow: 0 0 30px rgba(207, 79, 51, 0.45);
+  text-shadow: 0 0 30px rgb(var(--action-rgb) / 0.45);
 }
 .sig__range {
   font-size: var(--fs-small);
@@ -3691,7 +3691,7 @@ html.lenis body {
   min-height: 0;
   border-radius: var(--r-panel);
   background:
-    radial-gradient(60% 80% at 50% 60%, rgba(157, 186, 142, 0.06), transparent 70%),
+    radial-gradient(60% 80% at 50% 60%, rgb(var(--measured-rgb) / 0.06), transparent 70%),
     repeating-linear-gradient(90deg, var(--line-1) 0 1px, transparent 1px 64px);
   box-shadow: inset 0 0 0 1px var(--line-1);
   overflow: hidden;
@@ -3745,7 +3745,7 @@ html.lenis body {
 .flow__rail-fill {
   position: absolute;
   inset: 0;
-  background: linear-gradient(90deg, var(--measured), var(--sage-300));
+  background: linear-gradient(90deg, var(--measured), var(--m-300));
   transform: scaleX(0);
   transform-origin: left;
 }
@@ -3808,11 +3808,11 @@ html.lenis body {
 }
 .flow__step[data-active] .flow__card {
   background:
-    radial-gradient(90% 70% at 20% 0%, rgba(157, 186, 142, 0.16), transparent 70%),
+    radial-gradient(90% 70% at 20% 0%, rgb(var(--measured-rgb) / 0.16), transparent 70%),
     var(--surface-2);
   box-shadow:
     inset 0 0 0 1px var(--measured-line),
-    0 20px 50px -20px rgba(157, 186, 142, 0.45);
+    0 20px 50px -20px rgb(var(--measured-rgb) / 0.45);
 }
 .flow__orb {
   margin-bottom: var(--s-2);
@@ -3858,7 +3858,7 @@ html.lenis body {
   height: 60vmax;
   margin: -30vmax 0 0 -30vmax;
   border-radius: 50%;
-  background: radial-gradient(closest-side, rgba(195, 214, 180, 0.9), rgba(157, 186, 142, 0.45) 40%, transparent 72%);
+  background: radial-gradient(closest-side, rgb(var(--measured-hi-rgb) / 0.9), rgb(var(--measured-rgb) / 0.45) 40%, transparent 72%);
   opacity: 0;
   pointer-events: none;
 }
@@ -3915,9 +3915,9 @@ html.lenis body {
   transition: all var(--dur-3) var(--ease-out);
 }
 .finale__label[data-active] {
-  color: var(--text-on-sage);
+  color: var(--text-on-measured);
   background: var(--measured);
-  box-shadow: 0 0 24px rgba(157, 186, 142, 0.6);
+  box-shadow: 0 0 24px rgb(var(--measured-rgb) / 0.6);
   transform: scale(1.08);
 }
 .finale__label--0 {
@@ -3980,7 +3980,7 @@ html.lenis body {
   position: absolute;
   inset: 0;
   padding: inherit;
-  background: linear-gradient(100deg, transparent 0%, transparent 40%, rgba(195, 214, 180, 0.95) 50%, transparent 60%, transparent 100%);
+  background: linear-gradient(100deg, transparent 0%, transparent 40%, rgb(var(--measured-hi-rgb) / 0.95) 50%, transparent 60%, transparent 100%);
   background-size: 250% 100%;
   -webkit-background-clip: text;
   background-clip: text;
@@ -4129,7 +4129,7 @@ html.lenis body {
   padding: 0 var(--s-2) 0 var(--s-5);
   border-radius: var(--r-pill);
   background:
-    linear-gradient(90deg, rgba(157, 186, 142, 0.12), transparent 60%),
+    linear-gradient(90deg, rgb(var(--measured-rgb) / 0.12), transparent 60%),
     var(--surface-1);
   box-shadow: inset 0 0 0 1px var(--line-2), var(--highlight);
   transform-origin: center;
@@ -4213,7 +4213,7 @@ html.lenis body {
   flex-direction: column;
   border-radius: 24px;
   background:
-    radial-gradient(90% 60% at 50% 30%, rgba(157, 186, 142, 0.14), transparent 70%),
+    radial-gradient(90% 60% at 50% 30%, rgb(var(--measured-rgb) / 0.14), transparent 70%),
     var(--surface-1);
   box-shadow: inset 0 0 0 1px var(--line-2), var(--shadow-lift);
   overflow: hidden;
@@ -4285,7 +4285,7 @@ html.lenis body {
   aspect-ratio: 0.76;
   border-radius: var(--r-tile);
   background:
-    radial-gradient(circle at 50% 40%, rgba(157, 186, 142, 0.18), transparent 70%),
+    radial-gradient(circle at 50% 40%, rgb(var(--measured-rgb) / 0.18), transparent 70%),
     var(--surface-2);
   box-shadow: inset 0 0 0 1px var(--line-2);
 }
@@ -4319,7 +4319,7 @@ html.lenis body {
   width: calc(100% + 2 * var(--mx));
 }
 .m-strip--btn.is-on {
-  background: rgba(207, 79, 51, 0.1);
+  background: rgb(var(--action-rgb) / 0.1);
 }
 .m-strip--btn.is-on .marquee__group > span {
   color: var(--action);
@@ -4573,7 +4573,7 @@ html.lenis body {
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(100deg, transparent 30%, rgba(195, 214, 180, 0.09) 50%, transparent 70%);
+  background: linear-gradient(100deg, transparent 30%, rgb(var(--measured-hi-rgb) / 0.09) 50%, transparent 70%);
   background-size: 220% 100%;
   animation: shimmer 1.4s linear infinite;
 }
@@ -4590,7 +4590,7 @@ html.lenis body {
   grid-column: 1 / -1;
   border-radius: var(--r-panel);
   background:
-    radial-gradient(90% 80% at 68% 40%, rgba(157, 186, 142, 0.06), transparent 60%),
+    radial-gradient(90% 80% at 68% 40%, rgb(var(--measured-rgb) / 0.06), transparent 60%),
     #151411;
 }
 .sk-line {
@@ -4608,7 +4608,7 @@ html.lenis body {
   width: 180px;
   height: 44px;
   border-radius: var(--r-tile);
-  background: rgba(207, 79, 51, 0.16);
+  background: rgb(var(--action-rgb) / 0.16);
 }
 .sk-orb {
   position: absolute;
@@ -4617,8 +4617,8 @@ html.lenis body {
   width: 26%;
   aspect-ratio: 1;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(157, 186, 142, 0.14), transparent 65%);
-  box-shadow: inset 0 0 0 1px rgba(157, 186, 142, 0.12);
+  background: radial-gradient(circle, rgb(var(--measured-rgb) / 0.14), transparent 65%);
+  box-shadow: inset 0 0 0 1px rgb(var(--measured-rgb) / 0.12);
 }
 .sk-status {
   position: absolute;
@@ -4671,7 +4671,7 @@ html.lenis body {
   right: 0;
   top: 0;
   height: 10%;
-  background: linear-gradient(180deg, transparent, rgba(157, 186, 142, 0.12) 80%, rgba(195, 214, 180, 0.5) 99%, transparent);
+  background: linear-gradient(180deg, transparent, rgb(var(--measured-rgb) / 0.12) 80%, rgb(var(--measured-hi-rgb) / 0.5) 99%, transparent);
   pointer-events: none;
   opacity: 0;
 }
@@ -4789,7 +4789,7 @@ html.lenis body {
   background:
     radial-gradient(ellipse 50% 60% at 50% 100%, rgba(35, 34, 31, 0.55), transparent 70%),
     var(--room);
-  box-shadow: 0 1px 0 rgba(195, 214, 180, 0.15);
+  box-shadow: 0 1px 0 rgb(var(--measured-hi-rgb) / 0.15);
 }
 .intro__curtain--bottom {
   bottom: 0;
@@ -5208,7 +5208,7 @@ html.lenis body {
   gap: var(--s-4);
 }
 .is-error {
-  color: var(--cinder-300);
+  color: var(--a-300);
 }
 
 .music-empty {
@@ -5305,7 +5305,7 @@ html.lenis body {
   color: var(--measured);
 }
 .state-word--failed {
-  color: var(--cinder-300);
+  color: var(--a-300);
 }
 .mtrack__bar {
   overflow: hidden;
@@ -5558,5 +5558,147 @@ html.lenis body {
     animation: none;
     width: 100%;
     opacity: 0.5;
+  }
+}
+
+/* ═════════════════════════════════════════════════════════════
+   SESSION PROMPTS · PALETTES · 40 HZ BEATS
+   ═════════════════════════════════════════════════════════════ */
+.prompt-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: grid;
+  place-items: center;
+  padding: var(--s-4);
+  background: rgba(11, 10, 7, 0.62);
+  backdrop-filter: blur(6px);
+}
+.prompt {
+  position: relative;
+  width: min(440px, 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--s-3);
+  padding: var(--s-6);
+  border-radius: var(--r-panel);
+  background: linear-gradient(180deg, var(--surface-2), var(--surface-1));
+  box-shadow: inset 0 0 0 1px var(--line-2), var(--highlight), var(--shadow-float);
+}
+.prompt__icon {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  color: var(--measured);
+  background: var(--measured-soft);
+  box-shadow: inset 0 0 0 1px var(--measured-line);
+}
+.prompt__title {
+  margin: var(--s-2) 0 0;
+  font-size: var(--fs-title);
+  font-weight: 500;
+  line-height: 1.25;
+  color: var(--text-1);
+}
+.prompt__body {
+  margin: 0;
+  color: var(--text-2);
+}
+.prompt__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+  margin-top: var(--s-3);
+}
+.prompt__never {
+  font-size: var(--fs-small);
+  color: var(--text-3);
+  text-decoration: underline;
+  text-decoration-color: var(--line-3);
+  text-underline-offset: 3px;
+  transition: color var(--dur-2);
+}
+.prompt__never:hover {
+  color: var(--text-1);
+}
+.prompt__check {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  font-size: var(--fs-small);
+  color: var(--text-2);
+  cursor: pointer;
+}
+.prompt__check input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--action);
+}
+
+.palettes {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--s-2);
+}
+.palettes__label {
+  grid-column: 1 / -1;
+  color: var(--text-3);
+}
+.palette {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  min-width: 0;
+  padding: var(--s-2);
+  border-radius: var(--r-tile);
+  background: rgba(236, 230, 217, 0.03);
+  box-shadow: inset 0 0 0 1px var(--line-1);
+  text-align: left;
+  transition: box-shadow var(--dur-2), background var(--dur-2);
+}
+.palette:hover {
+  box-shadow: inset 0 0 0 1px var(--line-3);
+}
+.palette[aria-checked="true"] {
+  background: rgba(236, 230, 217, 0.06);
+  box-shadow: inset 0 0 0 1.5px var(--text-1);
+}
+.palette__swatch {
+  display: flex;
+  flex: none;
+}
+.palette__swatch i {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px var(--surface-1);
+}
+.palette__swatch i + i {
+  margin-left: -5px;
+}
+.palette__name {
+  min-width: 0;
+  font-size: var(--fs-small);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.beats-btn {
+  position: relative;
+}
+.beats-btn__pulse {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--measured);
+  animation: pulse 1.6s var(--ease-in-out) infinite;
+}
+@media (max-width: 1100px) {
+  .palettes {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }

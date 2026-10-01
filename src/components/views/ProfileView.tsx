@@ -3,6 +3,8 @@
 import { motion } from "motion/react";
 import { useRef, useState, useSyncExternalStore } from "react";
 import { useAuth } from "@/lib/auth";
+import { PALETTES, type PaletteId } from "@/lib/palettes";
+import { setPref, usePrefs } from "@/lib/prefs";
 import { uploadProfilePhoto } from "@/lib/profilePhoto";
 import { isBluetoothAvailable } from "@/lib/sensors/bluetooth";
 import { engine, useStudyLoop } from "@/lib/useStudyLoop";
@@ -14,6 +16,7 @@ const noopSubscribe = () => () => {};
 
 export function ProfileView() {
   const s = useStudyLoop();
+  const prefs = usePrefs();
   const { user, signOut, photo, googlePhoto, setPhoto } = useAuth();
   const fileRef = useRef<HTMLInputElement>(null);
   const [photoBusy, setPhotoBusy] = useState(false);
@@ -145,7 +148,42 @@ export function ProfileView() {
       <section className="profile__settings">
         <div className="toggles">
           <Toggle label="Quiet mode" hint="Dims everything except the timer and state." on={s.quiet} onChange={engine.toggleQuiet} />
-          <Toggle label="Research layer" hint="Shows experimental context in brick red." on={s.research} onChange={engine.toggleResearch} />
+          <Toggle label="Research layer" hint="Shows experimental context in the highlight colour." on={s.research} onChange={engine.toggleResearch} />
+          <Toggle
+            label="Offer music at start"
+            hint="Ask about a Loop when a session starts with nothing playing."
+            on={prefs.askMusicOnStart}
+            onChange={() => setPref("askMusicOnStart", !prefs.askMusicOnStart)}
+          />
+          <Toggle
+            label="Pause Loops for 40 Hz"
+            hint="Pause a playing Loop without asking when you start 40 Hz beats."
+            on={prefs.autoPauseForBeats}
+            onChange={() => setPref("autoPauseForBeats", !prefs.autoPauseForBeats)}
+          />
+        </div>
+        <div className="palettes" role="radiogroup" aria-label="Colour palette">
+          <p className="label palettes__label">Colours</p>
+          {(Object.keys(PALETTES) as PaletteId[]).map((id) => {
+            const p = PALETTES[id];
+            return (
+              <button
+                key={id}
+                type="button"
+                role="radio"
+                aria-checked={prefs.palette === id}
+                className="palette"
+                onClick={() => setPref("palette", id)}
+                title={p.blurb}
+              >
+                <span className="palette__swatch" aria-hidden>
+                  <i style={{ background: p.measured }} />
+                  <i style={{ background: p.action }} />
+                </span>
+                <span className="palette__name">{p.name}</span>
+              </button>
+            );
+          })}
         </div>
       </section>
     </div>

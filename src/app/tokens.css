@@ -15,12 +15,18 @@
 
 :root {
   /* ── Colour primitives ── */
-  --sage-500: #9dba8e;
-  --sage-300: #c3d6b4;
-  --sage-900: #272623;
-  --sage-950: #23221f;
-  --cinder-500: #cf4f33;
-  --cinder-300: #e58a6f;
+  /* Accent slots. Defaults are "Collegiate track"; a chosen palette overrides them
+     on <html> (see src/lib/palettes.ts). m = measured, a = action. */
+  --m-500: #9dba8e;
+  --m-300: #c3d6b4;
+  --measured-rgb: 157 186 142;
+  --measured-hi-rgb: 195 214 180;
+  --a-500: #cf4f33;
+  --a-300: #e58a6f;
+  --action-rgb: 207 79 51;
+  --action-hover: #da6448;
+  --carbon-900: #272623;
+  --carbon-950: #23221f;
   --ink-900: #12110f;
   --ivory: #ece6d9;
   --muted: #b6ae9f;
@@ -37,16 +43,16 @@
   --text-1: var(--ivory);
   --text-2: var(--muted);
   --text-3: #8a8376;
-  --text-on-cinder: var(--ink-900);
-  --text-on-sage: #12110f;
+  --text-on-action: var(--ink-900);
+  --text-on-measured: #12110f;
 
   /* ── Meaning ── */
-  --measured: var(--sage-500);
-  --measured-soft: rgba(157, 186, 142, 0.14);
-  --measured-line: rgba(157, 186, 142, 0.32);
-  --action: var(--cinder-500);
-  --action-soft: rgba(207, 79, 51, 0.14);
-  --action-line: rgba(207, 79, 51, 0.36);
+  --measured: var(--m-500);
+  --measured-soft: rgb(var(--measured-rgb) / 0.14);
+  --measured-line: rgb(var(--measured-rgb) / 0.32);
+  --action: var(--a-500);
+  --action-soft: rgb(var(--action-rgb) / 0.14);
+  --action-line: rgb(var(--action-rgb) / 0.36);
 
   /* ── Hairlines ── */
   --line-1: rgba(236, 230, 217, 0.06);

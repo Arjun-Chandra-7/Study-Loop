@@ -4,6 +4,7 @@ import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
 import { useRef } from "react";
+import { usePalette } from "@/lib/prefs";
 import { ThinkingOrb, type OrbState } from "thinking-orbs";
 import { DotCanvas } from "../motion/DotCanvas";
 import { flowScene } from "../motion/scenes";
@@ -19,6 +20,7 @@ const STEPS: { n: string; title: string; body: string; orb: OrbState; at: number
 ];
 
 export function Flow() {
+  const pal = usePalette();
   const root = useRef<HTMLElement>(null);
   const progress = useRef(0);
 
@@ -103,7 +105,7 @@ export function Flow() {
           <li key={s.n} className="flow__step">
             <Tilt className="flow__card" max={6}>
               <div className="flow__orb">
-                <ThinkingOrb state={s.orb} size={64} theme="dark" color="#9DBA8E" speed={0.7} aria-label={`${s.title} state`} />
+                <ThinkingOrb state={s.orb} size={64} theme="dark" color={pal.measured} speed={0.7} aria-label={`${s.title} state`} />
               </div>
               <span className="flow__n tnum">{s.n}</span>
               <h3 className="h-section">{s.title}</h3>

@@ -9,6 +9,7 @@ import { BASELINE_MS, type Tab } from "@/lib/engine";
 import { clock, signedPercent } from "@/lib/format";
 import { edaDelta, PHYSIO_LABEL } from "@/lib/sensors/classify";
 import { engine, useStudyLoop } from "@/lib/useStudyLoop";
+import { usePalette } from "@/lib/prefs";
 import { Sparkline } from "../charts/Sparkline";
 import { Dock } from "../cockpit/Dock";
 import { subjectCode } from "../cockpit/LowerCards";
@@ -69,11 +70,12 @@ function Section({ id, children }: { id: number; children: React.ReactNode }) {
   );
 }
 
-function Thumb({ orb, value, label, tone = "#9DBA8E", dir }: { orb: OrbState; value: React.ReactNode; label: string; tone?: string; dir: 1 | -1 }) {
+function Thumb({ orb, value, label, tone, dir }: { orb: OrbState; value: React.ReactNode; label: string; tone?: string; dir: 1 | -1 }) {
+  const pal = usePalette();
   return (
     <motion.div className={`m-side ${dir < 0 ? "m-side--l" : "m-side--r"}`} variants={side(dir)}>
       <div className="m-thumb">
-        <ThinkingOrb state={orb} size={32} theme="dark" color={tone} speed={0.7} />
+        <ThinkingOrb state={orb} size={32} theme="dark" color={tone ?? pal.measured} speed={0.7} />
       </div>
       <p className="m-cap">
         <b className="tnum">{value}</b>
@@ -311,6 +313,7 @@ function Sheet() {
 
 export function MobileApp() {
   const s = useStudyLoop();
+  const pal = usePalette();
   const root = useRef<HTMLDivElement>(null);
   const on = s.reading.connection === "connected";
   const { config } = s.session;
@@ -378,7 +381,7 @@ export function MobileApp() {
           Goal {config.minutes} min. {clock(s.session.elapsedMs)} studied so far.
         </motion.p>
         <div className="m-tri">
-          <Thumb dir={-1} orb="searching" value={on ? s.reading.quality : "—"} label="signal" tone={s.reading.quality === "poor" ? "#CF4F33" : "#9DBA8E"} />
+          <Thumb dir={-1} orb="searching" value={on ? s.reading.quality : "—"} label="signal" tone={s.reading.quality === "poor" ? pal.action : pal.measured} />
           <motion.div className="m-main m-main--chart" variants={main}>
             <p className="label">EDA · last 5 min</p>
             <div className="m-main__chart">
@@ -434,7 +437,7 @@ export function MobileApp() {
             </div>
             <p className="small muted">HR above · EDA below</p>
           </motion.div>
-          <Thumb dir={1} orb="composing" value={last?.elevatedMoments ?? 0} label="elevated" tone="#CF4F33" />
+          <Thumb dir={1} orb="composing" value={last?.elevatedMoments ?? 0} label="elevated" tone={pal.action} />
         </div>
         <Marquee items={["Not a medical device", "Measures HR + EDA", "No brain reading", "No stress score"]} />
       </Section>

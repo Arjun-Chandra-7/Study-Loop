@@ -3,6 +3,7 @@
 import { edaDelta } from "@/lib/sensors/classify";
 import { clock } from "@/lib/format";
 import { useStudyLoop } from "@/lib/useStudyLoop";
+import { usePalette } from "@/lib/prefs";
 import { Sparkline } from "../charts/Sparkline";
 import { AnimatedNumber } from "../ui/AnimatedNumber";
 import { ThinkingOrb, type OrbState } from "thinking-orbs";
@@ -24,6 +25,7 @@ function MetricCard({
   foot?: React.ReactNode;
   offline?: boolean;
 }) {
+  const pal = usePalette();
   return (
     <section className={`card metric ${offline ? "is-offline" : ""}`} aria-label={label}>
       <header className="card__head">
@@ -32,7 +34,7 @@ function MetricCard({
             state={orb}
             size={20}
             theme="dark"
-            color={offline ? "#8A8376" : chipTone === "action" ? "#CF4F33" : "#C3D6B4"}
+            color={offline ? "#8A8376" : chipTone === "action" ? pal.action : pal.measuredHi}
             speed={offline ? 0.3 : 0.8}
             paused={offline}
           />

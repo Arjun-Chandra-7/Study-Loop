@@ -1,6 +1,7 @@
 import type { OrbState } from "thinking-orbs";
 import type { SessionPhase } from "@/lib/engine";
 import type { PhysioState } from "@/lib/sensors/classify";
+import { palette } from "@/lib/prefs";
 import type { ConnectionState } from "@/lib/sensors/types";
 
 export interface OrbSpec {
@@ -11,8 +12,6 @@ export interface OrbSpec {
   label: string;
 }
 
-const SAGE = "#9DBA8E";
-const CINDER = "#CF4F33";
 const IVORY = "#B6AE9F";
 
 /**
@@ -26,24 +25,25 @@ export function orbFor(input: {
   research: boolean;
 }): OrbSpec {
   const { connection, phase, physio, research } = input;
+  const { measured: MEASURED, action: ACTION } = palette();
   if (connection === "disconnected") return { state: "breathing", speed: 0.3, color: IVORY, label: "Band offline" };
-  if (connection === "connecting") return { state: "connecting", speed: 0.8, color: SAGE, label: "Pairing with band" };
+  if (connection === "connecting") return { state: "connecting", speed: 0.8, color: MEASURED, label: "Pairing with band" };
   if (physio === "poor") return { state: "searching", speed: 0.6, color: IVORY, label: "Looking for a clean signal" };
-  if (phase === "baseline") return { state: "connecting", speed: 0.55, color: SAGE, label: "Capturing baseline" };
+  if (phase === "baseline") return { state: "connecting", speed: 0.55, color: MEASURED, label: "Capturing baseline" };
   if (phase === "paused") return { state: "breathing", speed: 0.25, color: IVORY, label: "Session paused" };
-  if (phase === "complete") return { state: "breathing", speed: 0.35, color: SAGE, label: "Session complete" };
+  if (phase === "complete") return { state: "breathing", speed: 0.35, color: MEASURED, label: "Session complete" };
   if (phase === "active") {
-    if (research) return { state: "listening", speed: 0.7, color: CINDER, label: "Research protocol layer active" };
+    if (research) return { state: "listening", speed: 0.7, color: ACTION, label: "Research protocol layer active" };
     switch (physio) {
       case "elevated":
-        return { state: "working", speed: 1.05, color: CINDER, label: "Signals elevated" };
+        return { state: "working", speed: 1.05, color: ACTION, label: "Signals elevated" };
       case "changing":
-        return { state: "working", speed: 0.75, color: SAGE, label: "Signals changing" };
+        return { state: "working", speed: 0.75, color: MEASURED, label: "Signals changing" };
       case "recovering":
-        return { state: "breathing", speed: 0.6, color: SAGE, label: "Signals recovering" };
+        return { state: "breathing", speed: 0.6, color: MEASURED, label: "Signals recovering" };
       default:
-        return { state: "working", speed: 0.5, color: SAGE, label: "Signals stable" };
+        return { state: "working", speed: 0.5, color: MEASURED, label: "Signals stable" };
     }
   }
-  return { state: "breathing", speed: 0.45, color: SAGE, label: "Ready" };
+  return { state: "breathing", speed: 0.45, color: MEASURED, label: "Ready" };
 }

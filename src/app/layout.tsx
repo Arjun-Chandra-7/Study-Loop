@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Instrument_Serif, Michroma } from "next/font/google";
 import { AuthProvider } from "@/lib/auth";
+import { prePaintScript } from "@/lib/palettes";
 import "./globals.css";
 
 // Editorial accent — taglines, research statements, transitions.
@@ -39,8 +40,10 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" data-theme="dark" className={`${instrumentSerif.variable} ${michroma.variable}`}>
+    <html lang="en" data-theme="dark" suppressHydrationWarning className={`${instrumentSerif.variable} ${michroma.variable}`}>
       <head>
+        {/* Apply the saved colour palette before first paint. */}
+        <script dangerouslySetInnerHTML={{ __html: prePaintScript() }} />
         {/* Satoshi is distributed by Fontshare, not Google Fonts. */}
         <link rel="preconnect" href="https://api.fontshare.com" crossOrigin="" />
         <link
