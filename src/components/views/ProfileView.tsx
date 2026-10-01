@@ -145,7 +145,7 @@ export function ProfileView() {
       <section className="profile__settings">
         <div className="toggles">
           <Toggle label="Quiet mode" hint="Dims everything except the timer and state." on={s.quiet} onChange={engine.toggleQuiet} />
-          <Toggle label="Research layer" hint="Shows experimental context in orange." on={s.research} onChange={engine.toggleResearch} />
+          <Toggle label="Research layer" hint="Shows experimental context in brick red." on={s.research} onChange={engine.toggleResearch} />
         </div>
       </section>
     </div>

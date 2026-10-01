@@ -21,7 +21,7 @@ const PAD_BOTTOM = 28;
 
 /**
  * Two lanes on one clock: heart rate above, skin conductance below, both
- * against the student's own baseline. Blaze marks are events, never data.
+ * against the student's own baseline. Cinder marks are events, never data.
  */
 export function SessionChart({ samples, events, baseline, durationMs }: Props) {
   const id = useId();

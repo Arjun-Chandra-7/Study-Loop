@@ -23,7 +23,7 @@ export function Tilt({
   const glare = useTransform(
     [sx, sy] as never,
     ([x, y]: number[]) =>
-      `radial-gradient(420px circle at ${x * 100}% ${y * 100}%, rgba(244, 244, 240,0.09), transparent 45%)`,
+      `radial-gradient(420px circle at ${x * 100}% ${y * 100}%, rgba(236, 230, 217,0.09), transparent 45%)`,
   );
 
   return (

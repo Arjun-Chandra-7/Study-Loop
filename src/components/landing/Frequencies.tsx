@@ -20,7 +20,7 @@ const ease = (x: number) => (x < 0.5 ? 4 * x * x * x : 1 - (-2 * x + 2) ** 3 / 2
 
 /**
  * Pinned: each band holds, then the ribbon morphs into the next frequency.
- * theta → alpha → gamma → 40 Hz (experimental, blaze).
+ * theta → alpha → gamma → 40 Hz (experimental, cinder).
  */
 export function Frequencies() {
   const root = useRef<HTMLElement>(null);
@@ -109,7 +109,7 @@ export function Frequencies() {
         </header>
 
         <div className="sig__wave">
-          <DotCanvas scene={ribbonScene} param={cycles} tint={exp ? "#FF5A1F" : "#D7FF3A"} label="Oscillation at the selected frequency" />
+          <DotCanvas scene={ribbonScene} param={cycles} tint={exp ? "#CF4F33" : "#9DBA8E"} label="Oscillation at the selected frequency" />
         </div>
 
         <ol className="sig__bands">

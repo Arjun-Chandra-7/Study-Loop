@@ -49,7 +49,7 @@ export function PlayerCard() {
             state={running ? "working" : phase === "baseline" ? "connecting" : "breathing"}
             size={32}
             theme="dark"
-            color="#E5FF8A"
+            color="#C3D6B4"
             speed={running ? 0.8 : 0.4}
           />
         </span>
@@ -152,7 +152,7 @@ export function TrendCard() {
   );
 }
 
-/** Right vertical card — the research layer, always blaze, always labelled experimental. */
+/** Right vertical card — the research layer, always cinder, always labelled experimental. */
 export function ResearchCard() {
   const s = useStudyLoop();
   return (
@@ -171,7 +171,7 @@ export function ResearchCard() {
           </svg>
         </div>
         <span className="research-card__orb">
-          <ThinkingOrb state="weaving" size={32} theme="dark" color="#FF5A1F" speed={s.research ? 1 : 0.35} />
+          <ThinkingOrb state="weaving" size={32} theme="dark" color="#CF4F33" speed={s.research ? 1 : 0.35} />
         </span>
         <span className="research-card__hz">
           40<small>Hz</small>

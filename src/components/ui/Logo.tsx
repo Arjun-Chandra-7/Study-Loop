@@ -1,6 +1,6 @@
 import Image from "next/image";
 
-/** Brand lockup: blaze STUDY, volt LOOP on graphite, slanted forward. Transparent background. */
+/** Brand lockup: cinder STUDY, sage LOOP on warm carbon, slanted forward. Transparent background. */
 export function Logo({ size = "md" }: { size?: "sm" | "md" }) {
   return (
     <Image
