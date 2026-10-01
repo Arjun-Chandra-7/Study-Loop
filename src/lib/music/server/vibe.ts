@@ -1,6 +1,7 @@
 import "server-only";
 import { createHash } from "node:crypto";
 import { google } from "@ai-sdk/google";
+import { groq } from "@ai-sdk/groq";
 import { generateText, Output, type LanguageModel } from "ai";
 import { VibeProfileSchema, type VibeProfile } from "../vibe/profile";
 import { q } from "./db";
@@ -8,11 +9,15 @@ import { ApiError } from "./http";
 import { log } from "./log";
 
 /**
- * Which model reads the vibe: Google Gemini directly when GOOGLE_GENERATIVE_AI_API_KEY is set (free tier
+ * Which model reads the vibe: Groq when GROQ_API_KEY is set, else Google Gemini when GOOGLE_GENERATIVE_AI_API_KEY is set (free tier
  * works), otherwise the Vercel AI Gateway. Returns [model, id used in the cache key].
  */
 function vibeModel(): [LanguageModel, string] {
   if (modelOverride) return [modelOverride, "test"];
+  if (process.env.GROQ_API_KEY) {
+    const id = process.env.MUSIC_VIBE_GROQ_MODEL || "openai/gpt-oss-120b";
+    return [groq(id), `groq/${id}`];
+  }
   if (process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
     const id = process.env.MUSIC_VIBE_GEMINI_MODEL || "gemini-3.8-flash";
     return [google(id), `google/${id}`];

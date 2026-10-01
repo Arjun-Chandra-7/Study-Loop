@@ -19,7 +19,7 @@ song audio involved, so it works for any playlist with nothing to upload.
 
 - **Vibe reading** (`src/lib/music/server/vibe.ts`): Spotify's API no longer returns tempo, key, energy or
   genres for new apps (verified: 403/404 or fields absent), so a model reads the playlist's titles and
-  artists through the Vercel AI Gateway (`anthropic/claude-sonnet-5.5`, structured output validated by
+  artists through the model (Groq `openai/gpt-oss-120b` when `GROQ_API_KEY` is set, else Gemini via `GOOGLE_GENERATIVE_AI_API_KEY`, else the Vercel AI Gateway; structured output validated by
   `VibeProfileSchema`) and returns tempo, key/mode, chord progression, drum feel (lo-fi / dholak groove /
   boom-bap / downtempo / ambient), instrument palette, energy, warmth and swing. Cached per exact track list
   (one call per playlist). If the gateway is unavailable, a keyword-based **basic vibe** is used (not cached)
