@@ -120,16 +120,22 @@ export function useMusicLibrary(api = musicApi) {
     }
   };
 
+  /** Tracks that can actually play (they have audio), in library order. */
+  const playable = (tracks ?? []).filter((t) => t.audio);
+
+  /** Like starting a playlist: play from this track, with the rest of the library queued after it. */
   const play = async (trackId: string, mode?: StudyMode) => {
-    const track = tracks?.find((t) => t.id === trackId);
-    if (!track) return;
+    const start = playable.findIndex((t) => t.id === trackId);
+    if (start === -1) return;
     setError(trackId, null);
-    try {
-      player.open(track, await api.versions(trackId), { mode, autoplay: true });
-    } catch (e) {
-      setError(trackId, message(e));
-    }
+    await player.playQueue(playable, start, { mode });
   };
 
-  return { tracks, loadError, uploads, errors, reload, importSpotify, addTrack, upload, process, play };
+  const playAll = async (shuffle = false) => {
+    if (!playable.length) return;
+    if (shuffle !== player.getSnapshot().shuffle) player.toggleShuffle();
+    await player.playQueue(playable, shuffle ? Math.floor(Math.random() * playable.length) : 0);
+  };
+
+  return { tracks, playable, loadError, uploads, errors, reload, importSpotify, addTrack, upload, process, play, playAll };
 }

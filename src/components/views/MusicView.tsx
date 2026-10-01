@@ -21,21 +21,45 @@ type Library = ReturnType<typeof useMusicLibrary>;
 export function MusicView() {
   const lib = useMusicLibrary();
   const p = usePlayer();
+  const [view, setView] = useState<"library" | "queue">("library");
+  const upNext = Math.max(0, p.queue.length - p.index - 1);
 
   return (
     <div className="music" data-has-track={p.track ? "" : undefined}>
       <div className="music__lib">
-        <div className="music__head">
-          <p className="eyebrow">
-            <span className="eyebrow__rule" aria-hidden />
-            Music for study
-          </p>
-          <h2 className="h-section">
-            Your music, <span className="serif">without the words.</span>
-          </h2>
+        <h2 className="eyebrow music__eyebrow">
+          <span className="eyebrow__rule" aria-hidden />
+          Music for study
+        </h2>
+        <div className="music__bar">
+          <div className="seg music__tabs" role="tablist" aria-label="Music">
+            {(["library", "queue"] as const).map((v) => (
+              <button key={v} id={`music-tab-${v}`} type="button" role="tab" aria-selected={view === v} aria-controls="music-panel" onClick={() => setView(v)}>
+                {view === v && <span className="seg__thumb" aria-hidden />}
+                <span>{v === "library" ? "Library" : `Up next${upNext ? ` · ${upNext}` : ""}`}</span>
+              </button>
+            ))}
+          </div>
+          <div className="music__bar-actions">
+            <button type="button" className="icon-btn" aria-label="Shuffle play" title="Shuffle play" disabled={!lib.playable.length} onClick={() => void lib.playAll(true)}>
+              <Icon name="shuffle" size={16} />
+            </button>
+            <button type="button" className="btn btn--sm btn--ghost" disabled={!lib.playable.length} onClick={() => void lib.playAll(false)}>
+              <Icon name="play" size={14} />
+              Play all
+            </button>
+          </div>
         </div>
-        <ImportBar lib={lib} />
-        <TrackList lib={lib} currentId={p.track?.id ?? null} audible={p.playing} />
+        <div id="music-panel" className="music__panel" role="tabpanel" aria-labelledby={`music-tab-${view}`}>
+          {view === "library" ? (
+            <>
+              <ImportBar lib={lib} />
+              <TrackList lib={lib} currentId={p.track?.id ?? null} audible={p.playing} />
+            </>
+          ) : (
+            <QueueList />
+          )}
+        </div>
       </div>
       <NowPlaying />
     </div>
@@ -257,6 +281,17 @@ function TrackCard({ track, lib, current, audible }: { track: TrackView; lib: Li
             {status.key === "failed" ? "Try again" : "Process track"}
           </button>
         )}
+        {track.audio && !current && (
+          <button
+            type="button"
+            className="icon-btn"
+            onClick={() => player.addToQueue(track)}
+            aria-label={`Add ${track.title} to queue`}
+            title="Add to queue"
+          >
+            <Icon name="queue" size={16} />
+          </button>
+        )}
         {track.audio && (
           <button
             type="button"
@@ -309,14 +344,27 @@ function NowPlaying() {
           <p className="card__sub">{p.track.artist}</p>
         </div>
         <div className="music-player__transport">
-          <button type="button" className="icon-btn" aria-label="Back 10 seconds" onClick={() => player.skip(-10)}>
-            <Icon name="back5" size={16} />
+          <button type="button" className="icon-btn transport-toggle" aria-label="Shuffle" aria-pressed={p.shuffle} title={p.shuffle ? "Shuffle on" : "Shuffle off"} onClick={() => player.toggleShuffle()}>
+            <Icon name="shuffle" size={16} />
+          </button>
+          <button type="button" className="icon-btn" aria-label="Previous" title="Previous" onClick={() => void player.previous()}>
+            <Icon name="prev" size={16} />
           </button>
           <button type="button" className="play-btn" aria-label={p.playing ? "Pause" : "Play"} onClick={() => player.toggle()} data-running={p.playing || undefined}>
             <Icon name={p.playing ? "pause" : "play"} size={18} />
           </button>
-          <button type="button" className="icon-btn" aria-label="Forward 10 seconds" onClick={() => player.skip(10)}>
-            <Icon name="fwd5" size={16} />
+          <button type="button" className="icon-btn" aria-label="Next" title="Next" disabled={!player.hasNext()} onClick={() => void player.next()}>
+            <Icon name="next" size={16} />
+          </button>
+          <button
+            type="button"
+            className="icon-btn transport-toggle"
+            aria-label={`Repeat: ${p.repeat === "off" ? "off" : p.repeat === "all" ? "all" : "this track"}`}
+            aria-pressed={p.repeat !== "off"}
+            title={p.repeat === "off" ? "Repeat off" : p.repeat === "all" ? "Repeat all" : "Repeat one"}
+            onClick={() => player.cycleRepeat()}
+          >
+            <Icon name={p.repeat === "one" ? "repeatOne" : "repeat"} size={16} />
           </button>
         </div>
       </div>
@@ -368,6 +416,21 @@ function NowPlaying() {
           style={{ ["--pct" as string]: `${p.duration ? (p.time / p.duration) * 100 : 0}%` }}
         />
         <span>{clock(p.duration * 1000)}</span>
+        <button type="button" className="icon-btn music-player__mute" aria-label={p.muted ? "Unmute" : "Mute"} onClick={() => player.toggleMute()}>
+          <Icon name={p.muted || p.volume === 0 ? "mute" : "volume"} size={16} />
+        </button>
+        <input
+          type="range"
+          className="scrub scrub--volume"
+          min={0}
+          max={1}
+          step={0.05}
+          value={p.muted ? 0 : p.volume}
+          onChange={(e) => player.setVolume(Number(e.target.value))}
+          aria-label="Volume"
+          aria-valuetext={`${Math.round((p.muted ? 0 : p.volume) * 100)}%`}
+          style={{ ["--pct" as string]: `${(p.muted ? 0 : p.volume) * 100}%` }}
+        />
       </div>
       {p.error && (
         <p className="small is-error" role="alert">
@@ -375,6 +438,41 @@ function NowPlaying() {
         </p>
       )}
     </section>
+  );
+}
+
+function QueueList() {
+  const p = usePlayer();
+  if (!p.queue.length) {
+    return (
+      <div className="music-empty">
+        <Icon name="queue" size={20} />
+        <p className="small muted">Nothing queued. Press play on a track, or add tracks to the queue from your library.</p>
+      </div>
+    );
+  }
+  return (
+    <ol className="music__list music-queue" aria-label="Queue" data-lenis-prevent>
+      {p.queue.map((t, i) => {
+        const now = i === p.index;
+        return (
+          <li key={t.id} className="mqueue" data-now={now || undefined} data-played={i < p.index || undefined}>
+            <span className="mqueue__n tnum" aria-hidden>
+              {now ? <Icon name={p.playing ? "wave" : "pause"} size={14} /> : i + 1}
+            </span>
+            <button type="button" className="mqueue__main" onClick={() => void player.jumpTo(i)} aria-current={now || undefined} aria-label={`${now ? "Now playing: " : "Play "}${t.title}${t.artist ? ` by ${t.artist}` : ""}`}>
+              <span className="card__title">{t.title}</span>
+              <span className="card__sub">{t.artist}</span>
+            </button>
+            {!now && (
+              <button type="button" className="icon-btn" aria-label={`Remove ${t.title} from queue`} onClick={() => player.removeFromQueue(i)}>
+                <Icon name="close" size={14} />
+              </button>
+            )}
+          </li>
+        );
+      })}
+    </ol>
   );
 }
 

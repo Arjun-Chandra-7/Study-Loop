@@ -38,6 +38,12 @@ One shared <audio> element (src/lib/music/player.ts): switching version swaps sr
 position + play/pause. All versions come from one decode, so they line up sample-for-sample.
 ```
 
+**Player.** Play/pause, previous (restarts the song after 3 s, like Spotify), next, shuffle (reorders
+what's coming up; turning it off restores the order), repeat off → all → one, seek, volume/mute, an
+**Up next** queue (play from any track, add to queue, remove, jump), auto-advance when a song ends, and
+media keys / lock-screen controls via the Media Session API. The chosen study version (e.g. No Lyrics)
+carries across tracks; an unprocessed track plays Original until it's processed.
+
 States the user sees: *Needs audio* → *Uploading audio… (real %)* → *Ready to process* → *Waiting for
 processing…* → *Separating music… (real %, from Demucs' own chunk counter)* → *Preparing study versions…*
 (activity sweep, no number) → *Ready to study*, or *Processing failed* with a plain-language reason and
@@ -113,7 +119,7 @@ last release) imports fine against torch 2.13.
 ## Tests
 
 ```bash
-npm test                                   # API, player, Music view (56 tests, ~5 s)
+npm test                                   # API, player, Music view (70 tests, ~6 s)
 npm run music:test-worker                  # worker pipeline with real FFmpeg + stand-in separator (12 tests)
 MUSIC_TEST_DEMUCS=1 npm run music:test-worker          # + real Demucs on a synthetic mix with known parts
 MUSIC_TEST_WORKER=1 npx vitest run worker.integration  # API → queue → real worker → playback links
@@ -169,11 +175,15 @@ Known limitations (normal for source separation; no output was listened to by a 
 
 ## Spotify, rights and privacy
 
+- **Spotify requires the owner of the Spotify developer app to have an active Premium subscription.**
+  Without it, every Web API call returns 403 "Active premium subscription required for the owner of the
+  app" (verified 1 Oct 2026 with real credentials), and the app shows "Spotify import is unavailable right
+  now". After subscribing, Spotify says it can take a few hours before requests are allowed.
 - Import uses Spotify's Web API with the **client-credentials** flow, so only public playlists, albums and
   tracks are readable. Up to 100 tracks per import. Local files and podcast episodes are skipped. Spotify has
   restricted some endpoints for new/dev-mode apps; if playlist reads are refused the user sees "Spotify
-  couldn't share that link". **Not tested against the live Spotify API** (no credentials were available);
-  tested against mocked responses that follow the documented shapes.
+  couldn't share that link". The live check is opt-in:
+  `MUSIC_TEST_SPOTIFY_URL=<share link> npx vitest run spotify.live` (reads `.env.local`).
 - Album art is shown from Spotify's CDN with a link back to the track on Spotify; audio is never fetched.
 - Users must supply audio they own or have the rights to use (the UI says so). Separating copyrighted
   recordings for personal listening still raises licensing questions for a commercial product; see the

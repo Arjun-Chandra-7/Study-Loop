@@ -4742,9 +4742,68 @@ html.lenis body {
   gap: var(--s-3);
   min-height: 0;
 }
-.music__head .h-section {
-  margin-top: var(--s-2);
-  font-size: var(--fs-title);
+.music__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+}
+.music__tabs button[aria-selected="true"] {
+  color: var(--ink-900);
+}
+.music__tabs button {
+  padding: 0 var(--s-4);
+}
+.music__bar-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+}
+.music__panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  flex: 1;
+  min-height: 0;
+}
+
+/* Queue */
+.mqueue {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-2) var(--s-3);
+  border-radius: var(--r-tile);
+  box-shadow: inset 0 0 0 1px var(--line-1);
+}
+.mqueue[data-now] {
+  background: rgba(244, 241, 234, 0.06);
+  box-shadow: inset 0 0 0 1px rgba(244, 241, 234, 0.4);
+}
+.mqueue[data-played] {
+  opacity: 0.55;
+}
+.mqueue__n {
+  display: grid;
+  place-items: center;
+  font-size: var(--fs-small);
+  color: var(--text-3);
+}
+.mqueue[data-now] .mqueue__n {
+  color: var(--measured);
+}
+.mqueue__main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  text-align: left;
+  border-radius: var(--r-chip);
+}
+.mqueue__main .card__title {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .music__list {
   flex: 1;
@@ -5017,6 +5076,30 @@ html.lenis body {
   display: flex;
   align-items: center;
   gap: var(--s-2);
+}
+/* On/off controls: lit icon + dot underneath, never colour alone (aria-pressed carries the state). */
+.transport-toggle[aria-pressed="true"] {
+  position: relative;
+  color: var(--measured);
+  box-shadow: inset 0 0 0 1px var(--measured-line);
+}
+.transport-toggle[aria-pressed="true"]::after {
+  content: "";
+  position: absolute;
+  bottom: 3px;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.music-player__mute {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  box-shadow: none;
+}
+.scrub.scrub--volume {
+  flex: 0 0 72px;
 }
 .music-player__seek {
   display: flex;

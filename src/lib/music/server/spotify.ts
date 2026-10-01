@@ -73,6 +73,14 @@ async function get<T>(url: string): Promise<T> {
     headers: { Authorization: `Bearer ${await accessToken()}` },
     cache: "no-store",
   });
+  if (res.status === 403) {
+    // Spotify refuses developer-mode apps whose owner lacks Premium, for every endpoint.
+    const reason = await res.text().catch(() => "");
+    if (/premium/i.test(reason)) {
+      log("spotify_failed", { stage: "fetch", status: 403, reason: "app_owner_needs_premium" });
+      throw new ApiError(503, "spotify_app_blocked", "Spotify import is unavailable right now: Spotify hasn't enabled StudyLoop's access yet. Add tracks by name instead.");
+    }
+  }
   if (res.status === 404 || res.status === 403 || res.status === 400) {
     throw new ApiError(404, "spotify_not_found", "Spotify couldn't share that link. Only public playlists, albums and tracks can be imported.");
   }

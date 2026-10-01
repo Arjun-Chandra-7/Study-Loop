@@ -378,6 +378,17 @@ describe("Spotify import", () => {
     expect((await res.json()).error.code).toBe("spotify_not_found");
   });
 
+  it("explains when Spotify blocks the app (owner without Premium)", async () => {
+    vi.stubGlobal("fetch", async (input: string | URL) =>
+      String(input).includes("accounts.spotify.com")
+        ? Response.json({ access_token: "tok", expires_in: 3600 })
+        : new Response("Active premium subscription required for the owner of the app.", { status: 403 }),
+    );
+    const res = await importUrl(`https://open.spotify.com/playlist/${ID}?si=abc`);
+    expect(res.status).toBe(503);
+    expect((await res.json()).error.code).toBe("spotify_app_blocked");
+  });
+
   it("says so when Spotify isn't configured", async () => {
     vi.stubEnv("SPOTIFY_CLIENT_ID", "");
     const res = await importUrl(`https://open.spotify.com/playlist/${ID}`);

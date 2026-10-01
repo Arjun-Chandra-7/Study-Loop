@@ -9,6 +9,8 @@ class FakeAudio extends EventTarget {
   currentTime = 0;
   duration = NaN;
   preload = "";
+  volume = 1;
+  muted = false;
   loads = 0;
   failNext = false;
   load() {
@@ -132,6 +134,151 @@ describe("MusicPlayer", () => {
     audio.dispatchEvent(new Event("error"));
     await tick();
     expect(p.getSnapshot().error).toMatch(/couldn't be played/);
+  });
+
+  describe("queue", () => {
+    const q = (id: string) => ({ id, title: `Song ${id}`, artist: "A", artworkUrl: null });
+    /** Versions per track; "u" = unprocessed (Original only). */
+    const versionsFor = (id: string): VersionsView =>
+      id.startsWith("u")
+        ? { trackId: id, expiresAt: 0, versions: { original: { url: `/${id}/o`, durationS: 200 } } }
+        : {
+            trackId: id,
+            expiresAt: 0,
+            versions: {
+              original: { url: `/${id}/o`, durationS: 200 },
+              no_lyrics: { url: `/${id}/n`, durationS: 200 },
+              vocals_only: { url: `/${id}/v`, durationS: 200 },
+              beats_only: { url: `/${id}/b`, durationS: 200 },
+            },
+          };
+    function queued(random = () => 0.5) {
+      const audio = new FakeAudio();
+      const p = new MusicPlayer(() => audio as unknown as HTMLAudioElement, random);
+      p.refetch = async (id) => versionsFor(id);
+      return { audio, p, ids: () => p.getSnapshot().queue.map((t) => t.id) };
+    }
+    const settle = async () => {
+      await tick();
+      await tick();
+    };
+
+    it("plays a list from the chosen track and moves through it", async () => {
+      const { audio, p } = queued();
+      await p.playQueue([q("a"), q("b"), q("c")], 1);
+      await settle();
+      expect(p.getSnapshot()).toMatchObject({ index: 1, track: { id: "b" }, playing: true });
+      await p.next();
+      await settle();
+      expect(audio.src).toBe("/c/o");
+      expect(p.hasNext()).toBe(false);
+      await p.next(); // end of queue, repeat off: stays put
+      expect(p.getSnapshot().track?.id).toBe("c");
+    });
+
+    it("previous restarts the song after 3 s, otherwise goes back", async () => {
+      const { audio, p } = queued();
+      await p.playQueue([q("a"), q("b")], 1);
+      await settle();
+      audio.currentTime = 42;
+      await p.previous();
+      expect(audio.currentTime).toBe(0);
+      expect(p.getSnapshot().track?.id).toBe("b");
+      await p.previous();
+      await settle();
+      expect(p.getSnapshot().track?.id).toBe("a");
+    });
+
+    it("advances when a song ends, and honours repeat all / one", async () => {
+      const { audio, p } = queued();
+      await p.playQueue([q("a"), q("b")]);
+      await settle();
+      audio.dispatchEvent(new Event("ended"));
+      await settle();
+      expect(p.getSnapshot().track?.id).toBe("b");
+
+      audio.dispatchEvent(new Event("ended")); // last song, repeat off
+      await settle();
+      expect(p.getSnapshot()).toMatchObject({ track: { id: "b" }, playing: false });
+
+      p.cycleRepeat(); // all
+      expect(p.getSnapshot().repeat).toBe("all");
+      audio.dispatchEvent(new Event("ended"));
+      await settle();
+      expect(p.getSnapshot().track?.id).toBe("a");
+
+      p.cycleRepeat(); // one
+      audio.currentTime = 150;
+      audio.dispatchEvent(new Event("ended"));
+      await settle();
+      expect(p.getSnapshot().track?.id).toBe("a");
+      expect(audio.currentTime).toBe(0);
+      expect(audio.paused).toBe(false);
+      p.cycleRepeat();
+      expect(p.getSnapshot().repeat).toBe("off");
+    });
+
+    it("shuffles what's coming up, keeps the current song, and restores order when turned off", async () => {
+      let n = 0;
+      const { p, ids } = queued(() => [0.1, 0.9, 0.3, 0.7][n++ % 4]);
+      await p.playQueue([q("a"), q("b"), q("c"), q("d"), q("e")], 1);
+      await settle();
+      p.toggleShuffle();
+      expect(p.getSnapshot()).toMatchObject({ shuffle: true, index: 0, track: { id: "b" } });
+      expect(ids()[0]).toBe("b");
+      expect([...ids()].sort()).toEqual(["a", "b", "c", "d", "e"]);
+      expect(ids()).not.toEqual(["b", "a", "c", "d", "e"]);
+      p.toggleShuffle();
+      expect(ids()).toEqual(["a", "b", "c", "d", "e"]);
+      expect(p.getSnapshot().index).toBe(1);
+    });
+
+    it("queues tracks to play next or last, and removes them", async () => {
+      const { p, ids } = queued();
+      await p.playQueue([q("a"), q("b")]);
+      await settle();
+      p.addToQueue(q("x"));
+      p.addToQueue(q("x")); // no duplicates
+      p.playNext(q("y"));
+      expect(ids()).toEqual(["a", "y", "b", "x"]);
+      p.removeFromQueue(2);
+      expect(ids()).toEqual(["a", "y", "x"]);
+      p.removeFromQueue(0); // can't remove what's playing
+      expect(ids()).toEqual(["a", "y", "x"]);
+      await p.next();
+      await settle();
+      expect(p.getSnapshot().track?.id).toBe("y");
+      await p.jumpTo(2);
+      await settle();
+      expect(p.getSnapshot().track?.id).toBe("x");
+    });
+
+    it("keeps the chosen study version across tracks, falling back to Original where needed", async () => {
+      const { audio, p } = queued();
+      await p.playQueue([q("a"), q("u1"), q("c")], 0, { mode: "no_lyrics" });
+      await settle();
+      expect(audio.src).toBe("/a/n");
+      await p.next();
+      await settle();
+      expect(p.getSnapshot()).toMatchObject({ mode: "original", preferredMode: "no_lyrics" });
+      await p.next();
+      await settle();
+      expect(audio.src).toBe("/c/n");
+    });
+
+    it("controls volume and mute", async () => {
+      const { audio, p } = queued();
+      await p.playQueue([q("a")]);
+      await settle();
+      p.setVolume(0.3);
+      expect((audio as unknown as { volume: number }).volume).toBe(0.3);
+      p.toggleMute();
+      expect(p.getSnapshot()).toMatchObject({ muted: true, volume: 0.3 });
+      p.toggleMute();
+      expect(p.getSnapshot()).toMatchObject({ muted: false, volume: 0.3 });
+      p.setVolume(0);
+      expect(p.getSnapshot().muted).toBe(true);
+    });
   });
 
   it("seeks and skips within the track", async () => {

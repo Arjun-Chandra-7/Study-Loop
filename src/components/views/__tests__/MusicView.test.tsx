@@ -221,6 +221,32 @@ describe("MusicView", () => {
     expect(within(playerRegion).getByRole("slider", { name: "Position" })).toBeTruthy();
   });
 
+  it("has Spotify-style controls and an Up next queue", async () => {
+    const t = (id: string, title: string) => withAudio({ id, title, job: job({ id: `j${id}`, status: "completed", progress: 1 }) });
+    api.tracks.mockResolvedValue([t("q1", "First"), t("q2", "Second"), t("q3", "Third")]);
+    api.versions.mockImplementation(async (id: string) => ({ ...versions(true), trackId: id }));
+    render(<MusicView />);
+    await userEvent.click(await screen.findByRole("button", { name: "Play First" }));
+    const region = screen.getByRole("region", { name: "Now playing" });
+    await within(region).findByText("First");
+    for (const name of ["Shuffle", "Previous", "Pause", "Next", "Repeat: off", "Mute"]) {
+      expect(within(region).getByRole("button", { name })).toBeTruthy();
+    }
+    expect(within(region).getByRole("slider", { name: "Volume" })).toBeTruthy();
+
+    await userEvent.click(within(region).getByRole("button", { name: "Repeat: off" }));
+    expect(within(region).getByRole("button", { name: "Repeat: all" }).getAttribute("aria-pressed")).toBe("true");
+    await userEvent.click(within(region).getByRole("button", { name: "Next" }));
+    expect(await within(region).findByText("Second")).toBeTruthy();
+
+    await userEvent.click(screen.getByRole("tab", { name: /Up next/ }));
+    const queue = screen.getByRole("list", { name: "Queue" });
+    expect(within(queue).getAllByRole("listitem")).toHaveLength(3);
+    expect(within(queue).getByRole("button", { name: "Now playing: Second by Marconi Union" })).toBeTruthy();
+    await userEvent.click(within(queue).getByRole("button", { name: "Remove Third from queue" }));
+    expect(within(queue).getAllByRole("listitem")).toHaveLength(2);
+  });
+
   it("locks the separated versions until a track is processed", async () => {
     api.tracks.mockResolvedValue([{ ...withAudio(), id: "t3", title: "Unprocessed" }]);
     api.versions.mockResolvedValue({ ...versions(false), trackId: "t3" });
