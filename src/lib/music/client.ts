@@ -1,7 +1,6 @@
 "use client";
 
 import { getFirebaseAuth } from "../firebase";
-import type { JobView, TrackView, VersionsView } from "./types";
 import type { VibeProfile } from "./vibe/profile";
 
 export class MusicApiError extends Error {
@@ -16,7 +15,7 @@ export class MusicApiError extends Error {
 
 async function idToken(): Promise<string> {
   const user = getFirebaseAuth()?.currentUser;
-  if (!user) throw new MusicApiError(401, "unauthorized", "Sign in to use your music library.");
+  if (!user) throw new MusicApiError(401, "unauthorized", "Sign in to start making Loops.");
   return user.getIdToken();
 }
 
@@ -29,62 +28,39 @@ async function call<T>(path: string, init: RequestInit = {}): Promise<T> {
     });
   } catch (e) {
     if (e instanceof MusicApiError) throw e;
-    throw new MusicApiError(0, "offline", "Couldn't reach StudyLoop. Check your connection.");
+    throw new MusicApiError(0, "offline", "Can't reach StudyLoop right now. Check your connection and try again.");
   }
   const body = await res.json().catch(() => null);
   if (!res.ok) {
-    throw new MusicApiError(res.status, body?.error?.code ?? "internal", body?.error?.message ?? "Something went wrong. Try again.");
+    throw new MusicApiError(res.status, body?.error?.code ?? "internal", body?.error?.message ?? "That one slipped on our side. Give it another try.");
   }
   return body as T;
 }
 
+export interface SavedLoop {
+  id: string;
+  name: string;
+  playlistName: string | null;
+  profile: VibeProfile;
+  createdAt: number;
+}
+
 export const musicApi = {
-  tracks: () => call<{ tracks: TrackView[] }>("/api/music/tracks").then((r) => r.tracks),
-  addTrack: (title: string, artist: string) =>
-    call<{ track: TrackView }>("/api/music/tracks", { method: "POST", body: JSON.stringify({ title, artist }) }).then((r) => r.track),
+  importSpotify: (url: string, spotifyToken?: string | null) =>
+    call<{ added: number; total: number; playlistName: string | null }>("/api/music/import", {
+      method: "POST",
+      body: JSON.stringify({ url, ...(spotifyToken ? { spotifyToken } : {}) }),
+    }),
+  spotifyConfig: () => call<{ clientId: string | null }>("/api/music/spotify/config"),
   playlists: () => call<{ playlists: { name: string; count: number }[] }>("/api/music/vibe?list=1").then((r) => r.playlists),
   vibe: (playlist: string | null, refresh = false) =>
     call<{ profile: VibeProfile; source: "ai" | "basic"; playlistName: string | null; trackCount: number }>(
       `/api/music/vibe?${new URLSearchParams({ ...(playlist ? { playlist } : {}), ...(refresh ? { refresh: "1" } : {}) })}`,
     ),
-  spotifyConfig: () => call<{ clientId: string | null }>("/api/music/spotify/config"),
-  importSpotify: (url: string, spotifyToken?: string | null) =>
-    call<{ added: number; total: number; playlistName: string | null; tracks: TrackView[] }>("/api/music/import", {
-      method: "POST",
-      body: JSON.stringify({ url, ...(spotifyToken ? { spotifyToken } : {}) }),
-    }),
-  process: (trackId: string) => call<{ job: JobView }>(`/api/music/tracks/${trackId}/process`, { method: "POST" }).then((r) => r.job),
-  job: (jobId: string) => call<{ job: JobView }>(`/api/music/jobs/${jobId}`).then((r) => r.job),
-  versions: (trackId: string) => call<VersionsView>(`/api/music/tracks/${trackId}/versions`),
-
-  /**
-   * Three steps: ask for a one-file upload URL, send the bytes straight to storage (XHR, for real
-   * progress), then hand the ticket back so the server can check and attach the file.
-   */
-  async upload(trackId: string, file: File, onProgress: (fraction: number) => void, signal?: AbortSignal): Promise<TrackView> {
-    const start = await call<{ uploadUrl: string; contentType: string; ticket: string }>(`/api/music/tracks/${trackId}/upload`, {
-      method: "POST",
-      body: JSON.stringify({ name: file.name, type: file.type, size: file.size }),
-    });
-    await new Promise<void>((resolve, reject) => {
-      const xhr = new XMLHttpRequest();
-      xhr.open("PUT", start.uploadUrl);
-      xhr.setRequestHeader("Content-Type", start.contentType);
-      xhr.upload.onprogress = (e) => e.lengthComputable && onProgress(e.loaded / e.total);
-      xhr.onerror = () => reject(new MusicApiError(0, "upload_failed", "The upload was interrupted. Try again."));
-      xhr.onabort = () => reject(new MusicApiError(0, "aborted", "Upload cancelled."));
-      xhr.onload = () =>
-        xhr.status >= 200 && xhr.status < 300
-          ? resolve()
-          : reject(new MusicApiError(xhr.status, xhr.status === 403 ? "too_large" : "upload_failed",
-              xhr.status === 403 ? "Storage refused that file (too large or wrong type)." : "The upload failed. Try again."));
-      signal?.addEventListener("abort", () => xhr.abort());
-      xhr.send(file);
-    });
-    const done = await call<{ track: TrackView }>(`/api/music/tracks/${trackId}/audio`, {
-      method: "POST",
-      body: JSON.stringify({ ticket: start.ticket }),
-    });
-    return done.track;
-  },
+  loops: () => call<{ loops: SavedLoop[] }>("/api/music/loops").then((r) => r.loops),
+  saveLoop: (loop: { name: string; playlistName: string | null; profile: VibeProfile }) =>
+    call<{ loop: SavedLoop }>("/api/music/loops", { method: "POST", body: JSON.stringify(loop) }).then((r) => r.loop),
+  renameLoop: (id: string, name: string) =>
+    call<{ loop: SavedLoop }>(`/api/music/loops/${id}`, { method: "PATCH", body: JSON.stringify({ name }) }).then((r) => r.loop),
+  deleteLoop: (id: string) => call<null>(`/api/music/loops/${id}`, { method: "DELETE" }),
 };

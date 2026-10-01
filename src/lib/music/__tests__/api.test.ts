@@ -276,7 +276,7 @@ describe("error responses", () => {
       throw new TypeError("cannot read x of undefined at /home/app/lib.ts:12");
     });
     const body = await (await boom(req("GET", "/x"), undefined)).json();
-    expect(body.error).toMatchObject({ code: "internal", message: "Something went wrong. Try again." });
+    expect(body.error).toMatchObject({ code: "internal", message: "That one slipped on our side. Give it another try." });
     expect(JSON.stringify(body)).not.toContain("/home");
   });
 });

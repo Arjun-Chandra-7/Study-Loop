@@ -2,18 +2,36 @@
 
 import Image from "next/image";
 import { motion } from "motion/react";
-import { useSyncExternalStore } from "react";
+import { useRef, useState, useSyncExternalStore } from "react";
 import { useAuth } from "@/lib/auth";
+import { uploadProfilePhoto } from "@/lib/profilePhoto";
 import { isBluetoothAvailable } from "@/lib/sensors/bluetooth";
 import { engine, useStudyLoop } from "@/lib/useStudyLoop";
-import { SimPanel } from "../cockpit/SimPanel";
+import { Avatar } from "../ui/Avatar";
 import { Icon } from "../ui/Icon";
 
 const noopSubscribe = () => () => {};
 
 export function ProfileView() {
   const s = useStudyLoop();
-  const { user, signOut } = useAuth();
+  const { user, signOut, photo, googlePhoto, setPhoto } = useAuth();
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [photoBusy, setPhotoBusy] = useState(false);
+  const [photoNote, setPhotoNote] = useState<string | null>(null);
+  const customPhoto = Boolean(photo && photo !== googlePhoto);
+
+  const changePhoto = async (file: File) => {
+    setPhotoBusy(true);
+    setPhotoNote(null);
+    try {
+      await setPhoto(await uploadProfilePhoto(file));
+      setPhotoNote("Looking good. Your new photo is saved.");
+    } catch (e) {
+      setPhotoNote(e instanceof Error ? e.message : "Couldn't save your photo. Try again.");
+    } finally {
+      setPhotoBusy(false);
+    }
+  };
   const r = s.reading;
   const bt = useSyncExternalStore(noopSubscribe, isBluetoothAvailable, () => false);
 
@@ -21,6 +39,46 @@ export function ProfileView() {
 
   return (
     <div className="profile">
+      <section className="profile__me" aria-label="You">
+        <Avatar size="lg" />
+        <div className="profile__me-text">
+          <p className="h-section">{user?.displayName ?? "Welcome back"}</p>
+          <p className="small muted">{user?.email}</p>
+          <div className="btn-row">
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/*"
+              className="sr-only"
+              tabIndex={-1}
+              aria-hidden
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                e.target.value = "";
+                if (f) void changePhoto(f);
+              }}
+            />
+            <button type="button" className="btn btn--ghost btn--sm" disabled={photoBusy} onClick={() => fileRef.current?.click()}>
+              <Icon name="upload" size={14} />
+              {photoBusy ? "Saving…" : "Change photo"}
+            </button>
+            {customPhoto && googlePhoto && (
+              <button type="button" className="btn btn--ghost btn--sm" disabled={photoBusy} onClick={() => void setPhoto(null)}>
+                Use my Google photo
+              </button>
+            )}
+            <button type="button" className="btn btn--ghost btn--sm" onClick={signOut}>
+              Sign out
+            </button>
+          </div>
+          {photoNote && (
+            <p className="small muted" role="status">
+              {photoNote}
+            </p>
+          )}
+        </div>
+      </section>
+
       <section className="profile__band">
         <div className="profile__render" aria-hidden>
           <Image src="/media/studyloop-band.png" alt="" fill sizes="320px" className="profile__img" />
@@ -52,23 +110,19 @@ export function ProfileView() {
               <dd>PPG · EDA (2 electrodes)</dd>
             </div>
             <div>
-              <dt>Source</dt>
-              <dd>{s.providerKind === "mock" ? "Simulated" : "Bluetooth LE"}</dd>
-            </div>
-            <div>
-              <dt>Account</dt>
-              <dd>{user?.email ?? "—"}</dd>
+              <dt>Connection</dt>
+              <dd>Bluetooth LE</dd>
             </div>
           </dl>
           <div className="btn-row">
-            <button type="button" className="btn btn--ghost btn--sm" onClick={engine.toggleConnection}>
-              <Icon name={r.connection === "disconnected" ? "link" : "unlink"} size={16} />
-              {r.connection === "disconnected" ? "Connect" : "Disconnect"}
-            </button>
-            <button type="button" className="btn btn--ghost btn--sm" onClick={signOut}>
-              Sign out
+            <button type="button" className="btn btn--solid btn--sm" onClick={engine.toggleConnection} disabled={!bt && r.connection === "disconnected"}>
+              <Icon name={r.connection === "disconnected" ? "bluetooth" : "unlink"} size={16} />
+              {r.connection === "disconnected" ? "Pair your band" : "Disconnect"}
             </button>
           </div>
+          {!bt && (
+            <p className="small muted">Pairing works in Chrome or Edge on desktop and Android. Open StudyLoop there to connect your band.</p>
+          )}
           {s.providerError && (
             <p className="small notice notice--inline" role="alert">
               <Icon name="alert" size={14} /> {s.providerError}
@@ -78,25 +132,6 @@ export function ProfileView() {
       </section>
 
       <section className="profile__settings">
-        <div className="field">
-          <span className="label">Data source</span>
-          <div className="seg seg--wide" role="radiogroup" aria-label="Data source">
-            {(["mock", "bluetooth"] as const).map((k) => (
-              <button
-                key={k}
-                type="button"
-                role="radio"
-                aria-checked={s.providerKind === k}
-                disabled={k === "bluetooth" && !bt}
-                onClick={() => engine.setProvider(k)}
-              >
-                {s.providerKind === k && <motion.span layoutId="seg-provider" className="seg__thumb" />}
-                <span>{k === "mock" ? "Simulated band" : bt ? "Bluetooth band" : "Bluetooth (unsupported)"}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-        <SimPanel />
         <div className="toggles">
           <Toggle label="Quiet mode" hint="Dims everything except the timer and state." on={s.quiet} onChange={engine.toggleQuiet} />
           <Toggle label="Research layer" hint="Shows experimental context in coral." on={s.research} onChange={engine.toggleResearch} />

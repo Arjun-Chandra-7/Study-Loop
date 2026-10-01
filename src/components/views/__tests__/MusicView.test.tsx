@@ -1,20 +1,18 @@
 // @vitest-environment jsdom
-import { act, cleanup, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import type { JobView, TrackView, VersionsView } from "@/lib/music/types";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { VibeProfile } from "@/lib/music/vibe/profile";
 
 const api = vi.hoisted(() => ({
-  tracks: vi.fn(),
-  addTrack: vi.fn(),
   importSpotify: vi.fn(),
   spotifyConfig: vi.fn(),
   playlists: vi.fn(),
   vibe: vi.fn(),
-  process: vi.fn(),
-  job: vi.fn(),
-  versions: vi.fn(),
-  upload: vi.fn(),
+  loops: vi.fn(),
+  saveLoop: vi.fn(),
+  renameLoop: vi.fn(),
+  deleteLoop: vi.fn(),
 }));
 vi.mock("@/lib/music/client", () => ({
   musicApi: api,
@@ -24,314 +22,168 @@ vi.mock("@/lib/music/client", () => ({
     }
   },
 }));
+// A different person per test: nothing remembered from one carries into the next.
+let testUid = 0;
+vi.mock("@/lib/auth", () => ({ useAuth: () => ({ user: { uid: `user-${testUid}` } }) }));
+vi.mock("@/lib/music/spotifyAuth", () => ({ spotifyToken: async () => null, startSpotifyLogin: vi.fn(), takePendingImport: () => null }));
 
-import { MusicApiError } from "@/lib/music/client";
-import { MusicView } from "../MusicView";
-
-const base: TrackView = {
-  id: "t1", title: "Weightless", artist: "Marconi Union", album: null, artworkUrl: null, durationMs: 480000,
-  spotifyUrl: "https://open.spotify.com/track/x", playlistName: "Focus", audio: null, job: null,
-};
-const withAudio = (over: Partial<TrackView> = {}): TrackView => ({ ...base, audio: { durationS: 480, sizeBytes: 1, container: "mp3" }, ...over });
-const job = (over: Partial<JobView>): JobView => ({ id: "j1", status: "queued", progress: null, error: null, ...over });
-const versions = (all: boolean): VersionsView => ({
-  trackId: "t1",
-  expiresAt: Date.now() + 1e6,
-  versions: all
-    ? { original: { url: "/o", durationS: 480 }, no_lyrics: { url: "/n", durationS: 480 }, vocals_only: { url: "/v", durationS: 480 }, beats_only: { url: "/b", durationS: 480 } }
-    : { original: { url: "/src", durationS: 480 } },
-});
-
-beforeAll(() => {
-  // jsdom has no media pipeline: loading a src just reports metadata, play/pause just flip state.
-  const paused = new WeakMap<HTMLMediaElement, boolean>();
-  Object.defineProperty(HTMLMediaElement.prototype, "paused", {
-    configurable: true,
-    get(this: HTMLMediaElement) {
-      return paused.get(this) ?? true;
+// The real engine makes sound with Tone.js; here it just tracks what would be playing.
+const fake = vi.hoisted(() => {
+  type Snap = { playing: boolean; loop: unknown; params: null; state: string };
+  let snap: Snap = { playing: false, loop: null, params: null, state: "stable" };
+  const listeners = new Set<() => void>();
+  const set = (patch: Partial<Snap>) => {
+    snap = { ...snap, ...patch };
+    listeners.forEach((l) => l());
+  };
+  return {
+    vibeEngine: {
+      get playing() {
+        return snap.playing;
+      },
+      subscribe: (fn: () => void) => (listeners.add(fn), () => listeners.delete(fn)),
+      getSnapshot: () => snap,
+      play: vi.fn(async (loop: unknown) => set({ playing: true, loop })),
+      stop: vi.fn(() => set({ playing: false })),
+      toggle: vi.fn(async () => set({ playing: !snap.playing })),
+      markSaved: vi.fn((id: string, name: string) => set({ loop: { ...(snap.loop as object), savedId: id, name } })),
+      setState: vi.fn(),
     },
-  });
-  vi.spyOn(HTMLMediaElement.prototype, "load").mockImplementation(function (this: HTMLMediaElement) {
-    queueMicrotask(() => this.dispatchEvent(new Event("loadedmetadata")));
-  });
-  vi.spyOn(HTMLMediaElement.prototype, "play").mockImplementation(function (this: HTMLMediaElement) {
-    paused.set(this, false);
-    this.dispatchEvent(new Event("play"));
-    return Promise.resolve();
-  });
-  vi.spyOn(HTMLMediaElement.prototype, "pause").mockImplementation(function (this: HTMLMediaElement) {
-    paused.set(this, true);
-    this.dispatchEvent(new Event("pause"));
-  });
+    reset: () => set({ playing: false, loop: null }),
+  };
 });
+vi.mock("@/lib/music/vibe/engine", () => ({ vibeEngine: fake.vibeEngine }));
+
+import { MusicView } from "../MusicView";
+import { NowPlaying } from "../loops/NowPlaying";
+
+const profile: VibeProfile = {
+  summary: "Warm Hindi indie with acoustic guitar and soft Punjabi grooves",
+  moods: ["romantic", "nostalgic"], tempoBpm: 84, key: "D", mode: "minor", progression: [1, 6, 4, 5],
+  drumFeel: "dholak_groove", palette: ["acoustic_guitar", "sitar"], energy: 0.4, warmth: 0.7, swing: 0.3,
+};
+const vibe = (over: Partial<VibeProfile> = {}, source: "ai" | "basic" = "ai") => ({ profile: { ...profile, ...over }, source, playlistName: "💏", trackCount: 44 });
+
 beforeEach(() => {
+  testUid++;
   Object.values(api).forEach((f) => f.mockReset());
-  api.playlists.mockResolvedValue([]);
+  fake.reset();
+  api.loops.mockResolvedValue([]);
 });
 afterEach(cleanup);
 
-/** The Music view opens on Study beats; most tests work in the Library tab. */
-async function renderLibrary() {
-  render(<MusicView />);
-  await userEvent.click(screen.getByRole("tab", { name: "Library" }));
-}
-
-const card = (title = "Weightless") => screen.getByText(title).closest("li")!;
-
-const vibeProfile = {
-  summary: "Warm Hindi indie with acoustic guitar and soft Punjabi grooves",
-  moods: ["romantic", "nostalgic"],
-  tempoBpm: 84,
-  key: "D",
-  mode: "minor",
-  progression: [1, 6, 4, 5],
-  drumFeel: "dholak_groove",
-  palette: ["acoustic_guitar", "sitar"],
-  energy: 0.4,
-  warmth: 0.7,
-  swing: 0.3,
-};
-
-describe("Study beats", () => {
-  it("opens first, and asks for a playlist when there isn't one", async () => {
-    api.tracks.mockResolvedValue([]);
+describe("Loops — Create", () => {
+  it("welcomes a first-timer with a clear next step", async () => {
+    api.playlists.mockResolvedValue([]);
     render(<MusicView />);
-    expect(screen.getByRole("tab", { name: "Study beats" }).getAttribute("aria-selected")).toBe("true");
-    expect(await screen.findByText(/Import a Spotify playlist in Library first/)).toBeTruthy();
+    expect(await screen.findByText("Let's make your first Loop")).toBeTruthy();
+    expect(screen.getByPlaceholderText("Paste a Spotify playlist link")).toBeTruthy();
+    expect(screen.getByRole("region", { name: "Now playing" }).textContent).toContain("Nothing's playing yet");
   });
 
-  it("shows the playlist's vibe and what the beat is doing", async () => {
-    api.tracks.mockResolvedValue([]);
-    api.playlists.mockResolvedValue([{ name: "💏", count: 44 }, { name: "Gym", count: 12 }]);
-    api.vibe.mockResolvedValue({ profile: vibeProfile, source: "ai", playlistName: "💏", trackCount: 44 });
+  it("turns a pasted playlist into a Loop", async () => {
+    api.playlists.mockResolvedValueOnce([]).mockResolvedValue([{ name: "💏", count: 44 }]);
+    api.importSpotify.mockResolvedValue({ added: 44, total: 44, playlistName: "💏" });
+    api.vibe.mockResolvedValue(vibe());
     render(<MusicView />);
-    expect(await screen.findByText(vibeProfile.summary)).toBeTruthy();
-    expect(api.vibe).toHaveBeenCalledWith("💏", false);
-    const card = screen.getByRole("region", { name: "Study beats" });
-    for (const chip of ["84 BPM", "D minor", "Dholak groove", "acoustic guitar", "sitar", "romantic"]) {
-      expect(within(card).getByText(chip)).toBeTruthy();
-    }
-    expect(within(card).getByRole("button", { name: "Play study beats" })).toBeTruthy();
-    expect(card.querySelector(".beats__state")?.textContent).toMatch(/·/); // state word · what the beat is doing
-
-    await userEvent.selectOptions(screen.getByLabelText("Playlist"), "Gym");
-    expect(api.vibe).toHaveBeenLastCalledWith("Gym", false);
-    await userEvent.click(screen.getByRole("button", { name: "New take" }));
-    expect(api.vibe).toHaveBeenLastCalledWith("Gym", true);
-  });
-
-  it("says when it's using the basic reading", async () => {
-    api.tracks.mockResolvedValue([]);
-    api.playlists.mockResolvedValue([{ name: "💏", count: 44 }]);
-    api.vibe.mockResolvedValue({ profile: vibeProfile, source: "basic", playlistName: "💏", trackCount: 44 });
-    render(<MusicView />);
-    expect(await screen.findByText("Basic vibe")).toBeTruthy();
-    expect(screen.getByText(/smart vibe reading isn't switched on yet/)).toBeTruthy();
-  });
-});
-
-describe("MusicView", () => {
-  it("shows a loading state, then the empty state", async () => {
-    let resolve!: (t: TrackView[]) => void;
-    api.tracks.mockReturnValue(new Promise((r) => (resolve = r)));
-    await renderLibrary();
-    expect(screen.getByText("Loading your music…").getAttribute("role")).toBe("status");
-    await act(async () => resolve([]));
-    expect(screen.getByText(/Nothing here yet/)).toBeTruthy();
-    expect(screen.getByRole("region", { name: "Now playing" }).textContent).toContain("Pick a track to start");
-  });
-
-  it("explains a failed load and retries", async () => {
-    api.tracks.mockRejectedValueOnce(new MusicApiError(503, "storage_unavailable", "Your music library is unavailable right now."));
-    api.tracks.mockResolvedValueOnce([base]);
-    await renderLibrary();
-    expect((await screen.findByRole("alert")).textContent).toContain("Your music library is unavailable right now.");
-    await userEvent.click(screen.getByRole("button", { name: "Try again" }));
-    expect(await screen.findByText("Weightless")).toBeTruthy();
-  });
-
-  it.each([
-    ["needs audio", base, "Needs audio", null],
-    ["ready", withAudio(), "Ready to process", null],
-    ["queued", withAudio({ job: job({ status: "queued", workerOnline: true }) }), "Waiting for processing…", null],
-    ["processing", withAudio({ job: job({ status: "processing", progress: 0.67 }) }), "Separating music…", 67],
-    ["finalizing", withAudio({ job: job({ status: "finalizing" }) }), "Preparing study versions…", "indeterminate"],
-    ["completed", withAudio({ job: job({ status: "completed", progress: 1 }) }), "Ready to study", null],
-    ["failed", withAudio({ job: job({ status: "failed", error: { code: "timeout", message: "Processing took too long and was stopped." } }) }), "Processing failed", null],
-  ] as const)("labels the %s state with words, not just colour", async (_n, track, label, progress) => {
-    api.tracks.mockResolvedValue([track]);
-    api.job.mockResolvedValue(track.job);
-    await renderLibrary();
-    const li = await screen.findByText(label).then((el) => el.closest("li")!);
-    const bar = within(li).queryByRole("progressbar");
-    if (progress === null) expect(bar).toBeNull();
-    else if (progress === "indeterminate") {
-      expect(bar!.getAttribute("aria-valuenow")).toBeNull();
-      expect(within(li).queryByText(/%$/)).toBeNull(); // no invented percentage
-    } else {
-      expect(bar!.getAttribute("aria-valuenow")).toBe(String(progress));
-      expect(within(li).getByText(`${progress}%`)).toBeTruthy();
-    }
-    if (_n === "failed") {
-      expect(within(li).getByText("Processing took too long and was stopped.")).toBeTruthy();
-      expect(within(li).getByRole("button", { name: /Try processing again/ })).toBeTruthy();
-    }
-  });
-
-  it("warns when nothing is processing the queue", async () => {
-    api.tracks.mockResolvedValue([withAudio({ job: job({ status: "queued", workerOnline: false }) })]);
-    api.job.mockResolvedValue(job({ status: "queued", workerOnline: false }));
-    await renderLibrary();
-    expect(await screen.findByText(/processing service is offline/)).toBeTruthy();
-  });
-
-  it("uploads with real progress, then processes and follows the job to completion", async () => {
-    api.tracks.mockResolvedValue([base]);
-    let finishUpload!: (t: TrackView) => void;
-    api.upload.mockImplementation((_id: string, _f: File, onProgress: (f: number) => void) => {
-      onProgress(0.4);
-      return new Promise((r) => (finishUpload = r));
-    });
-    await renderLibrary();
-    await screen.findByText("Needs audio");
-
-    const input = card().querySelector<HTMLInputElement>('input[type="file"]')!;
-    await userEvent.upload(input, new File([new Uint8Array(8)], "song.mp3", { type: "audio/mpeg" }));
-    expect(api.upload.mock.calls[0][1].name).toBe("song.mp3");
-    expect(within(card()).getByText("Uploading audio…")).toBeTruthy();
-    expect(within(card()).getByRole("progressbar").getAttribute("aria-valuenow")).toBe("40");
-
-    await act(async () => finishUpload(withAudio()));
-    expect(within(card()).getByText("Ready to process")).toBeTruthy();
-
-    api.process.mockResolvedValue(job({ status: "queued", workerOnline: true }));
-    api.job
-      .mockResolvedValueOnce(job({ status: "processing", progress: 0.5 }))
-      .mockResolvedValue(job({ status: "completed", progress: 1 }));
-    await userEvent.click(within(card()).getByRole("button", { name: "Process Weightless" }));
-    expect(within(card()).getByText("Waiting for processing…")).toBeTruthy();
-    expect(await within(card()).findByText("Separating music…", {}, { timeout: 3000 })).toBeTruthy();
-    expect(await within(card()).findByText("Ready to study", {}, { timeout: 3000 })).toBeTruthy();
-  });
-
-  it("shows upload rejections from the server", async () => {
-    api.tracks.mockResolvedValue([base]);
-    api.upload.mockRejectedValue(new MusicApiError(415, "unsupported_format", "That file type isn't supported. Use MP3, WAV, M4A or FLAC."));
-    await renderLibrary();
-    await screen.findByText("Needs audio");
-    await userEvent.upload(card().querySelector<HTMLInputElement>('input[type="file"]')!, new File(["x"], "a.mp3", { type: "audio/mpeg" }));
-    expect((await within(card()).findByRole("alert")).textContent).toContain("That file type isn't supported");
-    expect(within(card()).getByText("Needs audio")).toBeTruthy();
-  });
-
-  it("imports a playlist and reports what was added", async () => {
-    api.tracks.mockResolvedValue([]);
-    api.importSpotify.mockResolvedValue({ added: 2, total: 2, playlistName: "Deep Focus", tracks: [base, { ...base, id: "t2", title: "Nuvole Bianche" }] });
-    await renderLibrary();
-    await screen.findByText(/Nothing here yet/);
-    await userEvent.type(screen.getByLabelText(/Spotify playlist, album or track link/), "https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M");
-    await userEvent.click(screen.getByRole("button", { name: "Import" }));
-    expect(await screen.findByText("Added 2 tracks from Deep Focus.")).toBeTruthy();
-    expect(screen.getByText("Nuvole Bianche")).toBeTruthy();
+    await screen.findByText("Let's make your first Loop");
+    await userEvent.type(screen.getByLabelText("Spotify playlist link"), "https://open.spotify.com/playlist/3otkFuN9NnmLTHUgX8qe2z?si=x");
+    await userEvent.click(screen.getByRole("button", { name: "Make a Loop" }));
+    expect(await screen.findByText(/Got it — 44 songs from 💏/)).toBeTruthy();
+    expect(await screen.findByText("Romantic Dholak Groove")).toBeTruthy();
+    const card = screen.getByRole("region", { name: "Your Loop" });
+    for (const chip of ["84 BPM", "D minor", "Dholak groove", "acoustic guitar", "sitar"]) expect(within(card).getByText(chip)).toBeTruthy();
+    expect(within(card).getByText(/The vibe we heard/)).toBeTruthy();
   });
 
   it("offers Connect Spotify when a playlist needs it", async () => {
-    api.tracks.mockResolvedValue([]);
+    const { MusicApiError } = await import("@/lib/music/client");
+    api.playlists.mockResolvedValue([]);
     api.importSpotify.mockRejectedValue(new MusicApiError(409, "spotify_login_required", "Connect Spotify to import “💏”."));
-    await renderLibrary();
-    await screen.findByText(/Nothing here yet/);
-    await userEvent.type(screen.getByLabelText(/Spotify playlist, album or track link/), "https://open.spotify.com/playlist/3otkFuN9NnmLTHUgX8qe2z?si=4aedb68e77884c50");
-    await userEvent.click(screen.getByRole("button", { name: "Import" }));
-    expect(await screen.findByText("Connect Spotify to import “💏”.")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Connect Spotify" })).toBeTruthy();
+    render(<MusicView />);
+    await userEvent.type(await screen.findByLabelText("Spotify playlist link"), "https://open.spotify.com/playlist/3otkFuN9NnmLTHUgX8qe2z");
+    await userEvent.click(screen.getByRole("button", { name: "Make a Loop" }));
+    expect(await screen.findByRole("button", { name: "Connect Spotify" })).toBeTruthy();
   });
 
-  it("adds a track by name when it isn't on Spotify", async () => {
-    api.tracks.mockResolvedValue([]);
-    api.addTrack.mockResolvedValue({ ...base, id: "t9", title: "My recording", artist: "Me", spotifyUrl: null });
-    await renderLibrary();
-    await screen.findByText(/Nothing here yet/);
-    await userEvent.click(screen.getByRole("button", { name: /Add a track by name/ }));
-    await userEvent.type(screen.getByLabelText("Track name"), "My recording");
-    await userEvent.type(screen.getByLabelText("Artist"), "Me");
-    await userEvent.click(screen.getByRole("button", { name: "Add" }));
-    expect(api.addTrack).toHaveBeenCalledWith("My recording", "Me");
-    expect(await screen.findByText("My recording")).toBeTruthy();
+  it("plays, tries something else, and saves — and Now playing follows along", async () => {
+    api.playlists.mockResolvedValue([{ name: "💏", count: 44 }]);
+    api.vibe.mockResolvedValueOnce(vibe()).mockResolvedValue(vibe({ moods: ["dreamy"], drumFeel: "lofi", tempoBpm: 78 }));
+    api.saveLoop.mockImplementation(async (l) => ({ id: "a".repeat(32), createdAt: 1, ...l }));
+    render(<MusicView />);
+    await userEvent.click(await screen.findByRole("button", { name: "Play this Loop" }));
+    expect(fake.vibeEngine.play).toHaveBeenCalledWith(expect.objectContaining({ name: "Romantic Dholak Groove", playlistName: "💏" }), expect.anything());
+    const np = screen.getByRole("region", { name: "Now playing" });
+    expect(within(np).getByText("Romantic Dholak Groove")).toBeTruthy();
+    expect(within(np).getByText("From 💏")).toBeTruthy();
+
+    await userEvent.click(screen.getByRole("button", { name: "Try something else?" }));
+    expect(api.vibe).toHaveBeenLastCalledWith("💏", true);
+    expect(await within(screen.getByRole("region", { name: "Your Loop" })).findByText("Dreamy Lo-fi Groove")).toBeTruthy();
+    expect(within(np).getByText("Dreamy Lo-fi Groove")).toBeTruthy(); // the playing Loop switched to the new take
+
+    await userEvent.click(screen.getByRole("button", { name: "Save to Your Loops" }));
+    expect(api.saveLoop).toHaveBeenCalledWith(expect.objectContaining({ name: "Dreamy Lo-fi Groove", playlistName: "💏" }));
+    expect(await screen.findByRole("button", { name: "In Your Loops" })).toBeTruthy();
   });
 
-  it("plays a track and switches study versions from the player", async () => {
-    api.tracks.mockResolvedValue([withAudio({ job: job({ status: "completed", progress: 1 }) })]);
-    api.versions.mockResolvedValue(versions(true));
-    await renderLibrary();
-    await screen.findByText("Ready to study");
-    await userEvent.click(screen.getByRole("button", { name: "Play Weightless" }));
+  it("is upfront when it's a quick read instead of the full one", async () => {
+    api.playlists.mockResolvedValue([{ name: "💏", count: 44 }]);
+    api.vibe.mockResolvedValue(vibe({}, "basic"));
+    render(<MusicView />);
+    expect(await screen.findByText(/A quick read of your vibe/)).toBeTruthy();
+  });
+});
 
-    const playerRegion = await screen.findByRole("region", { name: "Now playing" });
-    await within(playerRegion).findByText("Weightless");
-    const group = within(playerRegion).getByRole("radiogroup", { name: "Study version" });
-    const radio = (name: string) => within(group).getByRole("radio", { name: new RegExp(name) });
-    expect(radio("Original").getAttribute("aria-checked")).toBe("true");
-    expect(within(playerRegion).getByRole("button", { name: "Pause" })).toBeTruthy();
+describe("Loops — Your Loops", () => {
+  const saved = (name: string, id: string) => ({ id, name, playlistName: "💏", profile, createdAt: 1 });
 
-    await userEvent.click(radio("No Lyrics"));
-    expect(radio("No Lyrics").getAttribute("aria-checked")).toBe("true");
-    expect(radio("Original").getAttribute("aria-checked")).toBe("false");
-
-    // Keyboard: the radios are real buttons.
-    radio("Beats Only").focus();
-    await userEvent.keyboard("{Enter}");
-    expect(radio("Beats Only").getAttribute("aria-checked")).toBe("true");
-    // Arrow keys move through the group (wrapping) and only the checked radio is in the tab order.
-    await userEvent.keyboard("{ArrowRight}");
-    expect(radio("Original").getAttribute("aria-checked")).toBe("true");
-    expect(document.activeElement).toBe(radio("Original"));
-    expect(radio("No Lyrics").tabIndex).toBe(-1);
-    await userEvent.keyboard("{ArrowLeft}");
-    expect(radio("Beats Only").getAttribute("aria-checked")).toBe("true");
-
-    await userEvent.click(within(playerRegion).getByRole("button", { name: "Pause" }));
-    expect(within(playerRegion).getByRole("button", { name: "Play" })).toBeTruthy();
-    expect(within(playerRegion).getByRole("slider", { name: "Position" })).toBeTruthy();
+  it("encourages saving when the collection is empty", async () => {
+    api.playlists.mockResolvedValue([]);
+    render(<MusicView />);
+    await userEvent.click(screen.getByRole("tab", { name: "Your Loops" }));
+    expect(await screen.findByText("Your collection starts here")).toBeTruthy();
+    await userEvent.click(screen.getByRole("button", { name: "Make a Loop" }));
+    expect(screen.getByRole("tab", { name: "Create" }).getAttribute("aria-selected")).toBe("true");
   });
 
-  it("has Spotify-style controls and an Up next queue", async () => {
-    const t = (id: string, title: string) => withAudio({ id, title, job: job({ id: `j${id}`, status: "completed", progress: 1 }) });
-    api.tracks.mockResolvedValue([t("q1", "First"), t("q2", "Second"), t("q3", "Third")]);
-    api.versions.mockImplementation(async (id: string) => ({ ...versions(true), trackId: id }));
-    await renderLibrary();
-    await userEvent.click(await screen.findByRole("button", { name: "Play First" }));
-    const region = screen.getByRole("region", { name: "Now playing" });
-    await within(region).findByText("First");
-    for (const name of ["Shuffle", "Previous", "Pause", "Next", "Repeat: off", "Mute"]) {
-      expect(within(region).getByRole("button", { name })).toBeTruthy();
-    }
-    expect(within(region).getByRole("slider", { name: "Volume" })).toBeTruthy();
+  it("plays, renames and removes saved Loops", async () => {
+    api.playlists.mockResolvedValue([]);
+    api.loops.mockResolvedValue([saved("Late night", "a".repeat(32)), saved("Morning", "b".repeat(32))]);
+    api.renameLoop.mockImplementation(async (id, name) => ({ ...saved(name, id) }));
+    api.deleteLoop.mockResolvedValue(null);
+    render(<MusicView />);
+    await userEvent.click(screen.getByRole("tab", { name: "Your Loops" }));
+    const list = await screen.findByRole("list", { name: "Your Loops" });
 
-    await userEvent.click(within(region).getByRole("button", { name: "Repeat: off" }));
-    expect(within(region).getByRole("button", { name: "Repeat: all" }).getAttribute("aria-pressed")).toBe("true");
-    await userEvent.click(within(region).getByRole("button", { name: "Next" }));
-    expect(await within(region).findByText("Second")).toBeTruthy();
+    await userEvent.click(within(list).getByRole("button", { name: "Play Late night" }));
+    expect(fake.vibeEngine.play).toHaveBeenCalledWith(expect.objectContaining({ name: "Late night", savedId: "a".repeat(32) }), expect.anything());
+    expect(within(list).getByRole("button", { name: "Pause Late night" })).toBeTruthy();
 
-    await userEvent.click(screen.getByRole("tab", { name: /Up next/ }));
-    const queue = screen.getByRole("list", { name: "Queue" });
-    expect(within(queue).getAllByRole("listitem")).toHaveLength(3);
-    expect(within(queue).getByRole("button", { name: "Now playing: Second by Marconi Union" })).toBeTruthy();
-    await userEvent.click(within(queue).getByRole("button", { name: "Remove Third from queue" }));
-    expect(within(queue).getAllByRole("listitem")).toHaveLength(2);
+    await userEvent.click(within(list).getByRole("button", { name: "Rename Morning" }));
+    const input = within(list).getByLabelText("Loop name");
+    await userEvent.clear(input);
+    await userEvent.type(input, "Sunrise{Enter}");
+    expect(api.renameLoop).toHaveBeenCalledWith("b".repeat(32), "Sunrise");
+    expect(await within(list).findByText("Sunrise")).toBeTruthy();
+
+    await userEvent.click(within(list).getByRole("button", { name: "Remove Sunrise" }));
+    expect(within(list).queryByText("Sunrise")).toBeNull();
   });
+});
 
-  it("locks the separated versions until a track is processed", async () => {
-    api.tracks.mockResolvedValue([{ ...withAudio(), id: "t3", title: "Unprocessed" }]);
-    api.versions.mockResolvedValue({ ...versions(false), trackId: "t3" });
-    await renderLibrary();
-    await userEvent.click(await screen.findByRole("button", { name: "Play Unprocessed" }));
-    const playerRegion = screen.getByRole("region", { name: "Now playing" });
-    await within(playerRegion).findByText("Unprocessed");
-    const group = within(playerRegion).getByRole("radiogroup");
-    for (const name of ["No Lyrics", "Vocals Only", "Beats Only"]) {
-      expect((within(group).getByRole("radio", { name: new RegExp(name) }) as HTMLButtonElement).disabled).toBe(true);
-    }
-    expect(within(playerRegion).getByText("Process this track to unlock the other versions.")).toBeTruthy();
-    await waitFor(() => expect(within(group).getByRole("radio", { name: /Original/ }).getAttribute("aria-checked")).toBe("true"));
+describe("Now playing", () => {
+  it("shows whatever Loop is loaded and controls it", async () => {
+    render(<NowPlaying />);
+    await act(async () => {
+      await fake.vibeEngine.play({ name: "Late night", playlistName: null, profile });
+    });
+    const np = screen.getByRole("region", { name: "Now playing" });
+    expect(within(np).getByText("Late night")).toBeTruthy();
+    expect(within(np).getByText("Your Loop")).toBeTruthy();
+    expect(within(np).getByText("84 BPM")).toBeTruthy();
+    await userEvent.click(within(np).getByRole("button", { name: "Pause" }));
+    expect(fake.vibeEngine.toggle).toHaveBeenCalled();
+    expect(within(np).getByRole("button", { name: "Play" })).toBeTruthy();
   });
 });

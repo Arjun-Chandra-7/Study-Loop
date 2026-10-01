@@ -6,8 +6,7 @@ import {
   type PhysioState,
   type Sample,
 } from "./sensors/classify";
-import { MockSensorProvider } from "./sensors/mock";
-import type { MockScenario, SensorProvider, SensorReading } from "./sensors/types";
+import type { SensorProvider, SensorReading } from "./sensors/types";
 import { EMPTY_READING } from "./sensors/types";
 
 export type Tab = "home" | "session" | "insights" | "research" | "music" | "profile";
@@ -60,9 +59,7 @@ export interface SessionState {
 
 export interface Snapshot {
   reading: SensorReading;
-  providerKind: "mock" | "bluetooth";
   providerError: string | null;
-  scenario: MockScenario;
   /** rolling 1 Hz history, last 10 minutes */
   history: Sample[];
   physio: PhysioState;
@@ -133,8 +130,7 @@ type Listener = () => void;
 
 export class StudyLoopEngine {
   private listeners = new Set<Listener>();
-  private mock = new MockSensorProvider();
-  private provider: SensorProvider = this.mock;
+  private provider: SensorProvider = new BluetoothSensorProvider();
   private unsubProvider: (() => void) | null = null;
   private loop: ReturnType<typeof setInterval> | null = null;
   private lastLoop = 0;
@@ -146,9 +142,7 @@ export class StudyLoopEngine {
 
   private snap: Snapshot = {
     reading: { ...EMPTY_READING },
-    providerKind: "mock",
     providerError: null,
-    scenario: "normal",
     history: [],
     physio: "none",
     session: idleSession(DEFAULT_CONFIG),
@@ -170,14 +164,13 @@ export class StudyLoopEngine {
 
   getSnapshot = () => this.snap;
 
-  /** Called once on the client. Auto-connects the mock band so the demo is alive. */
+  /** Called once on the client. Pairing a band needs a click (Web Bluetooth), so nothing connects here. */
   start() {
     if (this.started) return;
     this.started = true;
     this.attach(this.provider);
     this.lastLoop = performance.now();
     this.loop = setInterval(() => this.tick(), LOOP_MS);
-    void this.provider.connect();
   }
 
   stop() {
@@ -211,21 +204,7 @@ export class StudyLoopEngine {
     else this.disconnect();
   };
 
-  setScenario = (scenario: MockScenario) => {
-    this.mock.setScenario(scenario);
-    this.set({ scenario });
-  };
 
-  setProvider = (kind: "mock" | "bluetooth") => {
-    if (kind === this.snap.providerKind) return;
-    this.provider.disconnect();
-    this.unsubProvider?.();
-    if (this.provider !== this.mock) this.provider.dispose();
-    this.provider = kind === "mock" ? this.mock : new BluetoothSensorProvider();
-    this.attach(this.provider);
-    this.set({ providerKind: kind, providerError: null, reading: this.provider.getReading() });
-    if (kind === "mock") void this.connect();
-  };
 
   configure = (patch: Partial<SessionConfig>) => {
     const s = this.snap.session;

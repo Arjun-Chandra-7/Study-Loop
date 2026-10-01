@@ -1,5 +1,5 @@
 import "server-only";
-import { del, head, issueSignedToken, presignUrl, type IssuedSignedToken } from "@vercel/blob";
+import { del, head, issueSignedToken, presignUrl, put, type IssuedSignedToken } from "@vercel/blob";
 import { ApiError } from "./http";
 import { log } from "./log";
 
@@ -17,6 +17,8 @@ export interface Storage {
   readRange(pathname: string, start: number, end: number): Promise<Uint8Array>;
   read(pathname: string): Promise<ReadableStream<Uint8Array>>;
   remove(pathname: string): Promise<void>;
+  /** Small server-side writes (e.g. profile photos). */
+  put(pathname: string, bytes: Uint8Array, contentType: string): Promise<void>;
 }
 
 const storageDown = () =>
@@ -86,6 +88,15 @@ class BlobStorage implements Storage {
     const res = await fetch(await this.presignGet(pathname, { ttlS: 600 }));
     if (!res.ok || !res.body) throw storageDown();
     return res.body;
+  }
+
+  async put(pathname: string, bytes: Uint8Array, contentType: string) {
+    try {
+      await put(pathname, Buffer.from(bytes), { access: "private", addRandomSuffix: false, allowOverwrite: true, contentType });
+    } catch (e) {
+      log("storage_failed", { stage: "put", error: (e as Error).name });
+      throw storageDown();
+    }
   }
 
   async remove(pathname: string) {

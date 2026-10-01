@@ -1,6 +1,6 @@
 "use client";
 
-import { onAuthStateChanged, signInWithPopup, signInWithRedirect, signOut as fbSignOut, type User } from "firebase/auth";
+import { onAuthStateChanged, signInWithPopup, signInWithRedirect, signOut as fbSignOut, updateProfile, type User } from "firebase/auth";
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { firebaseConfigured, getFirebaseAuth, googleProvider } from "./firebase";
 
@@ -12,6 +12,12 @@ type AuthState = {
   configured: boolean;
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
+  /** The photo to show: the one they chose, else their Google photo. */
+  photo: string | null;
+  /** Their Google account photo (to switch back to). */
+  googlePhoto: string | null;
+  /** Save a new profile photo URL (null = back to the Google photo). */
+  setPhoto: (url: string | null) => Promise<void>;
 };
 
 const AuthContext = createContext<AuthState | null>(null);
@@ -19,6 +25,8 @@ const AuthContext = createContext<AuthState | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [status, setStatus] = useState<Status>(firebaseConfigured ? "loading" : "signed-out");
+  // Bumped after profile edits: Firebase updates the same User object in place.
+  const [, setVersion] = useState(0);
 
   useEffect(() => {
     const auth = getFirebaseAuth();
@@ -49,8 +57,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (auth) await fbSignOut(auth);
   };
 
+  const googlePhoto = user?.providerData.find((p) => p.providerId === "google.com")?.photoURL ?? null;
+  const photo = user?.photoURL ?? googlePhoto;
+
+  const setPhoto = async (url: string | null) => {
+    const current = getFirebaseAuth()?.currentUser;
+    if (!current) return;
+    await updateProfile(current, { photoURL: url ?? googlePhoto });
+    setVersion((v) => v + 1);
+  };
+
   return (
-    <AuthContext.Provider value={{ status, user, configured: firebaseConfigured, signInWithGoogle, signOut }}>
+    <AuthContext.Provider value={{ status, user, configured: firebaseConfigured, signInWithGoogle, signOut, photo, googlePhoto, setPhoto }}>
       {children}
     </AuthContext.Provider>
   );

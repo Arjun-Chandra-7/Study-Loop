@@ -240,7 +240,7 @@ function LiveSession() {
           ) : (
             <StateBadge state={s.physio} size="lg" />
           )}
-          <p className="small muted">{paused ? "Timer and state tracking are on hold." : PHYSIO_HINT[s.physio]}</p>
+          <p className="small muted">{paused ? "Paused. Pick up right where you left off whenever you're ready." : PHYSIO_HINT[s.physio]}</p>
         </div>
       </div>
       <div className="live__orb" ref={box}>

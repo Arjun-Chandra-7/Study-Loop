@@ -121,7 +121,7 @@ export function HomeFoot() {
               : "Band on wrist · ready for baseline"
             : conn === "connecting"
               ? "Pairing with band…"
-              : "Band offline — connect from the top bar"}
+              : "Pair your band from the top bar to begin"}
         </span>
       </div>
       <p className="foot__spec">

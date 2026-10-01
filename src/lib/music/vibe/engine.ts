@@ -43,6 +43,22 @@ const PATTERNS: Record<VibeProfile["drumFeel"], [Pattern, Pattern, Pattern, Patt
 
 const RAMP_S = 6;
 
+/** What's playing: a Loop is a vibe profile plus where it came from. */
+export interface LoopMeta {
+  name: string;
+  playlistName: string | null;
+  profile: VibeProfile;
+  /** Set once it's in "Your Loops". */
+  savedId?: string;
+}
+
+export interface LoopSnapshot {
+  playing: boolean;
+  loop: LoopMeta | null;
+  params: BeatParams | null;
+  state: PhysioState;
+}
+
 /**
  * Plays an endless, original, lyric-free beat in a playlist's style, entirely synthesized in the
  * browser (Tone.js), and reshapes it as the listener's stress state changes. One instance per app.
@@ -58,17 +74,28 @@ export class VibeEngine {
   private lastNote = 0;
   private master: { filter: import("tone").Filter; reverb: import("tone").Freeverb; volume: import("tone").Volume } | null = null;
   playing = false;
+  private meta: LoopMeta | null = null;
+  private snap: LoopSnapshot = { playing: false, loop: null, params: null, state: "stable" };
   listeners = new Set<() => void>();
 
   private emit() {
+    this.snap = { playing: this.playing, loop: this.meta, params: this.params, state: this.state };
     this.listeners.forEach((l) => l());
   }
 
+  subscribe = (fn: () => void) => {
+    this.listeners.add(fn);
+    return () => this.listeners.delete(fn);
+  };
+  getSnapshot = () => this.snap;
+
   /** Must be called from a user gesture (browsers only allow audio to start that way). */
-  async play(profile: VibeProfile, state: PhysioState) {
+  async play(loop: LoopMeta, state: PhysioState) {
+    const profile = loop.profile;
     const T = (this.T ??= await import("tone"));
     await T.start();
     this.stop();
+    this.meta = loop;
     this.profile = profile;
     this.state = state;
     this.params = beatParams(profile, state);
@@ -95,6 +122,19 @@ export class VibeEngine {
       this.master.volume.volume.rampTo(this.params.gainDb, RAMP_S);
       this.master.reverb.wet.rampTo(this.params.space, RAMP_S);
     }
+    this.emit();
+  }
+
+  /** Pause/resume what's loaded (resume needs a user gesture, like play). */
+  async toggle() {
+    if (this.playing) this.stop();
+    else if (this.meta) await this.play(this.meta, this.state);
+  }
+
+  /** The loaded Loop was saved (or renamed) in "Your Loops". */
+  markSaved(id: string, name: string) {
+    if (!this.meta) return;
+    this.meta = { ...this.meta, savedId: id, name };
     this.emit();
   }
 

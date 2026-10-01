@@ -12,7 +12,7 @@ export function InsightsView() {
     return (
       <div className="empty">
         <p className="label">Insights</p>
-        <p className="serif serif--lg">Your first session will appear here.</p>
+        <p className="serif serif--lg">Your first session lands here. Start one when you're ready and we'll map how it went.</p>
       </div>
     );
   }
@@ -59,7 +59,7 @@ export function InsightsView() {
         />
       ) : (
         <div className="empty empty--inline">
-          <p className="small muted">This session was too short to chart.</p>
+          <p className="small muted">That one was too short to chart. Give it a few more minutes next time.</p>
         </div>
       )}
 

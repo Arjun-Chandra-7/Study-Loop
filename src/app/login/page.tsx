@@ -12,7 +12,7 @@ function describe(code: string | undefined): string {
   switch (code) {
     case "auth/popup-closed-by-user":
     case "auth/cancelled-popup-request":
-      return "The Google window closed before sign-in finished. Try again when you’re ready.";
+      return "The Google window closed before we finished. Hit the button whenever you’re ready.";
     case "auth/network-request-failed":
       return "Couldn’t reach Google. Check your connection and try again.";
     case "auth/unauthorized-domain":
@@ -22,7 +22,7 @@ function describe(code: string | undefined): string {
     case "app/not-configured":
       return "Sign-in isn’t set up on this build: the Firebase keys are missing.";
     default:
-      return "Google sign-in didn’t finish. Try again.";
+      return "Google sign-in didn’t quite finish. Let’s try that again.";
   }
 }
 

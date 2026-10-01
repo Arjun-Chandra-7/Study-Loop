@@ -1,7 +1,8 @@
 "use client";
 
 import { motion } from "motion/react";
-import { initials, useAuth } from "@/lib/auth";
+import { useAuth } from "@/lib/auth";
+import { Avatar } from "../ui/Avatar";
 import { clock } from "@/lib/format";
 import { engine, useStudyLoop } from "@/lib/useStudyLoop";
 import { Sparkline } from "../charts/Sparkline";
@@ -212,7 +213,7 @@ export function ProfilePill() {
   const conn = reading.connection;
   return (
     <button type="button" className="profile-pill" onClick={() => engine.setTab("profile")} title="Open profile and band settings">
-      <span className="avatar">{initials(user)}</span>
+      <Avatar />
       <span className="profile-pill__text">
         <span className="profile-pill__name">{user?.displayName ?? user?.email ?? "Signed in"}</span>
         <span className="profile-pill__band">

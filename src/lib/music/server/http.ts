@@ -40,7 +40,7 @@ export function route<C>(name: string, handler: (req: Request, ctx: C) => Promis
       return Response.json(
         dbDown
           ? errorBody("storage_unavailable", "Your music library is unavailable right now. Try again shortly.", { requestId })
-          : errorBody("internal", "Something went wrong. Try again.", { requestId }),
+          : errorBody("internal", "That one slipped on our side. Give it another try.", { requestId }),
         { status: dbDown ? 503 : 500 },
       );
     }

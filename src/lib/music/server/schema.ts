@@ -87,6 +87,16 @@ export const SCHEMA: string[] = [
      created_at    DOUBLE PRECISION NOT NULL,
      PRIMARY KEY (user_id, key)
    )`,
+  // Loops a listener saved to play again.
+  `CREATE TABLE IF NOT EXISTS music_loops (
+     id            TEXT PRIMARY KEY,
+     user_id       TEXT NOT NULL,
+     name          TEXT NOT NULL,
+     playlist_name TEXT,
+     profile_json  TEXT NOT NULL,
+     created_at    DOUBLE PRECISION NOT NULL
+   )`,
+  `CREATE INDEX IF NOT EXISTS music_loops_by_user ON music_loops (user_id, created_at)`,
   // Worker liveness, so the app can tell "waiting in line" from "nobody is processing".
   `CREATE TABLE IF NOT EXISTS music_workers (
      id      TEXT PRIMARY KEY,
