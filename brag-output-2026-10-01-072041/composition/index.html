@@ -1,0 +1,521 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <title>StudyLoop — Focus, tuned to you</title>
+    <script src="assets/gsap.min.js"></script>
+    <script src="assets/audio-data.js"></script>
+    <style>
+      @font-face { font-family: "Satoshi"; src: url("assets/fonts/Satoshi-400.woff2") format("woff2"); font-weight: 400; }
+      @font-face { font-family: "Satoshi"; src: url("assets/fonts/Satoshi-500.woff2") format("woff2"); font-weight: 500; }
+      @font-face { font-family: "Satoshi"; src: url("assets/fonts/Satoshi-700.woff2") format("woff2"); font-weight: 700; }
+      @font-face { font-family: "Michroma"; src: url("assets/fonts/Michroma.woff2") format("woff2"); font-weight: 400; }
+      @font-face { font-family: "Instrument Serif"; src: url("assets/fonts/InstrumentSerif-Italic.woff2") format("woff2"); font-style: italic; }
+
+      :root {
+        --room: #060808;
+        --surface: #0b1413;
+        --surface-2: #122120;
+        --surface-3: #183130;
+        --teal: #14b8a6;
+        --teal-l: #5fd9cb;
+        --mint: #34ebaa;
+        --coral: #ff5a5a;
+        --coral-s: #ff6b5a;
+        --ivory: #f4f1ea;
+        --muted: #b7c4c1;
+      }
+      * { box-sizing: border-box; }
+      body { margin: 0; background: var(--room); color: var(--ivory); font-family: "Satoshi", sans-serif; }
+      #root { position: relative; width: 100%; height: 100%; overflow: hidden; background: var(--room); }
+
+      /* persistent room */
+      #room { position: absolute; inset: 0; }
+      #glow {
+        position: absolute; left: 0; right: 0; bottom: 0; height: 760px;
+        background: radial-gradient(60% 70% at 50% 100%, rgba(20,184,166,0.30), rgba(20,184,166,0.06) 55%, transparent 75%);
+      }
+      #vignette { position: absolute; inset: 0; background: radial-gradient(120% 90% at 50% 45%, transparent 55%, rgba(0,0,0,0.65)); }
+
+      .scene { position: absolute; inset: 0; }
+      .in { position: absolute; inset: 0; }
+      .step {
+        position: absolute; left: 96px; top: 72px; display: flex; align-items: center; gap: 18px;
+        font-family: "Michroma", sans-serif; font-size: 18px; letter-spacing: 0.24em; color: var(--muted);
+      }
+      .step i { display: block; width: 44px; height: 2px; background: var(--teal); }
+      .serif { font-family: "Instrument Serif", serif; font-style: italic; font-weight: 400; }
+
+      /* ── S1 hook ── */
+      #s1-line {
+        position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+        font-size: 132px; letter-spacing: -0.01em;
+      }
+      .chip {
+        position: absolute; display: flex; align-items: center; gap: 16px; white-space: nowrap;
+        padding: 16px 26px 16px 16px; border-radius: 22px;
+        background: var(--surface-2); border: 1px solid rgba(244,241,234,0.14);
+        box-shadow: 0 24px 60px rgba(0,0,0,0.55);
+        font-size: 30px; font-weight: 500; color: var(--ivory);
+      }
+      .chip b { display: block; width: 44px; height: 44px; border-radius: 12px; }
+      .chip em { font-style: normal; color: var(--muted); font-weight: 400; font-size: 24px; }
+      .pill { position: absolute; width: 1700px; height: 300px; border-radius: 150px; }
+      #pill-mint { left: -100px; top: 60px; background: rgba(52,235,170,0.88); }
+      #pill-coral { left: 320px; top: 700px; background: rgba(255,90,90,0.88); }
+
+      /* ── S2 logo ── */
+      #s2-wrap { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 28px; }
+      #s2-logo { display: block; width: 1150px; height: auto; }
+      #s2-line { font-size: 72px; color: var(--ivory); }
+
+      /* ── S3 hardware ── */
+      #s3-cols { position: absolute; inset: 0; display: flex; }
+      .col { width: 960px; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+      .trace { display: block; width: 560px; height: 150px; overflow: visible; }
+      .device { display: block; width: 460px; height: 330px; overflow: visible; margin-top: 8px; }
+      .kicker { margin-top: 30px; font-family: "Michroma", sans-serif; font-size: 20px; letter-spacing: 0.22em; color: var(--teal-l); }
+      .title { margin-top: 14px; font-size: 62px; font-weight: 700; letter-spacing: -0.01em; }
+      #s3-div { position: absolute; left: 959px; top: 250px; width: 2px; height: 580px; background: rgba(244,241,234,0.14); }
+
+      /* ── S4 bands ── */
+      #s4-head { position: absolute; left: 0; right: 0; top: 140px; text-align: center; font-size: 76px; }
+      #lanes { position: absolute; left: 210px; top: 300px; width: 1500px; height: 600px; }
+      .lane { position: absolute; left: 0; width: 1500px; height: 130px; display: flex; align-items: center; }
+      .lane .lab { width: 300px; padding-left: 48px; }
+      .lane .nm { font-family: "Michroma", sans-serif; font-size: 30px; letter-spacing: 0.08em; }
+      .lane .hz { margin-top: 6px; font-size: 22px; color: var(--muted); }
+      .lane svg { display: block; width: 1160px; height: 130px; overflow: visible; }
+      #sel {
+        position: absolute; left: 0; top: 0; width: 1500px; height: 130px; border-radius: 65px;
+        border: 2px solid var(--mint); background: rgba(52,235,170,0.07);
+      }
+      #sel-tag {
+        position: absolute; right: 48px; top: -19px; padding: 8px 16px; border-radius: 999px;
+        background: var(--mint); color: #04110f; font-family: "Michroma", sans-serif; font-size: 14px; letter-spacing: 0.16em;
+      }
+      #s4-foot { position: absolute; right: 120px; bottom: 90px; font-size: 22px; color: var(--muted); }
+
+      /* ── S5 strict ── */
+      #phone {
+        position: absolute; left: 330px; top: 150px; width: 400px; height: 780px; border-radius: 60px;
+        background: var(--surface); border: 2px solid rgba(244,241,234,0.32); box-shadow: 0 40px 120px rgba(0,0,0,0.6);
+      }
+      #notch { position: absolute; left: 150px; top: 22px; width: 100px; height: 26px; border-radius: 13px; background: #000; }
+      .tile { position: absolute; width: 96px; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+      .tile b {
+        display: flex; width: 88px; height: 88px; border-radius: 24px; align-items: center; justify-content: center;
+        font-size: 38px; font-weight: 700; color: #0b0d0f;
+      }
+      .tile span { font-size: 18px; color: var(--ivory); font-weight: 500; }
+      #allowed-note { position: absolute; left: 0; right: 0; top: 470px; text-align: center; font-size: 18px; color: var(--muted); }
+      #lock {
+        position: absolute; left: 455px; top: 465px; width: 150px; height: 150px; border-radius: 50%;
+        background: var(--coral-s); display: flex; align-items: center; justify-content: center;
+        box-shadow: 0 0 80px rgba(255,107,90,0.55);
+      }
+      #shock { position: absolute; left: 455px; top: 465px; width: 150px; height: 150px; border-radius: 50%; border: 4px solid var(--coral-s); }
+      #s5-text { position: absolute; left: 880px; top: 360px; width: 900px; }
+      #s5-a { font-size: 110px; color: var(--coral); line-height: 1; }
+      #s5-b { margin-top: 26px; font-size: 68px; font-weight: 700; line-height: 1.1; letter-spacing: -0.01em; max-width: 860px; }
+
+      /* ── S6 real app ── */
+      #stage { position: absolute; inset: 0; perspective: 1800px; }
+      .shot {
+        position: absolute; left: 232px; top: 20px; width: 1456px; height: 1000px; border-radius: 34px; overflow: hidden;
+        border: 2px solid rgba(244,241,234,0.16); box-shadow: 0 60px 160px rgba(0,0,0,0.7), 0 0 120px rgba(20,184,166,0.12);
+        background: #0a0d0e;
+      }
+      .shot img { display: block; width: 100%; height: 100%; object-fit: cover; }
+      #cursor { position: absolute; left: 0; top: 0; width: 46px; height: 46px; }
+      #ripple { position: absolute; left: 682px; top: 945px; width: 80px; height: 80px; border-radius: 50%; border: 3px solid var(--mint); }
+      #trail { position: absolute; left: 95px; top: 165px; width: 1265px; height: 310px; background: linear-gradient(90deg, rgba(52,235,170,0), rgba(52,235,170,0.13)); }
+      #playhead { position: absolute; left: 95px; top: 150px; width: 4px; height: 340px; border-radius: 2px; background: var(--mint); box-shadow: 0 0 24px var(--mint); }
+      #statring { position: absolute; left: 1086px; top: 110px; width: 130px; height: 74px; border-radius: 37px; border: 3px solid var(--mint); }
+      #s6-cap { position: absolute; left: 0; right: 0; top: 976px; text-align: center; font-size: 64px; }
+
+      /* ── S7 outro ── */
+      .ava {
+        position: absolute; left: 905px; top: 485px; width: 110px; height: 110px; border-radius: 50%;
+        display: flex; align-items: center; justify-content: center; background: var(--surface-2);
+        font-size: 36px; font-weight: 700; color: var(--ivory);
+      }
+      #ring { position: absolute; left: 610px; top: 190px; width: 700px; height: 700px; overflow: visible; }
+      #s7-tog { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 76px; }
+      #s7-end { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 34px; }
+      #s7-logo { display: block; width: 1150px; height: auto; }
+      #s7-tag { font-size: 50px; font-weight: 500; letter-spacing: 0.01em; }
+      #flash { position: absolute; inset: 0; background: radial-gradient(40% 40% at 50% 50%, rgba(52,235,170,0.45), transparent 70%); }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-width="1920" data-height="1080" data-duration="24.5">
+      <div id="room"><div id="glow"></div><div id="vignette"></div></div>
+
+      <!-- S1 · Hook: the pile-up -->
+      <section id="s1" class="scene clip" data-start="0" data-duration="3.7" data-track-index="1">
+        <div class="in" id="s1-in">
+          <div id="s1-line" class="serif" data-layout-allow-overlap>You sat down to study.</div>
+          <div class="chip" data-layout-allow-overlap id="c0" style="left:430px;top:300px"><b style="background:#ff5a5a"></b>Reels <em>· 12 new</em></div>
+          <div class="chip" data-layout-allow-overlap id="c1" style="left:1450px;top:250px"><b style="background:#f4f1ea"></b>Next episode in 5…</div>
+          <div class="chip" data-layout-allow-overlap id="c2" style="left:1480px;top:720px"><b style="background:#34ebaa"></b>Group chat <em>· 47 new messages</em></div>
+          <div class="chip" data-layout-allow-overlap id="c3" style="left:430px;top:770px"><b style="background:#ff9a8d"></b>Shorts <em>· picked for you</em></div>
+          <div class="chip" data-layout-allow-overlap id="c4" style="left:960px;top:160px"><b style="background:#5fd9cb"></b>3 new stories</div>
+          <div class="chip" data-layout-allow-overlap id="c5" style="left:990px;top:900px"><b style="background:#ff6b5a"></b>Someone liked your photo</div>
+          <div class="chip" data-layout-allow-overlap id="c6" style="left:700px;top:560px"><b style="background:#14b8a6"></b>Live now <em>· watch party</em></div>
+          <div class="chip" data-layout-allow-overlap id="c7" style="left:1250px;top:500px"><b style="background:#ff5a5a"></b>Unread <em>· 128</em></div>
+          <div class="chip" data-layout-allow-overlap id="c8" style="left:880px;top:450px"><b style="background:#34ebaa"></b>Battle pass ends today</div>
+          <div class="chip" data-layout-allow-overlap id="c9" style="left:1100px;top:630px"><b style="background:#f4f1ea"></b>you up??</div>
+          <div class="pill" id="pill-mint"></div>
+          <div class="pill" id="pill-coral"></div>
+        </div>
+      </section>
+
+      <!-- S2 · Reveal: the logo -->
+      <section id="s2" class="scene clip" data-start="3.3" data-duration="2.3" data-track-index="2">
+        <div class="in" id="s2-in">
+          <div id="s2-wrap">
+            <img id="s2-logo" src="assets/img/logo.png" alt="StudyLoop" />
+            <div id="s2-line" class="serif">It listens while you study.</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- S3 · Hardware -->
+      <section id="s3" class="scene clip" data-start="5.45" data-duration="4.15" data-track-index="1">
+        <div class="in" id="s3-in">
+          <div class="step" data-layout-allow-overlap id="s3-step"><i></i>01 — CONNECT</div>
+          <div id="s3-div"></div>
+          <div id="s3-cols">
+            <div class="col" id="s3-left">
+              <svg class="trace" viewBox="0 0 560 150"><path id="eeg" d="" fill="none" stroke="#34ebaa" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" /></svg>
+              <svg class="device" viewBox="0 0 460 330">
+                <path class="draw" d="M80 250 C80 70 380 70 380 250" fill="none" stroke="#f4f1ea" stroke-width="14" stroke-linecap="round" pathLength="1" stroke-dasharray="1" stroke-dashoffset="1" />
+                <rect class="draw cup" x="40" y="190" width="84" height="130" rx="34" fill="#122120" fill-opacity="0" stroke="#f4f1ea" stroke-width="8" pathLength="1" stroke-dasharray="1" stroke-dashoffset="1" />
+                <rect class="draw cup" x="336" y="190" width="84" height="130" rx="34" fill="#122120" fill-opacity="0" stroke="#f4f1ea" stroke-width="8" pathLength="1" stroke-dasharray="1" stroke-dashoffset="1" />
+                <circle class="cupdot" cx="82" cy="255" r="12" fill="#34ebaa" opacity="0" />
+                <circle class="cupdot" cx="378" cy="255" r="12" fill="#34ebaa" opacity="0" />
+              </svg>
+              <div class="kicker" id="s3-k1">HEADPHONES</div>
+              <div class="title" id="s3-t1">Read your brainwaves</div>
+            </div>
+            <div class="col" id="s3-right">
+              <svg class="trace" viewBox="0 0 560 150"><path id="ppg" d="" fill="none" stroke="#5fd9cb" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" /></svg>
+              <svg class="device" viewBox="0 0 460 330">
+                <rect class="draw2" x="10" y="125" width="440" height="80" rx="40" fill="none" stroke="#b7c4c1" stroke-width="6" pathLength="1" stroke-dasharray="1" stroke-dashoffset="1" />
+                <rect class="draw2" x="100" y="95" width="260" height="140" rx="42" fill="#0b1413" stroke="#f4f1ea" stroke-width="8" pathLength="1" stroke-dasharray="1" stroke-dashoffset="1" />
+                <line id="status" x1="150" y1="165" x2="262" y2="165" stroke="#5fd9cb" stroke-width="10" stroke-linecap="round" opacity="0" />
+                <circle class="draw2" cx="312" cy="165" r="18" fill="none" stroke="#f4f1ea" stroke-width="5" pathLength="1" stroke-dasharray="1" stroke-dashoffset="1" />
+              </svg>
+              <div class="kicker" id="s3-k2">WRISTBAND · MAX30102</div>
+              <div class="title" id="s3-t2">Reads your pulse</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- S4 · Adaptive audio -->
+      <section id="s4" class="scene clip" data-start="9.45" data-duration="4.15" data-track-index="2">
+        <div class="in" id="s4-in">
+          <div class="step" data-layout-allow-overlap><i></i>02 — STUDY · ADAPTIVE AUDIO</div>
+          <div id="s4-head" class="serif">Non-lyrical audio, tuned to the band you need.</div>
+          <div id="lanes">
+            <div id="sel"><div id="sel-tag">NOW PLAYING</div></div>
+            <div class="lane" style="top:0px"><div class="lab" id="lab0"><div class="nm">GAMMA</div><div class="hz">≈ 40 Hz</div></div><svg viewBox="0 0 1160 130"><path id="w0" d="" fill="none" stroke-linecap="round" /></svg></div>
+            <div class="lane" style="top:150px"><div class="lab" id="lab1"><div class="nm">ALPHA</div><div class="hz">8–12 Hz</div></div><svg viewBox="0 0 1160 130"><path id="w1" d="" fill="none" stroke-linecap="round" /></svg></div>
+            <div class="lane" style="top:300px"><div class="lab" id="lab2"><div class="nm">THETA</div><div class="hz">4–8 Hz</div></div><svg viewBox="0 0 1160 130"><path id="w2" d="" fill="none" stroke-linecap="round" /></svg></div>
+            <div class="lane" style="top:450px"><div class="lab" id="lab3"><div class="nm">DELTA</div><div class="hz">0.5–4 Hz</div></div><svg viewBox="0 0 1160 130"><path id="w3" d="" fill="none" stroke-linecap="round" /></svg></div>
+          </div>
+          <div id="s4-foot">Exploratory · not a treatment</div>
+        </div>
+      </section>
+
+      <!-- S5 · Strict mode -->
+      <section id="s5" class="scene clip" data-start="13.45" data-duration="2.65" data-track-index="1">
+        <div class="in" id="s5-in">
+          <div class="step" data-layout-allow-overlap><i></i>02 — STUDY · STRICT MODE</div>
+          <div id="phone">
+            <div id="notch"></div>
+            <div data-layout-allow-overlap class="tile bad" style="left:42px;top:110px"><b style="background:#ff5a5a">R</b><span>Reels</span></div>
+            <div data-layout-allow-overlap class="tile bad" style="left:152px;top:110px"><b style="background:#f4f1ea">S</b><span>Shorts</span></div>
+            <div data-layout-allow-overlap class="tile bad" style="left:262px;top:110px"><b style="background:#5fd9cb">T</b><span>Stream</span></div>
+            <div data-layout-allow-overlap class="tile bad" style="left:42px;top:250px"><b style="background:#ff9a8d">F</b><span>Feed</span></div>
+            <div data-layout-allow-overlap class="tile bad" style="left:152px;top:250px"><b style="background:#14b8a6">G</b><span>Games</span></div>
+            <div data-layout-allow-overlap class="tile bad" style="left:262px;top:250px"><b style="background:#ff6b5a">C</b><span>Chat</span></div>
+            <div data-layout-allow-overlap class="tile good" style="left:42px;top:390px"><b style="background:#183130;color:#f4f1ea">N</b><span>Notes</span></div>
+            <div data-layout-allow-overlap class="tile good" style="left:152px;top:390px"><b style="background:#183130;color:#f4f1ea">T</b><span>Timer</span></div>
+            <div data-layout-allow-overlap class="tile good" style="left:262px;top:390px"><b style="background:#34ebaa">S</b><span>StudyLoop</span></div>
+            <div id="allowed-note">Allowed during your session</div>
+          </div>
+          <div id="shock"></div>
+          <div id="lock">
+            <svg width="64" height="72" viewBox="0 0 64 72"><path d="M16 32 V22 a16 16 0 0 1 32 0 V32" fill="none" stroke="#0b0d0f" stroke-width="7" stroke-linecap="round" /><rect x="6" y="30" width="52" height="40" rx="10" fill="#0b0d0f" /></svg>
+          </div>
+          <div id="s5-text">
+            <div id="s5-a" class="serif">Strict mode.</div>
+            <div id="s5-b">Distractions locked for the session.</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- S6 · The real app (website) -->
+      <section id="s6" class="scene clip" data-start="15.95" data-duration="4.65" data-track-index="2">
+        <div class="in" id="s6-in">
+          <div id="stage">
+            <div class="shot" id="shot-home">
+              <img src="assets/ui/home.jpg" alt="StudyLoop cockpit home" />
+              <div id="ripple"></div>
+              <svg id="cursor" data-layout-allow-overflow viewBox="0 0 46 46"><path d="M6 4 L6 36 L15 28 L21 42 L27 39 L21 26 L33 26 Z" fill="#f4f1ea" stroke="#060808" stroke-width="2.5" stroke-linejoin="round" /></svg>
+            </div>
+            <div class="shot" id="shot-ins">
+              <img src="assets/ui/insights.jpg" alt="StudyLoop insights" />
+              <div id="trail"></div>
+              <div id="playhead"></div>
+              <div id="statring"></div>
+            </div>
+          </div>
+          <div class="step" data-layout-allow-overlap><i></i>03 — REVIEW · THE REAL APP</div>
+          <div id="s6-cap" class="serif">Every session, analysed.</div>
+        </div>
+      </section>
+
+      <!-- S7 · Outro -->
+      <section id="s7" class="scene clip" data-start="20.45" data-duration="4.05" data-track-index="1">
+        <div class="in" id="s7-in">
+          <svg id="ring" viewBox="0 0 700 700"><circle id="ringc" cx="350" cy="350" r="300" fill="none" stroke="#34ebaa" stroke-width="3" pathLength="1" stroke-dasharray="1" stroke-dashoffset="1" /></svg>
+          <div class="ava" data-layout-allow-overlap style="border:3px solid #34ebaa">AK</div>
+          <div class="ava" data-layout-allow-overlap style="border:3px solid #ff5a5a">MR</div>
+          <div class="ava" data-layout-allow-overlap style="border:3px solid #34ebaa">JS</div>
+          <div class="ava" data-layout-allow-overlap style="border:3px solid #ff5a5a">PL</div>
+          <div class="ava" data-layout-allow-overlap style="border:3px solid #34ebaa">TY</div>
+          <div id="s7-tog" class="serif" data-layout-allow-overlap>Study together.</div>
+          <div id="flash"></div>
+          <div id="s7-end">
+            <img id="s7-logo" src="assets/img/logo.png" alt="StudyLoop" />
+            <div id="s7-tag">Focus, tuned to you.</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Audio -->
+      <audio id="music" src="assets/music/happy-beats-business-moves-vol-1-by-ende-dot-app.mp3" data-start="0" data-duration="24.5" data-track-index="10" data-volume="0.34"
+        data-automation='{"version":1,"lanes":[{"target":"volume","points":[{"t":0,"v":1},{"t":23,"v":1},{"t":24.5,"v":0}]}]}'></audio>
+      <audio id="sfx-chip1" src="assets/sfx/drop_001.ogg" data-start="0.88" data-duration="0.11" data-track-index="11" data-volume="0.6"></audio>
+      <audio id="sfx-chip2" src="assets/sfx/drop_002.ogg" data-start="2.4" data-duration="0.19" data-track-index="12" data-volume="0.6"></audio>
+      <audio id="sfx-sweep" src="assets/sfx/impactSoft_medium_001.ogg" data-start="2.98" data-duration="0.18" data-track-index="13" data-volume="0.75"></audio>
+      <audio id="sfx-logo1" src="assets/sfx/impactSoft_medium_004.ogg" data-start="3.5" data-duration="0.15" data-track-index="14" data-volume="0.7"></audio>
+      <audio id="sfx-hp" src="assets/sfx/drop_001.ogg" data-start="6.0" data-duration="0.11" data-track-index="11" data-volume="0.55"></audio>
+      <audio id="sfx-band" src="assets/sfx/drop_002.ogg" data-start="7.0" data-duration="0.19" data-track-index="12" data-volume="0.55"></audio>
+      <audio id="sfx-sel1" src="assets/sfx/click_003.ogg" data-start="10.02" data-duration="0.05" data-track-index="13" data-volume="0.7"></audio>
+      <audio id="sfx-sel2" src="assets/sfx/click_003.ogg" data-start="11.02" data-duration="0.05" data-track-index="14" data-volume="0.7"></audio>
+      <audio id="sfx-sel3" src="assets/sfx/click_003.ogg" data-start="12.02" data-duration="0.05" data-track-index="13" data-volume="0.7"></audio>
+      <audio id="sfx-tiles" src="assets/sfx/drop_001.ogg" data-start="13.65" data-duration="0.11" data-track-index="11" data-volume="0.55"></audio>
+      <audio id="sfx-lock" src="assets/sfx/impactSoft_heavy_003.ogg" data-start="14.5" data-duration="0.54" data-track-index="12" data-volume="0.8"></audio>
+      <audio id="sfx-site" src="assets/sfx/impactSoft_medium_004.ogg" data-start="16.0" data-duration="0.15" data-track-index="13" data-volume="0.7"></audio>
+      <audio id="sfx-click" src="assets/sfx/click_003.ogg" data-start="17.8" data-duration="0.05" data-track-index="14" data-volume="0.75"></audio>
+      <audio id="sfx-whip" src="assets/sfx/card-slide-1.ogg" data-start="17.95" data-duration="0.6" data-track-index="11" data-volume="0.6"></audio>
+      <audio id="sfx-ava" src="assets/sfx/drop_002.ogg" data-start="20.6" data-duration="0.19" data-track-index="12" data-volume="0.55"></audio>
+      <audio id="sfx-bell" src="assets/sfx/impactBell_heavy_000.ogg" data-start="23.0" data-duration="1.5" data-track-index="13" data-volume="0.7"></audio>
+    </div>
+
+    <script>
+      (function () {
+        var tl = gsap.timeline({ paused: true });
+        var FPS = 30, DUR = 24.5;
+        var AD = window.AUDIO_DATA;
+
+        function rng(seed) {
+          return function () {
+            seed |= 0; seed = (seed + 0x6d2b79f5) | 0;
+            var t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+            t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+            return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+          };
+        }
+        var rand = rng(7);
+        function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+        function prog(t, a, b) { return clamp((t - a) / (b - a), 0, 1); }
+        function easeOut(p) { return 1 - Math.pow(1 - p, 3); }
+        function easeIn(p) { return p * p * p; }
+
+        /* ── S1 · Hook ── */
+        tl.fromTo("#s1-line", { opacity: 0, y: 40, filter: "blur(14px)" }, { opacity: 1, y: 0, filter: "blur(0px)", duration: 0.55, ease: "expo.out" }, 0.05);
+        var chips = gsap.utils.toArray(".chip");
+        chips.forEach(function (c, i) {
+          var r = (rand() - 0.5) * 14;
+          tl.fromTo(c,
+            { xPercent: -50, yPercent: -50, scale: 0.4, opacity: 0, rotation: r * 2, y: 60 },
+            { xPercent: -50, yPercent: -50, scale: 1, opacity: 1, rotation: r, y: 0, duration: 0.42, ease: "back.out(2)" },
+            i < 6 ? 0.88 + i * 0.2 : 2.1 + (i - 6) * 0.15); // outer chips first; the four that bury the line land after it has been read
+        });
+        // shudder
+        tl.to("#s1-in", { keyframes: [{ x: -10, duration: 0.05 }, { x: 12, duration: 0.05 }, { x: -8, duration: 0.05 }, { x: 6, duration: 0.05 }, { x: 0, duration: 0.05 }] }, 2.55);
+        // the sweep: logo pills wipe the noise
+        tl.fromTo("#pill-mint", { x: -2200, rotation: -20, opacity: 1 }, { x: 2300, rotation: -20, duration: 0.6, ease: "power2.inOut" }, 2.98);
+        tl.fromTo("#pill-coral", { x: 2200, rotation: -20, opacity: 1 }, { x: -2700, rotation: -20, duration: 0.6, ease: "power2.inOut" }, 3.03);
+        var tops = [300, 250, 720, 770, 160, 900, 560, 500, 450, 630];
+        var lefts = [430, 1450, 1480, 430, 960, 990, 700, 1250, 880, 1100];
+        chips.forEach(function (c, i) {
+          var upper = tops[i] < 540;
+          var when = upper ? 3.05 + (lefts[i] / 1920) * 0.4 : 3.1 + ((1920 - lefts[i]) / 1920) * 0.4;
+          tl.to(c, { x: upper ? 1500 : -1500, rotation: upper ? 25 : -25, opacity: 0, duration: 0.35, ease: "power2.in" }, when - 0.12);
+        });
+        tl.to("#s1-line", { opacity: 0, scale: 0.9, duration: 0.25, ease: "power2.in" }, 3.08);
+
+        /* ── S2 · Logo ── */
+        tl.fromTo("#s2-logo", { scale: 0.72, opacity: 0, rotation: -4, filter: "blur(20px)" }, { scale: 1, opacity: 1, rotation: 0, filter: "blur(0px)", duration: 0.7, ease: "expo.out" }, 3.5);
+        tl.fromTo("#s2-line", { y: 30, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, ease: "power3.out" }, 3.82);
+        tl.to("#s2-in", { opacity: 0, scale: 0.94, y: -20, duration: 0.25, ease: "power2.in" }, 5.3);
+
+        /* ── S3 · Hardware ── */
+        tl.fromTo("#s3-step", { opacity: 0, x: -30 }, { opacity: 1, x: 0, duration: 0.5, ease: "power3.out" }, 5.55);
+        tl.fromTo("#s3-div", { scaleY: 0 }, { scaleY: 1, duration: 0.8, ease: "expo.out" }, 5.55);
+        tl.fromTo("#s3-left .device", { y: 40, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, ease: "power3.out" }, 5.55);
+        tl.to("#s3-left .draw", { attr: { "stroke-dashoffset": 0 }, duration: 0.7, stagger: 0.1, ease: "power2.inOut" }, 5.6);
+        tl.to("#s3-left .cup", { attr: { "fill-opacity": 1 }, duration: 0.3 }, 6.25);
+        tl.to("#s3-left .cupdot", { attr: { opacity: 1 }, duration: 0.2 }, 6.4);
+        tl.fromTo("#s3-k1", { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.4, ease: "power3.out" }, 6.0);
+        tl.fromTo("#s3-t1", { opacity: 0, y: 26 }, { opacity: 1, y: 0, duration: 0.5, ease: "power3.out" }, 6.08);
+        tl.fromTo("#s3-right .device", { y: 40, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, ease: "power3.out" }, 6.52);
+        tl.to("#s3-right .draw2", { attr: { "stroke-dashoffset": 0 }, duration: 0.6, stagger: 0.1, ease: "power2.inOut" }, 6.55);
+        tl.fromTo("#status", { attr: { opacity: 0 } }, { attr: { opacity: 1 }, duration: 0.15, ease: "none" }, 7.02); // beat-grid: 7.02s
+        tl.fromTo("#s3-k2", { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.4, ease: "power3.out" }, 7.0);
+        tl.fromTo("#s3-t2", { opacity: 0, y: 26 }, { opacity: 1, y: 0, duration: 0.5, ease: "power3.out" }, 7.08);
+        tl.to("#s3-in", { opacity: 0, y: -40, duration: 0.3, ease: "power2.in" }, 9.25);
+
+        /* ── S4 · Adaptive audio ── */
+        tl.fromTo("#s4-head", { opacity: 0, y: 30, filter: "blur(10px)" }, { opacity: 1, y: 0, filter: "blur(0px)", duration: 0.6, ease: "expo.out" }, 9.62);
+        tl.fromTo(".lane .lab", { opacity: 0, x: -30 }, { opacity: 1, x: 0, duration: 0.4, stagger: 0.08, ease: "power3.out" }, 9.6);
+        tl.fromTo("#sel", { opacity: 0, scaleX: 0.3, y: 0 }, { opacity: 1, scaleX: 1, y: 0, duration: 0.45, ease: "expo.out" }, 10.02); // beat-grid: gamma 10.02s
+        tl.to("#sel", { y: 150, duration: 0.4, ease: "back.out(1.6)" }, 11.02); // beat-grid: alpha 11.02s
+        tl.to("#sel", { y: 0, duration: 0.4, ease: "back.out(1.6)" }, 12.02); // beat-grid: gamma 12.02s
+        tl.fromTo("#s4-foot", { opacity: 0 }, { opacity: 1, duration: 0.4 }, 10.2);
+        tl.to("#s4-in", { opacity: 0, scale: 0.96, duration: 0.3, ease: "power2.in" }, 13.28);
+
+        /* ── S5 · Strict mode ── */
+        tl.fromTo("#phone", { y: 120, opacity: 0, rotation: -6 }, { y: 0, opacity: 1, rotation: 0, duration: 0.5, ease: "expo.out" }, 13.52);
+        tl.fromTo(".tile", { scale: 0, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.3, stagger: 0.045, ease: "back.out(2.2)" }, 13.62);
+        tl.fromTo("#allowed-note", { opacity: 0 }, { opacity: 0, duration: 0.01 }, 13.5);
+        tl.fromTo("#s5-a", { opacity: 0, x: 60 }, { opacity: 1, x: 0, duration: 0.45, ease: "expo.out" }, 13.62);
+        tl.fromTo("#s5-b", { opacity: 0, x: 60 }, { opacity: 1, x: 0, duration: 0.45, ease: "expo.out" }, 13.78);
+        tl.fromTo("#lock", { scale: 2.8, opacity: 0, rotation: -20 }, { scale: 1, opacity: 1, rotation: 0, duration: 0.2, ease: "power4.in" }, 14.32); // beat-grid: lock lands 14.52s
+        tl.fromTo("#shock", { scale: 1, opacity: 0 }, { keyframes: [{ opacity: 1, duration: 0.01 }, { scale: 3.2, opacity: 0, duration: 0.5, ease: "power2.out" }] }, 14.52);
+        tl.to("#s5-in", { keyframes: [{ x: -8, duration: 0.04 }, { x: 8, duration: 0.04 }, { x: 0, duration: 0.04 }] }, 14.52);
+        gsap.utils.toArray(".tile.bad").forEach(function (t, i) {
+          tl.to(t, { y: 560, rotation: (rand() - 0.5) * 80, opacity: 0, duration: 0.5, ease: "power2.in" }, 14.6 + i * 0.03);
+        });
+        tl.to(".tile.good", { y: -280, duration: 0.45, ease: "expo.out" }, 15.0);
+        tl.to("#lock", { scale: 0.36, y: -362, duration: 0.45, ease: "expo.out" }, 15.0);
+        tl.to("#allowed-note", { opacity: 1, duration: 0.3 }, 15.2);
+        tl.to("#s5-in", { opacity: 0, scale: 0.93, duration: 0.25, ease: "power2.in" }, 15.8);
+
+        /* ── S6 · The real app ── */
+        tl.fromTo("#shot-home",
+          { rotationX: 30, rotationY: -24, y: 300, scale: 0.55, opacity: 0 },
+          { rotationX: 7, rotationY: -8, y: 0, scale: 0.84, opacity: 1, duration: 0.8, ease: "expo.out" }, 16.02); // beat-locked: 16.02s
+        tl.to("#shot-home", { rotationX: 0, rotationY: 0, scale: 0.86, duration: 1.1, ease: "power2.inOut" }, 16.82);
+        tl.set("#cursor", { x: 1250, y: 620 }, 16.9);
+        tl.fromTo("#cursor", { opacity: 0 }, { opacity: 1, duration: 0.15 }, 16.9);
+        tl.to("#cursor", { x: 712, y: 968, duration: 0.7, ease: "power3.inOut" }, 17.05);
+        tl.to("#cursor", { keyframes: [{ scale: 0.82, duration: 0.07 }, { scale: 1, duration: 0.1 }] }, 17.8);
+        tl.fromTo("#ripple", { scale: 0.3, opacity: 0 }, { keyframes: [{ opacity: 1, duration: 0.01 }, { scale: 1.6, opacity: 0, duration: 0.4, ease: "power2.out" }] }, 17.8);
+        tl.to("#shot-home", { x: -1800, rotationY: 30, filter: "blur(10px)", duration: 0.3, ease: "power3.in" }, 17.95);
+        tl.fromTo("#shot-ins",
+          { x: 1800, rotationY: -30, scale: 0.86, opacity: 1, filter: "blur(10px)" },
+          { x: 0, rotationY: 0, scale: 0.86, opacity: 1, filter: "blur(0px)", duration: 0.45, ease: "expo.out" }, 18.02); // beat-grid: 18.02s
+        tl.fromTo("#trail", { scaleX: 0, transformOrigin: "0% 50%" }, { scaleX: 1, transformOrigin: "0% 50%", duration: 1.8, ease: "none" }, 18.45);
+        tl.fromTo("#playhead", { x: 0, opacity: 0 }, { x: 1265, opacity: 1, duration: 1.8, ease: "none" }, 18.45);
+        tl.fromTo("#statring", { scale: 0.5, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.4, ease: "back.out(2)" }, 19.02); // beat-grid: 19.02s
+        tl.fromTo("#s6-cap", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.5, ease: "power3.out" }, 18.4);
+        tl.to("#shot-ins", { scale: 0.25, opacity: 0, filter: "blur(8px)", duration: 0.3, ease: "power3.in" }, 20.25);
+        tl.to("#s6-cap, #s6-in .step", { opacity: 0, duration: 0.25 }, 20.25);
+
+        /* ── S7 · Outro ── */
+        tl.to("#ringc", { attr: { "stroke-dashoffset": 0 }, duration: 0.6, ease: "power2.inOut" }, 21.15);
+        tl.fromTo("#s7-tog", { opacity: 0, scale: 0.9 }, { opacity: 1, scale: 1, duration: 0.45, ease: "expo.out" }, 21.35);
+        tl.to("#s7-tog", { opacity: 0, scale: 0.8, duration: 0.22, ease: "power2.in" }, 22.72);
+        tl.to("#ring", { scale: 0, opacity: 0, duration: 0.28, ease: "power3.in" }, 22.74);
+        tl.fromTo("#flash", { opacity: 0 }, { keyframes: [{ opacity: 1, duration: 0.08 }, { opacity: 0, duration: 0.8, ease: "power2.out" }] }, 23.0);
+        tl.fromTo("#s7-logo", { scale: 1.3, opacity: 0, filter: "blur(18px)" }, { scale: 1, opacity: 1, filter: "blur(0px)", duration: 0.55, ease: "expo.out" }, 23.02); // beat-locked: 23.02s
+        tl.fromTo("#s7-tag", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.45, ease: "power3.out" }, 23.22);
+
+        /* ── Per-frame layer: live traces, waves, orbits, audio-reactive room ── */
+        var glow = document.getElementById("glow");
+        var eeg = document.getElementById("eeg"), ppg = document.getElementById("ppg");
+        var waves = [0, 1, 2, 3].map(function (i) { return document.getElementById("w" + i); });
+        var labs = [0, 1, 2, 3].map(function (i) { return document.getElementById("lab" + i); });
+        var sel = document.getElementById("sel");
+        var avas = gsap.utils.toArray(".ava");
+        var BANDS = [{ k: 22, w: 15 }, { k: 10, w: 8 }, { k: 5.5, w: 5 }, { k: 2.2, w: 2.5 }];
+        var WAVE_W = 1160;
+
+        function gauss(x, m, s) { return Math.exp(-((x - m) * (x - m)) / (2 * s * s)); }
+        function wrap(x) { return x - Math.floor(x); }
+
+        function draw(f) {
+          var t = f / FPS;
+          var bass = AD && AD.frames[f] != null ? AD.frames[f] : 0.3;
+          glow.style.opacity = (0.45 + bass * 0.55).toFixed(3);
+
+          if (t >= 5.4 && t <= 9.7) {
+            var n = 112, i, x, y, d = "", r1 = prog(t, 6.0, 6.6), r2 = prog(t, 7.0, 7.6);
+            for (i = 0; i <= n * r1; i++) {
+              x = (i / n) * 560;
+              y = 75 + 26 * Math.sin(x * 0.09 - t * 7) + 16 * Math.sin(x * 0.23 + t * 5) + 18 * Math.sin(x * 0.041 - t * 3) + 7 * Math.sin(x * 0.6 + t * 13);
+              d += (i ? "L" : "M") + x.toFixed(1) + " " + y.toFixed(1);
+            }
+            eeg.setAttribute("d", d || "M0 75");
+            d = "";
+            for (i = 0; i <= n * 2 * r2; i++) {
+              x = (i / (n * 2)) * 560;
+              var s = wrap((x / 560) * 3 - t * 1.25);
+              y = 110 - 80 * (gauss(s, 0.15, 0.04) + 0.35 * gauss(s, 0.4, 0.06));
+              d += (i ? "L" : "M") + x.toFixed(1) + " " + y.toFixed(1);
+            }
+            ppg.setAttribute("d", d || "M0 110");
+          }
+
+          if (t >= 9.4 && t <= 13.7) {
+            var selY = Number(gsap.getProperty(sel, "y")) || 0;
+            var selOn = Number(gsap.getProperty(sel, "opacity")) || 0;
+            for (var b = 0; b < 4; b++) {
+              var wgt = clamp(1 - Math.abs(selY - b * 150) / 150, 0, 1) * selOn;
+              var rev = easeOut(prog(t, 9.6 + b * 0.1, 10.1 + b * 0.1));
+              var A = (12 + 34 * wgt) * (0.85 + 0.35 * bass) * rev;
+              var pts = 160, dd = "";
+              for (var j = 0; j <= pts; j++) {
+                var u = j / pts, xx = u * WAVE_W;
+                var env = Math.pow(Math.sin(Math.PI * u), 0.6);
+                var yy = 65 + A * env * Math.sin(2 * Math.PI * BANDS[b].k * u - t * BANDS[b].w);
+                dd += (j ? "L" : "M") + xx.toFixed(1) + " " + yy.toFixed(1);
+              }
+              waves[b].setAttribute("d", dd);
+              waves[b].setAttribute("stroke", wgt > 0.5 ? "#34ebaa" : "#b7c4c1");
+              waves[b].setAttribute("stroke-width", (2 + 3 * wgt).toFixed(2));
+              waves[b].setAttribute("stroke-opacity", (0.35 + 0.65 * wgt).toFixed(2));
+              labs[b].style.color = wgt > 0.5 ? "#34ebaa" : "#f4f1ea";
+            }
+          }
+
+          if (t >= 20.4) {
+            var pIn = easeOut(prog(t, 20.55, 21.4)), pOut = easeIn(prog(t, 22.74, 23.0));
+            for (var a = 0; a < avas.length; a++) {
+              var ang = (-90 + a * 72 - (1 - pIn) * 160 + prog(t, 21.4, 22.74) * 18) * Math.PI / 180;
+              var rad = (1150 - 850 * pIn) * (1 - pOut);
+              avas[a].style.transform = "translate(" + (Math.cos(ang) * rad).toFixed(1) + "px," + (Math.sin(ang) * rad).toFixed(1) + "px) scale(" + (1 - pOut).toFixed(3) + ")";
+              avas[a].style.opacity = (prog(t, 20.55, 20.9) * (1 - pOut)).toFixed(3);
+            }
+          }
+        }
+
+        var total = Math.floor(DUR * FPS);
+        for (var f = 0; f < total; f++) {
+          tl.call((function (fr) { return function () { draw(fr); }; })(f), [], f / FPS);
+        }
+        draw(0);
+        window.__timelines["main"] = tl;
+      })();
+    </script>
+  </body>
+</html>
