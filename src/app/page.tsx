@@ -11,6 +11,7 @@ import { MotionPrefs } from "@/components/motion/MotionPrefs";
 import { MusicReturn } from "@/components/music/MusicReturn";
 import { QuietLock } from "@/components/motion/QuietLock";
 import { SessionPrompts } from "@/components/session/SessionPrompts";
+import { SessionRecovery } from "@/components/session/SessionRecovery";
 import { ScrollFX } from "@/components/motion/ScrollFX";
 import { SmoothScroll } from "@/components/motion/SmoothScroll";
 
@@ -44,6 +45,7 @@ export default function Home() {
         <FinePrint />
         <ScrollFX />
         <SessionPrompts />
+        <SessionRecovery />
       </MotionPrefs>
     </AuthGate>
   );

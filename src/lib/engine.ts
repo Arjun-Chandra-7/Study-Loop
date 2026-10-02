@@ -45,6 +45,8 @@ export interface SessionSummary {
   events: SessionEvent[];
   baseline: Baseline | null;
   isSample?: boolean;
+  /** epoch ms; dateLabel is derived from it when sessions are restored */
+  endedAt?: number;
 }
 
 export interface SessionState {
@@ -73,9 +75,29 @@ export interface Snapshot {
   selectedSummary: string | null;
   quiet: boolean;
   research: boolean;
+  /** A session that was running when the page went away, waiting for "continue?" */
+  recovery: SessionState | null;
 }
 
 export const BASELINE_MS = 20_000;
+const SAVE_EVERY_MS = 3_000;
+const LIVE: SessionPhase[] = ["baseline", "active", "paused"];
+
+/** What survives a reload, per signed-in person (this browser only). */
+interface Saved {
+  v: 1;
+  savedAt: number;
+  session: SessionState | null;
+  summaries: SessionSummary[];
+}
+
+const DAY = 86_400_000;
+export function dateLabelFor(endedAt: number, now = Date.now()) {
+  const d0 = new Date(now).setHours(0, 0, 0, 0);
+  if (endedAt >= d0) return "Today";
+  if (endedAt >= d0 - DAY) return "Yesterday";
+  return new Date(endedAt).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
 const HISTORY_MAX = 600;
 const LOOP_MS = 250;
 
@@ -156,9 +178,14 @@ export class StudyLoopEngine {
     selectedSummary: null,
     quiet: false,
     research: false,
+    recovery: null,
   };
 
   readonly serverSnapshot = this.snap;
+  private storeKey: string | null = null;
+  private lastSave = 0;
+  private savedPhase: SessionPhase | null = null;
+  private savedSummaries: SessionSummary[] | null = null;
 
   subscribe = (l: Listener) => {
     this.listeners.add(l);
@@ -175,10 +202,15 @@ export class StudyLoopEngine {
     this.started = true;
     this.attach(this.provider);
     this.lastLoop = performance.now();
+    if (typeof window !== "undefined") window.addEventListener("pagehide", this.flush);
     this.loop = setInterval(() => this.tick(), LOOP_MS);
   }
 
+  private flush = () => this.save(true);
+
   stop() {
+    this.flush();
+    if (typeof window !== "undefined") window.removeEventListener("pagehide", this.flush);
     if (this.loop) clearInterval(this.loop);
     this.loop = null;
     this.unsubProvider?.();
@@ -276,6 +308,86 @@ export class StudyLoopEngine {
     this.setSession(idleSession(this.snap.session.config, this.snap.session.baseline));
   };
 
+  // ── persistence & crash recovery ───────────────────────────
+
+  /**
+   * Called once the signed-in person is known. Restores their finished sessions,
+   * and if a session was running when the page went away, holds it for "continue?".
+   */
+  attachUser = (uid: string | null) => {
+    const key = uid ? `sl-sessions:${uid}` : null;
+    if (key === this.storeKey) return;
+    this.storeKey = key;
+    if (!key) return;
+    let saved: Saved | null = null;
+    try {
+      const raw = JSON.parse(localStorage.getItem(key) ?? "null") as Saved | null;
+      if (raw?.v === 1) saved = raw;
+    } catch {}
+    if (!saved) {
+      this.save(true);
+      return;
+    }
+    const restored = saved.summaries.map((x) => (x.endedAt ? { ...x, dateLabel: dateLabelFor(x.endedAt) } : x));
+    const live = this.snap.session.phase;
+    const pending = saved.session && LIVE.includes(saved.session.phase) && !LIVE.includes(live) ? saved.session : null;
+    this.set({ summaries: [...restored, sampleSummary()].slice(0, 8), recovery: pending });
+  };
+
+  /** "Continue": pick the session back up. A half-taken baseline starts over. */
+  resumeRecovered = () => {
+    const r = this.snap.recovery;
+    if (!r) return;
+    this.lastLoop = performance.now();
+    if (r.phase === "baseline") {
+      this.baselineStart = Date.now();
+      this.baselineSamples = [];
+      this.set({ recovery: null, tab: "session", session: { ...idleSession(r.config, r.baseline), phase: "baseline" } });
+    } else {
+      this.set({ recovery: null, tab: "session", session: { ...r, phase: "active" } });
+    }
+  };
+
+  /** "End & save": keep what was studied as a finished session. */
+  endRecovered = () => {
+    const r = this.snap.recovery;
+    if (!r) return;
+    this.snap = { ...this.snap, recovery: null };
+    if (r.phase === "baseline" || r.elapsedMs < 1000) {
+      this.set({ session: idleSession(r.config, r.baseline) });
+      return;
+    }
+    this.complete(r);
+    this.set({ tab: "insights" });
+  };
+
+  discardRecovered = () => {
+    this.set({ recovery: null });
+    this.save(true);
+  };
+
+  /** Writes on phase changes and new summaries at once, live progress every few seconds. */
+  private save(force = false) {
+    if (!this.storeKey) return;
+    const { session, summaries, recovery } = this.snap;
+    const now = Date.now();
+    const changed = session.phase !== this.savedPhase || summaries !== this.savedSummaries;
+    if (!force && !changed && !(LIVE.includes(session.phase) && now - this.lastSave >= SAVE_EVERY_MS)) return;
+    this.lastSave = now;
+    this.savedPhase = session.phase;
+    this.savedSummaries = summaries;
+    const data: Saved = {
+      v: 1,
+      savedAt: now,
+      // Until "continue?" is answered, the interrupted session stays the one on record.
+      session: recovery ?? (LIVE.includes(session.phase) ? session : null),
+      summaries: summaries.filter((x) => !x.isSample),
+    };
+    try {
+      localStorage.setItem(this.storeKey, JSON.stringify(data));
+    } catch {}
+  }
+
   // ── internals ──────────────────────────────────────────────
 
   private useProvider(kind: "mock" | "bluetooth") {
@@ -362,13 +474,14 @@ export class StudyLoopEngine {
     this.emit();
   }
 
-  private complete() {
-    const s = this.snap.session;
+  private complete(s: SessionState = this.snap.session) {
+    const endedAt = Date.now();
     const summary: SessionSummary = {
-      id: String(Date.now()),
+      id: String(endedAt),
       subject: s.config.subject,
       topic: s.config.topic,
       dateLabel: "Today",
+      endedAt,
       minutes: Math.max(1, Math.round(s.elapsedMs / 60_000)),
       stableShare: s.elapsedMs ? s.stableMs / s.elapsedMs : 0,
       elevatedMoments: s.events.filter((e) => e.kind === "elevated").length,
@@ -396,6 +509,7 @@ export class StudyLoopEngine {
   }
 
   private emit() {
+    this.save();
     for (const l of this.listeners) l();
   }
 }
