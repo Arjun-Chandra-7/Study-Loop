@@ -41,7 +41,7 @@ export function ProfileView() {
   const connLabel = { connected: "Connected", connecting: "Connecting…", disconnected: "Disconnected" }[r.connection];
 
   return (
-    <div className="profile">
+    <div className="profile" data-lenis-prevent>
       <section className="profile__me" aria-label="You">
         <Avatar size="lg" />
         <div className="profile__me-text">
@@ -146,22 +146,6 @@ export function ProfileView() {
       </section>
 
       <section className="profile__settings">
-        <div className="toggles">
-          <Toggle label="Quiet mode" hint="Dims everything except the timer and state." on={s.quiet} onChange={engine.toggleQuiet} />
-          <Toggle label="Research layer" hint="Shows experimental context in the highlight colour." on={s.research} onChange={engine.toggleResearch} />
-          <Toggle
-            label="Offer music at start"
-            hint="Ask about a Loop when a session starts with nothing playing."
-            on={prefs.askMusicOnStart}
-            onChange={() => setPref("askMusicOnStart", !prefs.askMusicOnStart)}
-          />
-          <Toggle
-            label="Pause Loops for 40 Hz"
-            hint="Pause a playing Loop without asking when you start 40 Hz beats."
-            on={prefs.autoPauseForBeats}
-            onChange={() => setPref("autoPauseForBeats", !prefs.autoPauseForBeats)}
-          />
-        </div>
         <div className="palettes" role="radiogroup" aria-label="Colour palette">
           <p className="label palettes__label">Colours</p>
           {(Object.keys(PALETTES) as PaletteId[]).map((id) => {
@@ -184,6 +168,22 @@ export function ProfileView() {
               </button>
             );
           })}
+        </div>
+        <div className="toggles">
+          <Toggle label="Quiet mode" hint="Dims everything except the timer and state." on={s.quiet} onChange={engine.toggleQuiet} />
+          <Toggle label="Research layer" hint="Shows experimental context in the highlight colour." on={s.research} onChange={engine.toggleResearch} />
+          <Toggle
+            label="Offer music at start"
+            hint="Ask about a Loop when a session starts with nothing playing."
+            on={prefs.askMusicOnStart}
+            onChange={() => setPref("askMusicOnStart", !prefs.askMusicOnStart)}
+          />
+          <Toggle
+            label="Pause Loops for 40 Hz"
+            hint="Pause a playing Loop without asking when you start 40 Hz beats."
+            on={prefs.autoPauseForBeats}
+            onChange={() => setPref("autoPauseForBeats", !prefs.autoPauseForBeats)}
+          />
         </div>
       </section>
     </div>
