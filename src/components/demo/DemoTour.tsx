@@ -72,6 +72,7 @@ export function DemoTour() {
   useEffect(() => {
     if (!isDemo()) return;
     engine.baselineMs = 5_000;
+    document.documentElement.dataset.demo = "";
     // eslint-disable-next-line react-hooks/set-state-in-effect -- reads the tab's demo flag once on mount
     setDemo(true);
     setI(savedStep());

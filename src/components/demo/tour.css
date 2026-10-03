@@ -302,6 +302,17 @@
 }
 
 @media (max-width: 759px) {
+  html[data-demo] .mx-today {
+    padding-top: 52px;
+  }
+  /* Phones: the tab bar owns the bottom edge, so the pill sits under the top bar. */
+  .tour-pill {
+    left: 50%;
+    bottom: auto;
+    top: calc(env(safe-area-inset-top, 0px) + 64px);
+    translate: -50% 0;
+    white-space: nowrap;
+  }
   .tour__guide,
   .tour__guide.is-right {
     left: var(--s-3);

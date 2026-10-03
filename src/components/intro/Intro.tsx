@@ -172,28 +172,24 @@ export function Intro() {
         <div className="only-phone">
           <div className="sk-phone">
             <div className="sk-phone__top sk-anim">
-              <span />
-              <span />
-              <span />
               <b />
-              <i />
-              <i />
-              <i />
+              <span />
               <i />
             </div>
-            <span className="sk sk-anim sk-phone__pill" />
-            <span className="sk sk-anim sk-phone__bar" />
-            <span className="sk-phone__note sk-anim">
+            <div className="sk-phone__greet sk-anim">
               <span />
               <span />
               <span />
-            </span>
-            <div className="sk-phone__tri">
-              <span className="sk sk-anim sk-phone__l" />
-              <span className="sk sk-anim sk-phone__c" />
-              <span className="sk sk-anim sk-phone__r" />
             </div>
-            <span className="sk-anim sk-phone__strip" />
+            <span className="sk sk-anim sk-phone__hero" />
+            <div className="sk-phone__dials">
+              <span className="sk sk-anim" />
+              <span className="sk sk-anim" />
+              <span className="sk sk-anim" />
+            </div>
+            <span className="sk sk-anim sk-phone__card" />
+            <span className="sk sk-anim sk-phone__card sk-phone__card--tall" />
+            <span className="sk-anim sk-phone__tabs" />
           </div>
         </div>
         <span className="intro__scan" />

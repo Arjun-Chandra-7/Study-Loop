@@ -58,14 +58,14 @@ export const STEPS: TourStep[] = [
     id: "what",
     title: "What StudyLoop is",
     line: "StudyLoop is a study wristband plus this app. The band reads your heart rate and skin conductance while you study, and the app shows how your body is responding, always against your own baseline and never as a score.",
-    target: [".main"],
+    target: [".main", ".mx-hero"],
     tab: "home",
   },
   {
     id: "pair",
     title: "Pair the band",
     line: "Normally you’d pair your band from up here. For this demo I’ve connected a simulated SL-01, so everything you see from now on is live data.",
-    target: [".top-capsule", ".notch--tr"],
+    target: [".top-capsule", ".notch--tr", ".mx-band"],
     run: () => {
       if (engine.getSnapshot().reading.connection === "disconnected") void engine.connect();
     },
@@ -74,13 +74,13 @@ export const STEPS: TourStep[] = [
     id: "signals",
     title: "Live signals",
     line: "Heart rate comes from the pulse sensor, skin conductance from two electrodes on the underside. Signal quality tells you if the band is sitting right, and the baseline is your resting level for today.",
-    target: [".notch--bl", ".area-c", ".area-d"],
+    target: [".notch--bl", ".area-c", ".area-d", ".mx-dials"],
   },
   {
     id: "start",
     title: "Start a session",
     line: "Let’s study. A session starts with a short stillness so StudyLoop learns your baseline: 20 seconds normally, 5 for this demo. No band? You can still run a plain timed session.",
-    target: [".main"],
+    target: [".main", ".mx-sheet"],
     tab: "session",
     run: () => {
       if (!live()) engine.beginSession();
@@ -90,14 +90,14 @@ export const STEPS: TourStep[] = [
     id: "controls",
     title: "While you study",
     line: "Pause, mark a moment you want to remember, or switch on 40 Hz beats. If nothing’s playing when you start, StudyLoop offers to put some music on.",
-    target: [".main-foot"],
+    target: [".main-foot", ".mx-sheet .m-sheet__foot"],
     tab: "session",
   },
   {
     id: "stress",
     title: "When stress climbs",
     line: "Watch this: I’m making the simulated band stressed. Heart rate and skin conductance climb above baseline, the state turns elevated, and that moment gets logged for your review.",
-    target: [".main", ".notch--bl"],
+    target: [".main", ".notch--bl", ".mx-sheet"],
     tab: "session",
     run: () => engine.demoScenario("elevated"),
   },
