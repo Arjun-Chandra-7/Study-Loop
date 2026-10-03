@@ -1,0 +1,568 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <title>StudyLoop — See how you study</title>
+    <script src="assets/gsap.min.js"></script>
+    <script src="assets/audio-data.js"></script>
+    <style>
+      @font-face { font-family: "Satoshi"; src: url("assets/fonts/Satoshi-400.woff2") format("woff2"); font-weight: 400; }
+      @font-face { font-family: "Satoshi"; src: url("assets/fonts/Satoshi-500.woff2") format("woff2"); font-weight: 500; }
+      @font-face { font-family: "Satoshi"; src: url("assets/fonts/Satoshi-700.woff2") format("woff2"); font-weight: 700; }
+      @font-face { font-family: "Michroma"; src: url("assets/fonts/Michroma.woff2") format("woff2"); font-weight: 400; }
+      @font-face { font-family: "Instrument Serif"; src: url("assets/fonts/InstrumentSerif-Italic.woff2") format("woff2"); font-style: italic; }
+
+      :root {
+        --room: #0b0a07;
+        --panel: #151411;
+        --s1: #181714;
+        --s2: #21201d;
+        --s3: #2f2e2b;
+        --sage: #9dba8e;
+        --sage-hi: #c3d6b4;
+        --cinder: #cf4f33;
+        --cinder-hi: #e58a6f;
+        --bone: #ece6d9;
+        --muted: #b6ae9f;
+        --line: rgba(236, 230, 217, 0.1);
+        --line-3: rgba(236, 230, 217, 0.18);
+      }
+      * { box-sizing: border-box; }
+      body { margin: 0; background: var(--room); color: var(--bone); font-family: "Satoshi", sans-serif; }
+      #root { position: relative; width: 100%; height: 100%; overflow: hidden; background: var(--room); }
+
+      #room { position: absolute; inset: 0; }
+      #glow {
+        position: absolute; left: 0; right: 0; bottom: 0; height: 820px;
+        background: radial-gradient(55% 70% at 50% 100%, rgba(157,186,142,0.20), rgba(157,186,142,0.05) 55%, transparent 78%);
+      }
+      #warm {
+        position: absolute; left: 0; top: 0; width: 1100px; height: 700px;
+        background: radial-gradient(60% 60% at 20% 10%, rgba(207,79,51,0.10), transparent 70%);
+      }
+      #vignette { position: absolute; inset: 0; background: radial-gradient(120% 90% at 50% 45%, transparent 55%, rgba(0,0,0,0.6)); }
+
+      .scene { position: absolute; inset: 0; }
+      .in { position: absolute; inset: 0; }
+      .serif { font-family: "Instrument Serif", serif; font-style: italic; font-weight: 400; }
+      .kicker {
+        display: flex; align-items: center; gap: 16px;
+        font-family: "Michroma", sans-serif; font-size: 20px; letter-spacing: 0.22em; color: var(--sage);
+      }
+      .kicker i { display: block; width: 44px; height: 2px; background: var(--sage); }
+      .card {
+        position: absolute; background: var(--s1); border: 1px solid var(--line); border-radius: 24px;
+        box-shadow: 0 40px 120px rgba(0,0,0,0.55), inset 0 1px 0 rgba(236,230,217,0.05);
+      }
+      .label { font-size: 22px; color: var(--muted); font-weight: 500; }
+      .chip {
+        display: inline-flex; align-items: center; gap: 10px; padding: 10px 18px; border-radius: 999px;
+        border: 1px solid var(--line-3); font-size: 22px; font-weight: 500; color: var(--bone); white-space: nowrap;
+      }
+      .chip b { display: block; width: 10px; height: 10px; border-radius: 50%; background: var(--sage); }
+
+      /* S1 hook */
+      #s1-wrap { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 26px; }
+      #s1-a { font-size: 84px; color: var(--bone); }
+      #s1-timer { font-family: "Michroma", sans-serif; font-size: 200px; letter-spacing: 0.02em; color: var(--bone); line-height: 1.1; }
+      #s1-b { font-size: 96px; color: var(--cinder-hi); }
+
+      /* S2 band */
+      #band-wrap { position: absolute; left: 250px; top: -110px; width: 1920px; height: 1280px; }
+      #band-wrap img { display: block; width: 1920px; height: 1280px; }
+      #flare-rot { position: absolute; left: 796px; top: 470px; width: 180px; height: 16px; transform: rotate(11.6deg); transform-origin: 0 50%; }
+      #flare {
+        width: 180px; height: 16px; border-radius: 8px; background: var(--sage-hi);
+        box-shadow: 0 0 24px 6px rgba(157,186,142,0.9), 0 0 90px 30px rgba(157,186,142,0.45);
+      }
+      #s2-shade { position: absolute; inset: 0; background: linear-gradient(90deg, rgba(11,10,7,0.92) 0%, rgba(11,10,7,0.55) 36%, transparent 60%), linear-gradient(0deg, rgba(11,10,7,0.9) 0%, transparent 38%); }
+      #s2-text { position: absolute; left: 120px; top: 640px; width: 900px; }
+      #s2-line { margin-top: 22px; font-size: 64px; line-height: 1.08; }
+
+      /* S3 baseline */
+      #s3-left { position: absolute; left: 120px; top: 330px; width: 760px; }
+      #s3-head { margin-top: 26px; font-size: 100px; line-height: 1.02; }
+      #s3-sub { margin-top: 26px; font-size: 32px; line-height: 1.35; color: var(--muted); width: 680px; }
+      #s3-card { left: 1000px; top: 170px; width: 800px; height: 740px; }
+      #s3-card .top { position: absolute; left: 48px; right: 48px; top: 44px; display: flex; align-items: center; justify-content: space-between; }
+      #s3-card .ttl { font-size: 34px; font-weight: 700; }
+      #ring { position: absolute; left: 250px; top: 140px; width: 300px; height: 300px; }
+      #ring svg { display: block; width: 300px; height: 300px; }
+      #ring-num { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-family: "Michroma", sans-serif; font-size: 84px; }
+      #ring-set { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-family: "Michroma", sans-serif; font-size: 40px; letter-spacing: 0.06em; color: var(--sage-hi); }
+      #s3-hint { position: absolute; left: 0; right: 0; top: 470px; text-align: center; font-size: 28px; color: var(--muted); }
+      #s3-done { position: absolute; left: 0; right: 0; top: 470px; text-align: center; font-size: 28px; color: var(--sage-hi); font-weight: 500; }
+      #s3-tiles { position: absolute; left: 48px; right: 48px; top: 548px; display: flex; gap: 24px; }
+      .tile { flex: 1; height: 150px; border-radius: 16px; background: var(--s2); border: 1px solid var(--line); padding: 24px 28px; }
+      .tile .v { margin-top: 12px; font-family: "Michroma", sans-serif; font-size: 50px; color: var(--sage-hi); }
+      .tile .v small { font-family: "Satoshi", sans-serif; font-size: 24px; color: var(--muted); margin-left: 10px; letter-spacing: 0; }
+
+      /* S4 live */
+      #s4-cap { position: absolute; left: 120px; top: 80px; font-size: 68px; }
+      #s4-panel { left: 120px; top: 220px; width: 1680px; height: 780px; background: var(--panel); }
+      #s4-row { position: absolute; left: 56px; right: 56px; top: 48px; display: flex; align-items: center; justify-content: space-between; }
+      #live b { background: var(--cinder); }
+      #s4-subj { font-size: 26px; color: var(--muted); margin-left: 18px; }
+      #s4-timer { position: absolute; left: 56px; top: 130px; font-family: "Michroma", sans-serif; font-size: 132px; line-height: 1.1; }
+      #badges { position: absolute; right: 56px; top: 160px; width: 480px; height: 96px; }
+      .badge {
+        position: absolute; right: 0; top: 0; height: 96px; display: flex; align-items: center; gap: 18px;
+        padding: 0 34px; border-radius: 48px; border: 2px solid currentColor; background: rgba(21,20,17,0.9);
+        font-family: "Michroma", sans-serif; font-size: 34px; letter-spacing: 0.04em; white-space: nowrap;
+      }
+      .badge i { display: block; width: 18px; height: 18px; border-radius: 50%; background: currentColor; }
+      #b-stable { color: var(--sage); }
+      #b-changing { color: var(--sage-hi); }
+      #b-elevated { color: var(--cinder-hi); }
+      #b-recovering { color: var(--sage-hi); }
+      .metric { position: absolute; top: 340px; width: 760px; height: 390px; border-radius: 20px; background: var(--s1); border: 1px solid var(--line); }
+      #m-hr { left: 56px; }
+      #m-eda { left: 864px; }
+      .metric .hd { position: absolute; left: 32px; right: 32px; top: 28px; display: flex; justify-content: space-between; align-items: baseline; }
+      .metric .val { font-family: "Michroma", sans-serif; font-size: 56px; color: var(--sage-hi); }
+      .metric .val small { font-family: "Satoshi", sans-serif; font-size: 24px; color: var(--muted); margin-left: 8px; }
+      .metric svg { position: absolute; left: 32px; top: 150px; width: 696px; height: 210px; overflow: visible; }
+      .metric .note { position: absolute; left: 32px; top: 104px; font-size: 22px; color: var(--muted); }
+
+      /* S5 loops */
+      #s5-left { position: absolute; left: 120px; top: 120px; width: 940px; height: 820px; }
+      #s5-title { margin-top: 22px; font-size: 64px; font-weight: 700; letter-spacing: -0.01em; }
+      #s5-input { position: absolute; left: 0; top: 200px; width: 940px; height: 88px; border-radius: 18px; background: var(--s1); border: 1px solid var(--line-3); }
+      #s5-ph { position: absolute; left: 30px; top: 0; height: 88px; display: flex; align-items: center; font-size: 26px; color: var(--muted); }
+      #s5-typed { position: absolute; left: 30px; top: 0; height: 88px; display: flex; align-items: center; font-size: 28px; color: var(--bone); white-space: nowrap; }
+      #s5-btn {
+        position: absolute; left: 0; top: 316px; height: 76px; width: 250px; border-radius: 16px; background: var(--cinder);
+        display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: 700; color: #12110f;
+      }
+      #rows { position: absolute; left: 0; top: 440px; width: 940px; height: 320px; }
+      .row {
+        position: absolute; left: 0; width: 940px; height: 96px; border-radius: 18px; background: var(--s1); border: 1px solid var(--line);
+        display: flex; align-items: center; padding: 0 28px; gap: 22px;
+      }
+      .row .play { width: 48px; height: 48px; border-radius: 50%; background: var(--s3); display: flex; align-items: center; justify-content: center; }
+      .row .play svg { display: block; width: 18px; height: 18px; }
+      .row .nm { font-size: 28px; font-weight: 500; flex: 1; }
+      .row .st { font-size: 22px; color: var(--sage-hi); border: 1px solid rgba(157,186,142,0.4); padding: 6px 14px; border-radius: 999px; }
+      .row .bpm { font-family: "Michroma", sans-serif; font-size: 22px; color: var(--muted); width: 120px; text-align: right; }
+      #now { left: 1140px; top: 200px; width: 660px; height: 600px; }
+      #now .lbl { position: absolute; left: 44px; top: 44px; }
+      #now .song { position: absolute; left: 44px; top: 96px; font-size: 34px; font-weight: 700; }
+      #tempo { position: absolute; left: 44px; top: 170px; height: 170px; display: flex; align-items: center; font-family: "Michroma", sans-serif; font-size: 150px; line-height: 1; color: var(--bone); }
+      #tempo-u { position: absolute; left: 44px; top: 372px; font-size: 26px; color: var(--muted); }
+      #now-state { position: absolute; left: 44px; top: 450px; width: 572px; height: 110px; }
+      #ns-follow, #ns-elev { position: absolute; left: 0; top: 0; }
+      #ns-elev { border-color: rgba(229,138,111,0.6); }
+      #ns-elev b { background: var(--cinder-hi); }
+      #ns-note { position: absolute; left: 0; top: 66px; font-size: 24px; color: var(--cinder-hi); }
+      #cursor { position: absolute; left: 0; top: 0; width: 44px; height: 54px; }
+      #cursor svg { display: block; width: 44px; height: 54px; }
+      #s5-cap { position: absolute; left: 1140px; top: 846px; width: 700px; font-size: 56px; line-height: 1.1; color: var(--bone); }
+
+      /* S6 insights */
+      #s6-left { position: absolute; left: 120px; top: 360px; width: 640px; }
+      #s6-head { margin-top: 26px; font-size: 100px; line-height: 1.02; }
+      #s6-card { left: 820px; top: 150px; width: 980px; height: 780px; }
+      #s6-card .top { position: absolute; left: 48px; right: 48px; top: 44px; display: flex; align-items: center; justify-content: space-between; }
+      #s6-card .ttl { font-size: 34px; font-weight: 700; }
+      #s6-card .ttl span { font-weight: 400; color: var(--muted); margin-left: 12px; font-size: 28px; }
+      #chart { position: absolute; left: 48px; top: 130px; width: 884px; height: 330px; overflow: visible; }
+      #chart-legend { position: absolute; left: 48px; top: 478px; display: flex; gap: 32px; font-size: 22px; color: var(--muted); }
+      #chart-legend span { display: flex; align-items: center; gap: 10px; }
+      #chart-legend i { display: block; width: 26px; height: 10px; border-radius: 5px; }
+      #stats { position: absolute; left: 48px; right: 48px; top: 556px; display: flex; gap: 24px; }
+      .stat { flex: 1; height: 176px; border-radius: 16px; background: var(--s2); border: 1px solid var(--line); padding: 26px 28px; }
+      .stat .n { font-family: "Michroma", sans-serif; font-size: 64px; line-height: 1.1; color: var(--sage-hi); }
+      .stat .n.act { color: var(--cinder-hi); }
+      .stat .label { margin-top: 12px; }
+
+      /* pills + S7 */
+      #pill-rot { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; transform: rotate(-18deg); }
+      .pill { position: absolute; width: 1900px; height: 340px; border-radius: 170px; }
+      #pill-sage { left: -2000px; top: 160px; background: #9dba8e; }
+      #pill-cinder { left: 2020px; top: 580px; background: #cf4f33; }
+      #s7-wrap { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+      #logo { display: block; width: 1180px; height: 473px; }
+      #s7-tag { margin-top: 8px; font-size: 88px; color: var(--bone); }
+      #s7-url { margin-top: 26px; font-family: "Michroma", sans-serif; font-size: 22px; letter-spacing: 0.14em; color: var(--muted); }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-width="1920" data-height="1080" data-duration="23.6">
+      <div id="room" class="clip" data-start="0" data-duration="23.6" data-track-index="0">
+        <div id="glow"></div>
+        <div id="warm"></div>
+        <div id="vignette"></div>
+      </div>
+
+      <!-- S1 · Hook -->
+      <section id="s1" class="clip scene" data-start="0" data-duration="3.01" data-track-index="1">
+        <div class="in" id="s1-in">
+          <div id="s1-wrap">
+            <div id="s1-a" class="serif">You know how long you sat there.</div>
+            <div id="s1-timer">00:47:12</div>
+            <div id="s1-b" class="serif">Not how it went.</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- S2 · The band -->
+      <section id="s2" class="clip scene" data-start="3.01" data-duration="3.27" data-track-index="2">
+        <div class="in" id="s2-in">
+          <div id="band-wrap">
+            <img src="assets/img/band.jpg" alt="StudyLoop band" />
+            <div id="flare-rot"><div id="flare"></div></div>
+          </div>
+          <div id="s2-shade"></div>
+          <div id="s2-text">
+            <div class="kicker" id="s2-k"><i></i>THE BAND · SL-01</div>
+            <div id="s2-line">StudyLoop reads how your body responds while you study.</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- S3 · Baseline -->
+      <section id="s3" class="clip scene" data-start="6.28" data-duration="3.01" data-track-index="1">
+        <div class="in" id="s3-in">
+          <div id="s3-left">
+            <div class="kicker"><i></i>01 · BASELINE</div>
+            <div id="s3-head" class="serif">20 seconds of stillness.</div>
+            <div id="s3-sub">Your resting heart rate and skin conductance, for the day.</div>
+          </div>
+          <div class="card" id="s3-card">
+            <div class="top">
+              <div class="ttl">Capturing baseline</div>
+              <div class="chip"><b></b>Band ready</div>
+            </div>
+            <div id="ring">
+              <svg viewBox="0 0 300 300">
+                <circle cx="150" cy="150" r="130" fill="none" stroke="#2f2e2b" stroke-width="14" />
+                <circle id="ring-arc" cx="150" cy="150" r="130" fill="none" stroke="#9dba8e" stroke-width="14" stroke-linecap="round" pathLength="1" stroke-dasharray="1 1" stroke-dashoffset="1" transform="rotate(-90 150 150)" />
+              </svg>
+              <div id="ring-num">20</div>
+              <div id="ring-set">SET</div>
+            </div>
+            <div id="s3-hint" data-layout-allow-overlap>Sit still. Breathe normally.</div>
+            <div id="s3-done" data-layout-allow-overlap>Your baseline</div>
+            <div id="s3-tiles">
+              <div class="tile"><div class="label">Heart rate</div><div class="v">68<small>bpm</small></div></div>
+              <div class="tile"><div class="label">Skin conductance</div><div class="v">2.4<small>µS</small></div></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- S4 · Live session -->
+      <section id="s4" class="clip scene" data-start="9.29" data-duration="3.82" data-track-index="2">
+        <div class="in" id="s4-in">
+          <div id="s4-cap" class="serif">Measured against you. Never a score.</div>
+          <div class="card" id="s4-panel">
+            <div id="s4-row">
+              <div style="display:flex;align-items:center">
+                <div class="chip" id="live"><b></b>Session live</div>
+                <div id="s4-subj">Biology · Cell respiration · Deep work</div>
+              </div>
+              <div class="label">vs. your baseline</div>
+            </div>
+            <div id="s4-timer">00:23:41</div>
+            <div id="badges" data-layout-allow-overlap>
+              <div data-layout-allow-overlap class="badge" id="b-stable"><i></i>Stable</div>
+              <div data-layout-allow-overlap class="badge" id="b-changing"><i></i>Changing</div>
+              <div data-layout-allow-overlap class="badge" id="b-elevated"><i></i>Elevated</div>
+              <div data-layout-allow-overlap class="badge" id="b-recovering"><i></i>Recovering</div>
+            </div>
+            <div class="metric" id="m-hr">
+              <div class="hd"><div class="label">Heart rate</div><div class="val"><span id="hr-v">69</span><small>bpm</small></div></div>
+              <div class="note">Baseline 68</div>
+              <svg viewBox="0 0 696 210">
+                <rect x="0" y="118" width="696" height="40" fill="rgba(157,186,142,0.12)" />
+                <path id="hr-path" d="M0 138" fill="none" stroke="#c3d6b4" stroke-width="4" stroke-linejoin="round" pathLength="1" stroke-dasharray="1 1" stroke-dashoffset="1" />
+              </svg>
+            </div>
+            <div class="metric" id="m-eda">
+              <div class="hd"><div class="label">Skin conductance</div><div class="val"><span id="eda-v">2.4</span><small>µS</small></div></div>
+              <div class="note">Baseline 2.4</div>
+              <svg viewBox="0 0 696 210">
+                <rect x="0" y="118" width="696" height="40" fill="rgba(157,186,142,0.12)" />
+                <path id="eda-path" d="M0 138" fill="none" stroke="#c3d6b4" stroke-width="4" stroke-linejoin="round" pathLength="1" stroke-dasharray="1 1" stroke-dashoffset="1" />
+              </svg>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- S5 · Loops -->
+      <section id="s5" class="clip scene" data-start="13.11" data-duration="4.09" data-track-index="1">
+        <div class="in" id="s5-in">
+          <div id="s5-left">
+            <div class="kicker"><i></i>02 · LOOPS</div>
+            <div id="s5-title">Your playlist, as study beats</div>
+            <div id="s5-input">
+              <div id="s5-ph">Paste a Spotify playlist, album or song link</div>
+              <div id="s5-typed"></div>
+            </div>
+            <div id="s5-btn">Make beats</div>
+            <div id="rows">
+              <div class="row" id="r1" style="top:0"><div class="play"><svg viewBox="0 0 18 18"><path d="M4 2 L16 9 L4 16 Z" fill="#ece6d9"/></svg></div><div class="nm">Late Night Revision · 1</div><div class="st">Lo-fi groove</div><div class="bpm">92</div></div>
+              <div class="row" id="r2" style="top:112px"><div class="play"><svg viewBox="0 0 18 18"><path d="M4 2 L16 9 L4 16 Z" fill="#ece6d9"/></svg></div><div class="nm">Late Night Revision · 2</div><div class="st">Dholak groove</div><div class="bpm">96</div></div>
+              <div class="row" id="r3" style="top:224px"><div class="play"><svg viewBox="0 0 18 18"><path d="M4 2 L16 9 L4 16 Z" fill="#ece6d9"/></svg></div><div class="nm">Late Night Revision · 3</div><div class="st">Boom-bap</div><div class="bpm">88</div></div>
+            </div>
+          </div>
+          <div class="card" id="now">
+            <div class="label lbl">Now playing</div>
+            <div class="song">Late Night Revision · 1</div>
+            <div id="tempo">92</div>
+            <div id="tempo-u">bpm · lyric-free, made in your browser</div>
+            <div id="now-state">
+              <div class="chip" id="ns-follow" data-layout-allow-overlap><b></b>Follows your band</div>
+              <div class="chip" id="ns-elev" data-layout-allow-overlap><b></b>Elevated · easing off</div>
+              <div id="ns-note">Tempo ×0.82 · softer drums</div>
+            </div>
+          </div>
+          <div id="s5-cap" class="serif">They ease off when you tense up.</div>
+          <div id="cursor"><svg viewBox="0 0 44 54"><path d="M3 3 L3 44 L14 34 L22 51 L30 47 L22 31 L37 31 Z" fill="#ece6d9" stroke="#12110f" stroke-width="3" stroke-linejoin="round"/></svg></div>
+        </div>
+      </section>
+
+      <!-- S6 · Insights -->
+      <section id="s6" class="clip scene" data-start="17.2" data-duration="2.99" data-track-index="2">
+        <div class="in" id="s6-in">
+          <div id="s6-left">
+            <div class="kicker"><i></i>03 · INSIGHTS</div>
+            <div id="s6-head" class="serif">Then see how it went.</div>
+          </div>
+          <div class="card" id="s6-card">
+            <div class="top">
+              <div class="ttl">Biology<span>47 min · Deep work</span></div>
+              <div class="chip">Sample data</div>
+            </div>
+            <svg id="chart" viewBox="0 0 884 330">
+              <rect x="0" y="150" width="884" height="70" fill="rgba(157,186,142,0.13)" />
+              <line x1="0" y1="185" x2="884" y2="185" stroke="rgba(157,186,142,0.45)" stroke-width="2" stroke-dasharray="8 8" />
+              <path id="ins-path" d="M0 185" fill="none" stroke="#c3d6b4" stroke-width="4" stroke-linejoin="round" pathLength="1" stroke-dasharray="1 1" stroke-dashoffset="1" />
+              <g id="ins-dots"></g>
+            </svg>
+            <div id="chart-legend">
+              <span><i style="background:#c3d6b4"></i>Skin conductance</span>
+              <span><i style="background:rgba(157,186,142,0.35)"></i>Your baseline</span>
+              <span><i style="background:#e58a6f"></i>Elevated</span>
+              <span><i style="background:#ece6d9"></i>Marked</span>
+            </div>
+            <div id="stats">
+              <div class="stat" id="st1"><div class="n"><span id="n1">0</span>%</div><div class="label">Near baseline</div></div>
+              <div class="stat" id="st2"><div class="n act" id="n2">0</div><div class="label">Elevated moments</div></div>
+              <div class="stat" id="st3"><div class="n" id="n3">0</div><div class="label">Moments you marked</div></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Pill wipe -->
+      <div id="pills" class="clip" data-start="19.6" data-duration="1.2" data-track-index="4">
+        <div id="pill-rot">
+          <div class="pill" id="pill-sage"></div>
+          <div class="pill" id="pill-cinder"></div>
+        </div>
+      </div>
+
+      <!-- S7 · Logo -->
+      <section id="s7" class="clip scene" data-start="20.19" data-duration="3.41" data-track-index="1">
+        <div class="in" id="s7-in">
+          <div id="s7-wrap">
+            <img id="logo" src="assets/img/logo.png" alt="StudyLoop" />
+            <div id="s7-tag" class="serif">See how you study.</div>
+            <div id="s7-url">STUDY-LOOP-ALPHA.VERCEL.APP</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Audio -->
+      <audio id="music" src="assets/music/happy-beats-business-moves-vol-10-by-ende-dot-app.mp3" data-start="0" data-duration="23.6" data-track-index="10" data-volume="0.36"
+        data-automation='{"version":1,"lanes":[{"target":"volume","points":[{"t":0,"v":0},{"t":0.6,"v":1},{"t":22.4,"v":1},{"t":23.6,"v":0}]}]}'></audio>
+      <audio id="sfx-hook" src="assets/sfx/drop_001.ogg" data-start="1.55" data-duration="0.11" data-track-index="11" data-volume="0.5"></audio>
+      <audio id="sfx-band" src="assets/sfx/impactSoft_medium_001.ogg" data-start="3.55" data-duration="0.18" data-track-index="12" data-volume="0.75"></audio>
+      <audio id="sfx-lock" src="assets/sfx/drop_002.ogg" data-start="8.22" data-duration="0.19" data-track-index="11" data-volume="0.6"></audio>
+      <audio id="sfx-k1" src="assets/sfx/keypress-003.wav" data-start="13.40" data-duration="0.15" data-track-index="13" data-volume="0.45"></audio>
+      <audio id="sfx-k2" src="assets/sfx/keypress-007.wav" data-start="13.52" data-duration="0.15" data-track-index="14" data-volume="0.45"></audio>
+      <audio id="sfx-k3" src="assets/sfx/keypress-012.wav" data-start="13.64" data-duration="0.15" data-track-index="13" data-volume="0.45"></audio>
+      <audio id="sfx-k4" src="assets/sfx/keypress-018.wav" data-start="13.76" data-duration="0.15" data-track-index="14" data-volume="0.45"></audio>
+      <audio id="sfx-k5" src="assets/sfx/keypress-021.wav" data-start="13.88" data-duration="0.15" data-track-index="13" data-volume="0.45"></audio>
+      <audio id="sfx-k6" src="assets/sfx/keypress-026.wav" data-start="14.00" data-duration="0.15" data-track-index="14" data-volume="0.45"></audio>
+      <audio id="sfx-click" src="assets/sfx/click_003.ogg" data-start="14.20" data-duration="0.05" data-track-index="12" data-volume="0.75"></audio>
+      <audio id="sfx-r1" src="assets/sfx/drop_001.ogg" data-start="14.45" data-duration="0.11" data-track-index="11" data-volume="0.5"></audio>
+      <audio id="sfx-r3" src="assets/sfx/drop_002.ogg" data-start="14.85" data-duration="0.19" data-track-index="12" data-volume="0.5"></audio>
+      <audio id="sfx-elev" src="assets/sfx/switch_002.ogg" data-start="15.28" data-duration="0.2" data-track-index="13" data-volume="0.65"></audio>
+      <audio id="sfx-ins" src="assets/sfx/card-slide-1.ogg" data-start="17.05" data-duration="0.6" data-track-index="14" data-volume="0.55"></audio>
+      <audio id="sfx-wipe" src="assets/sfx/impactSoft_medium_004.ogg" data-start="19.95" data-duration="0.15" data-track-index="11" data-volume="0.6"></audio>
+      <audio id="sfx-bell" src="assets/sfx/impactBell_heavy_000.ogg" data-start="20.19" data-duration="1.5" data-track-index="12" data-volume="0.7"></audio>
+    </div>
+
+    <script>
+      (function () {
+        var tl = gsap.timeline({ paused: true });
+        var FPS = 30, DUR = 23.6;
+        var AD = window.AUDIO_DATA;
+        function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+        function prog(t, a, b) { return clamp((t - a) / (b - a), 0, 1); }
+        function eo(p) { return 1 - Math.pow(1 - p, 3); }
+        function eio(p) { return p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2; }
+        function gauss(x, m, s) { return Math.exp(-((x - m) * (x - m)) / (2 * s * s)); }
+        function pad(n) { return (n < 10 ? "0" : "") + n; }
+
+        /* ── Precomputed traces (deterministic) ── */
+        function trace(w, n, fn) {
+          var d = "", i, x;
+          for (i = 0; i <= n; i++) { x = (i / n) * w; d += (i ? "L" : "M") + x.toFixed(1) + " " + fn(i / n).toFixed(1); }
+          return d;
+        }
+        // S4: baseline band centre y=138; elevated bump lines up with the Elevated badge
+        document.getElementById("hr-path").setAttribute("d", trace(696, 140, function (u) {
+          return 138 - 92 * gauss(u, 0.64, 0.07) - 30 * gauss(u, 0.38, 0.05) + 6 * Math.sin(u * 61) + 4 * Math.sin(u * 23 + 1);
+        }));
+        document.getElementById("eda-path").setAttribute("d", trace(696, 140, function (u) {
+          return 138 - 84 * gauss(u, 0.66, 0.1) - 18 * gauss(u, 0.36, 0.06) + 3 * Math.sin(u * 37);
+        }));
+        // S6 insights: baseline band centre y=185
+        var insFn = function (u) {
+          return 185 - 110 * gauss(u, 0.27, 0.035) - 125 * gauss(u, 0.58, 0.04) - 90 * gauss(u, 0.83, 0.03) + 9 * Math.sin(u * 47) + 6 * Math.sin(u * 13 + 2);
+        };
+        document.getElementById("ins-path").setAttribute("d", trace(884, 220, insFn));
+        var dotG = document.getElementById("ins-dots"), NS = "http://www.w3.org/2000/svg";
+        [0.27, 0.58, 0.83].forEach(function (u, i) {
+          var c = document.createElementNS(NS, "circle");
+          c.setAttribute("cx", (u * 884).toFixed(1)); c.setAttribute("cy", insFn(u).toFixed(1)); c.setAttribute("r", "11");
+          c.setAttribute("fill", "#e58a6f"); c.setAttribute("id", "dot" + i); c.setAttribute("opacity", "0");
+          dotG.appendChild(c);
+        });
+        [0.15, 0.71].forEach(function (u, i) {
+          var l = document.createElementNS(NS, "line");
+          l.setAttribute("x1", (u * 884).toFixed(1)); l.setAttribute("x2", (u * 884).toFixed(1));
+          l.setAttribute("y1", "20"); l.setAttribute("y2", "310"); l.setAttribute("stroke", "#ece6d9");
+          l.setAttribute("stroke-width", "2"); l.setAttribute("stroke-dasharray", "4 6"); l.setAttribute("id", "mark" + i); l.setAttribute("opacity", "0");
+          dotG.appendChild(l);
+        });
+
+        /* ── S1 · Hook ── */
+        tl.fromTo("#s1-timer", { opacity: 0, scale: 0.96 }, { opacity: 1, scale: 1, duration: 0.6, ease: "expo.out" }, 0.1);
+        tl.fromTo("#s1-a", { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.5, ease: "expo.out" }, 0.25);
+        tl.to("#s1-timer", { opacity: 0.35, duration: 0.3, ease: "power2.out" }, 1.55);
+        tl.fromTo("#s1-b", { opacity: 0, y: 26, filter: "blur(10px)" }, { opacity: 1, y: 0, filter: "blur(0px)", duration: 0.45, ease: "expo.out" }, 1.55);
+
+        /* ── S2 · Band ── */
+        tl.fromTo("#band-wrap", { scale: 1.12, x: 80 }, { scale: 1.0, x: 0, duration: 3.3, ease: "power2.out" }, 3.01);
+        tl.fromTo("#s2-in", { opacity: 0 }, { opacity: 1, duration: 0.35, ease: "power1.out" }, 3.01);
+        tl.fromTo("#flare", { opacity: 0, scaleX: 0.2 }, { opacity: 1, scaleX: 1, duration: 0.5, ease: "expo.out" }, 3.55); // beat-grid: 3.55
+        tl.fromTo("#s2-k", { opacity: 0, x: -30 }, { opacity: 1, x: 0, duration: 0.45, ease: "expo.out" }, 3.4);
+        tl.fromTo("#s2-line", { opacity: 0, y: 34 }, { opacity: 1, y: 0, duration: 0.55, ease: "expo.out" }, 3.6);
+        tl.to("#s2-in", { opacity: 0, x: -60, duration: 0.28, ease: "power2.in" }, 6.0);
+
+        /* ── S3 · Baseline ── */
+        tl.fromTo("#s3-left", { opacity: 0, x: 60 }, { opacity: 1, x: 0, duration: 0.5, ease: "expo.out" }, 6.3);
+        tl.fromTo("#s3-card", { opacity: 0, x: 120 }, { opacity: 1, x: 0, duration: 0.55, ease: "expo.out" }, 6.38);
+        tl.fromTo("#ring-arc", { attr: { "stroke-dashoffset": 1 } }, { attr: { "stroke-dashoffset": 0 }, duration: 1.5, ease: "power1.inOut" }, 6.7);
+        tl.set("#ring-set", { opacity: 0 }, 0);
+        tl.set("#s3-done", { opacity: 0 }, 0);
+        tl.to("#ring-num", { opacity: 0, duration: 0.12 }, 8.2);
+        tl.fromTo("#ring-set", { opacity: 0, scale: 0.8 }, { opacity: 1, scale: 1, duration: 0.35, ease: "back.out(2)", immediateRender: false }, 8.22); // beat-grid: 8.22
+        tl.to("#s3-hint", { opacity: 0, duration: 0.12 }, 8.2);
+        tl.fromTo("#s3-done", { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.3, ease: "expo.out", immediateRender: false }, 8.22);
+        tl.fromTo("#s3-tiles .tile", { opacity: 0.25 }, { opacity: 1, duration: 0.3, stagger: 0.1 }, 8.22);
+        tl.to("#s3-in", { opacity: 0, y: -40, duration: 0.25, ease: "power2.in" }, 9.04);
+
+        /* ── S4 · Live ── */
+        tl.fromTo("#s4-panel", { opacity: 0, y: 80 }, { opacity: 1, y: 0, duration: 0.6, ease: "expo.out" }, 9.29);
+        tl.fromTo("#s4-cap", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.5, ease: "expo.out" }, 9.35);
+        tl.fromTo(["#hr-path", "#eda-path"], { attr: { "stroke-dashoffset": 1 } }, { attr: { "stroke-dashoffset": 0 }, duration: 3.5, ease: "none" }, 9.45);
+        // beat-grid: badge steps at 10.38 / 11.47 / 12.56 (every other beat; single words held ≥1 s)
+        var badgeT = [["#b-stable", 9.5], ["#b-changing", 10.38], ["#b-elevated", 11.47], ["#b-recovering", 12.56]];
+        tl.set(".badge", { opacity: 0 }, 0);
+        badgeT.forEach(function (b, i) {
+          tl.fromTo(b[0], { opacity: 0, scale: 0.86 }, { opacity: 1, scale: 1, duration: 0.3, ease: "back.out(2.2)", immediateRender: false }, b[1]);
+          if (i < badgeT.length - 1) tl.to(b[0], { opacity: 0, duration: 0.1 }, badgeT[i + 1][1]);
+        });
+        tl.to("#s4-in", { opacity: 0, x: -80, duration: 0.25, ease: "power2.in" }, 12.86);
+
+        /* ── S5 · Loops ── */
+        tl.fromTo("#s5-left", { opacity: 0, x: 80 }, { opacity: 1, x: 0, duration: 0.5, ease: "expo.out" }, 13.11);
+        tl.fromTo("#now", { opacity: 0, x: 120 }, { opacity: 1, x: 0, duration: 0.55, ease: "expo.out" }, 13.2);
+        tl.to("#s5-ph", { opacity: 0, duration: 0.1 }, 13.35);
+        tl.fromTo("#cursor", { x: 1500, y: 980, opacity: 0 }, { x: 250, y: 470, opacity: 1, duration: 0.7, ease: "power3.inOut" }, 13.4);
+        tl.to("#s5-btn", { scale: 0.93, duration: 0.08, yoyo: true, repeat: 1, ease: "power2.out" }, 14.2);
+        tl.to("#cursor", { scale: 0.85, duration: 0.08, yoyo: true, repeat: 1 }, 14.2);
+        tl.to("#cursor", { opacity: 0, duration: 0.25 }, 14.5);
+        tl.set(".row", { opacity: 0 }, 0);
+        ["#r1", "#r2", "#r3"].forEach(function (r, i) {
+          tl.fromTo(r, { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.35, ease: "expo.out", immediateRender: false }, 14.45 + i * 0.2);
+        });
+        tl.set("#ns-elev", { opacity: 0 }, 0);
+        tl.set("#ns-note", { opacity: 0 }, 0);
+        tl.to("#ns-follow", { opacity: 0, duration: 0.12 }, 15.28);
+        tl.fromTo("#ns-elev", { opacity: 0, scale: 0.9 }, { opacity: 1, scale: 1, duration: 0.3, ease: "back.out(2)", immediateRender: false }, 15.28); // beat-grid: 15.28
+        tl.fromTo("#ns-note", { opacity: 0 }, { opacity: 1, duration: 0.3, immediateRender: false }, 15.4);
+        tl.fromTo("#s5-cap", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.5, ease: "expo.out" }, 15.4);
+        tl.to("#s5-in", { opacity: 0, x: -80, duration: 0.25, ease: "power2.in" }, 16.95);
+
+        /* ── S6 · Insights ── */
+        tl.fromTo("#s6-left", { opacity: 0, x: 60 }, { opacity: 1, x: 0, duration: 0.5, ease: "expo.out" }, 17.2);
+        tl.fromTo("#s6-card", { opacity: 0, x: 120 }, { opacity: 1, x: 0, duration: 0.55, ease: "expo.out" }, 17.25);
+        tl.fromTo("#ins-path", { attr: { "stroke-dashoffset": 1 } }, { attr: { "stroke-dashoffset": 0 }, duration: 1.2, ease: "power1.inOut" }, 17.4);
+        [["#mark0", 17.55], ["#dot0", 17.7], ["#dot1", 17.98], ["#mark1", 18.15], ["#dot2", 18.3]].forEach(function (m) {
+          tl.fromTo(m[0], { attr: { opacity: 0 } }, { attr: { opacity: 1 }, duration: 0.2 }, m[1]);
+        });
+        // beat-grid: stats at 17.47 / 18.01 / 18.55
+        ["#st1", "#st2", "#st3"].forEach(function (s, i) {
+          tl.fromTo(s, { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.35, ease: "expo.out" }, 17.47 + i * 0.54);
+        });
+
+        /* ── Pill wipe → logo ── */
+        tl.fromTo("#pill-sage", { x: 0 }, { x: 4000, duration: 1.0, ease: "power3.inOut" }, 19.67); // midpoint covers frame on the 20.19 cut
+        tl.fromTo("#pill-cinder", { x: 0 }, { x: -4000, duration: 1.0, ease: "power3.inOut" }, 19.71);
+        tl.fromTo("#logo", { opacity: 0, scale: 0.88 }, { opacity: 1, scale: 1, duration: 0.6, ease: "expo.out" }, 20.19); // beat-locked: 20.19s
+        tl.to("#logo", { scale: 1.03, duration: 2.75, ease: "none" }, 20.82);
+        tl.fromTo("#s7-tag", { opacity: 0, y: 26 }, { opacity: 1, y: 0, duration: 0.5, ease: "expo.out" }, 20.85);
+        tl.fromTo("#s7-url", { opacity: 0 }, { opacity: 1, duration: 0.5 }, 21.4);
+
+        /* ── Per-frame: counters, typing, audio-reactive glow ── */
+        var typedEl = document.getElementById("s5-typed");
+        var LINK = "open.spotify.com/playlist/late-night-revision";
+        var s1t = document.getElementById("s1-timer"), ringNum = document.getElementById("ring-num");
+        var hrV = document.getElementById("hr-v"), edaV = document.getElementById("eda-v"), s4t = document.getElementById("s4-timer");
+        var tempo = document.getElementById("tempo");
+        var n1 = document.getElementById("n1"), n2 = document.getElementById("n2"), n3 = document.getElementById("n3");
+        var glow = document.getElementById("glow"), flare = document.getElementById("flare"), logo = document.getElementById("logo");
+
+        function draw(f) {
+          var t = f / FPS;
+          var rms = AD && AD.rms[f] != null ? AD.rms[f] : 0.3;
+          var bass = AD && AD.bass[f] != null ? AD.bass[f] : 0.3;
+          glow.style.opacity = (0.5 + bass * 0.5).toFixed(3);
+
+          s1t.textContent = "00:47:" + pad(12 + Math.floor(Math.min(t, 1.55) * 2.6));
+          flare.style.filter = "brightness(" + (0.9 + rms * 0.5).toFixed(3) + ")";
+          ringNum.textContent = String(Math.max(0, Math.ceil(20 - 20 * eio(prog(t, 6.7, 8.2)))));
+
+          var u = prog(t, 9.45, 12.95);
+          hrV.textContent = String(Math.round(68 + 15 * gauss(u, 0.64, 0.07) + 5 * gauss(u, 0.38, 0.05)));
+          edaV.textContent = (2.4 + 1.1 * gauss(u, 0.66, 0.1) + 0.25 * gauss(u, 0.36, 0.06)).toFixed(1);
+          s4t.textContent = "00:23:" + pad(41 + Math.floor(clamp(t - 9.29, 0, 4)));
+
+          typedEl.textContent = LINK.slice(0, Math.round(LINK.length * prog(t, 13.38, 14.05)));
+          tempo.textContent = String(Math.round(92 - 17 * eio(prog(t, 15.28, 16.4))));
+
+          n1.textContent = String(Math.round(74 * eo(prog(t, 17.47, 18.2))));
+          n2.textContent = String(Math.round(3 * eo(prog(t, 18.01, 18.5))));
+          n3.textContent = String(Math.round(2 * eo(prog(t, 18.55, 19.0))));
+
+          logo.style.filter = "drop-shadow(0 0 " + (18 + bass * 46).toFixed(1) + "px rgba(157,186,142," + (0.10 + rms * 0.22).toFixed(3) + "))";
+        }
+        var total = Math.round(DUR * FPS);
+        for (var f = 0; f <= total; f++) {
+          tl.call((function (fr) { return function () { draw(fr); }; })(f), [], f / FPS);
+        }
+        draw(0);
+
+        window.__timelines["main"] = tl;
+      })();
+    </script>
+  </body>
+</html>
