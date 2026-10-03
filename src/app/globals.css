@@ -4384,44 +4384,43 @@ html.lenis body {
   border-radius: 50%;
   background: var(--surface-2);
 }
-.sk-phone__greet {
+.sk-phone__hero {
+  flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 10px 2px 6px;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  padding-bottom: calc(84px + env(safe-area-inset-bottom, 0px));
 }
-.sk-phone__greet span {
-  height: 10px;
-  width: 40%;
-  border-radius: 4px;
+.sk-phone__eyebrow,
+.sk-phone__title,
+.sk-phone__line {
+  border-radius: 6px;
   background: var(--surface-2);
 }
-.sk-phone__greet span:nth-child(2) {
-  height: 24px;
-  width: 78%;
+.sk-phone__eyebrow {
+  width: 56%;
+  height: 10px;
 }
-.sk-phone__greet span:nth-child(3) {
-  width: 52%;
+.sk-phone__orb {
+  width: min(232px, 62vw);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1.6px var(--line-2);
 }
-.sk-phone__hero {
-  height: 224px;
-  border-radius: 22px;
+.sk-phone__title {
+  width: 70%;
+  height: 30px;
 }
-.sk-phone__dials {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
+.sk-phone__line {
+  width: 50%;
+  height: 12px;
 }
-.sk-phone__dials .sk {
-  height: 108px;
-  border-radius: 18px;
-}
-.sk-phone__card {
-  height: 64px;
-  border-radius: 22px;
-}
-.sk-phone__card--tall {
-  height: 140px;
+.sk-phone__cta {
+  width: 100%;
+  height: 52px;
+  border-radius: var(--r-pill);
 }
 .sk-phone__tabs {
   position: fixed;
