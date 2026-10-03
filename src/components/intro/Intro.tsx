@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { isDemo } from "@/lib/demo";
 import { intro } from "@/lib/intro";
 import { lockScroll } from "../motion/SmoothScroll";
+import { TAGLINE } from "../ui/HowItWorks";
 import { WORDMARK_LETTERS, WORDMARK_VIEWBOX } from "./wordmark";
 
 gsap.registerPlugin(useGSAP);
@@ -212,7 +213,7 @@ export function Intro() {
               ))}
             </g>
           </svg>
-          <p className="intro__tag">Focus, measured differently</p>
+          <p className="intro__tag">{TAGLINE}</p>
         </div>
       </div>
 

@@ -77,16 +77,42 @@
   align-self: flex-end;
   line-height: 0;
 }
+/* The three poses sit on top of each other; only the current one shows. */
+.tour__poses {
+  display: grid;
+  transform-origin: 50% 100%;
+}
+.tour__poses.is-flipped {
+  scale: -1 1;
+}
+.tour__poses img {
+  grid-area: 1 / 1;
+  opacity: 0;
+  transition: opacity 0.22s var(--ease-out);
+}
+.tour__poses img.is-shown {
+  opacity: 1;
+}
+/* While he talks, a small bob, like a game character mid-line. */
+.tour__art.is-talking .tour__poses {
+  animation: tour-talk 0.8s var(--ease-in-out) infinite;
+}
+@keyframes tour-talk {
+  0%,
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-3px) rotate(-0.6deg);
+  }
+}
 .tour__art img {
   display: block;
   width: auto;
-  height: min(300px, 38vh);
+  height: min(270px, 34vh);
   filter: drop-shadow(0 0 28px rgb(var(--measured-rgb) / 0.22)) drop-shadow(0 18px 30px rgba(0, 0, 0, 0.6));
   -webkit-mask-image: linear-gradient(180deg, #000 82%, transparent);
   mask-image: linear-gradient(180deg, #000 82%, transparent);
-}
-.tour__art img.is-flipped {
-  transform: scaleX(-1);
 }
 .tour__guide.is-full .tour__art img {
   height: min(86vh, 860px);
@@ -96,7 +122,7 @@
 .tour__bubble {
   position: relative;
   pointer-events: auto;
-  width: min(460px, calc(100vw - 2 * var(--page-x) - 160px));
+  width: min(460px, calc(100vw - 2 * var(--page-x) - 270px));
   margin: 0 0 clamp(20px, 5vh, 48px);
   padding: var(--s-5);
   display: flex;
@@ -107,7 +133,7 @@
   box-shadow: inset 0 0 0 1px var(--line-2), var(--highlight), var(--shadow-float);
 }
 .tour__guide.is-full .tour__bubble {
-  width: min(520px, calc(100vw - 2 * var(--page-x) - 240px));
+  width: min(520px, calc(100vw - 2 * var(--page-x) - 380px));
   margin-bottom: 18vh;
 }
 /* Speech tail, pointing at Arjun. */
@@ -159,6 +185,10 @@
   font-size: var(--fs-body);
   line-height: 1.55;
   color: var(--text-2);
+}
+.tour__line b {
+  font-weight: 600;
+  color: var(--text-1);
 }
 .tour__caret {
   display: inline-block;
@@ -276,9 +306,10 @@
   box-shadow: 0 0 0 2px rgb(var(--measured-rgb) / 0.6);
 }
 .login__demo-face img {
-  width: 100%;
+  width: 170%;
+  max-width: none;
   height: auto;
-  margin-top: 2px;
+  margin: 2px 0 0 -35%;
 }
 .login__demo-text {
   display: flex;
@@ -355,7 +386,8 @@
     transition: none;
   }
   .tour__spot::after,
-  .tour__caret {
+  .tour__caret,
+  .tour__art.is-talking .tour__poses {
     animation: none;
   }
 }

@@ -8,8 +8,9 @@ import { useIntroDone } from "@/lib/intro";
 import { vibeEngine } from "@/lib/music/vibe/engine";
 import { engine } from "@/lib/useStudyLoop";
 import { lockScroll, scrollToTop } from "../motion/SmoothScroll";
+import { HowItWorks } from "../ui/HowItWorks";
 import { Icon } from "../ui/Icon";
-import { STEPS } from "./steps";
+import { STEPS, type Pose } from "./steps";
 import "./tour.css";
 
 const STEP_KEY = "sl-tour-step";
@@ -43,6 +44,24 @@ function unionRect(selectors: string[]): Rect | null {
 const same = (a: Rect | null, b: Rect | null) =>
   a === b || (!!a && !!b && Math.abs(a.x - b.x) < 1 && Math.abs(a.y - b.y) < 1 && Math.abs(a.w - b.w) < 1 && Math.abs(a.h - b.h) < 1);
 
+/** A line's visible text, without its **bold** markers. */
+const plain = (line: string) => line.replace(/\*\*/g, "");
+
+/** The first `n` visible characters of a line, keeping its bold parts bold. */
+function typedLine(line: string, n: number) {
+  const out: React.ReactNode[] = [];
+  let left = n;
+  line.split("**").forEach((part, k) => {
+    if (left <= 0 || !part) return;
+    const shown = part.slice(0, left);
+    left -= shown.length;
+    out.push(k % 2 ? <b key={k}>{shown}</b> : shown);
+  });
+  return out;
+}
+
+const POSES: Pose[] = ["normal", "talking", "extra"];
+
 function savedStep() {
   try {
     const n = Number(sessionStorage.getItem(STEP_KEY));
@@ -65,6 +84,7 @@ export function DemoTour() {
   const [typed, setTyped] = useState(0);
   const nextBtn = useRef<HTMLButtonElement>(null);
   const step = STEPS[i];
+  const text = plain(step.line);
   const last = i === STEPS.length - 1;
   const active = demo && introDone && open;
 
@@ -95,6 +115,7 @@ export function DemoTour() {
     if (!active) return;
     scrollToTop();
     lockScroll(true);
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- opening the tour runs its current step
     go(i);
     return () => lockScroll(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- run once per opening, not per step
@@ -122,19 +143,19 @@ export function DemoTour() {
     if (!active) return;
     if (matchMedia("(prefers-reduced-motion: reduce)").matches) {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- reduced motion shows the full line at once
-      setTyped(step.line.length);
+      setTyped(text.length);
       return;
     }
-    const t = setInterval(() => setTyped((n) => (n >= step.line.length ? (clearInterval(t), n) : n + 1)), 1000 / TYPE_CPS);
+    const t = setInterval(() => setTyped((n) => (n >= text.length ? (clearInterval(t), n) : n + 1)), 1000 / TYPE_CPS);
     return () => clearInterval(t);
-  }, [active, step]);
+  }, [active, text]);
 
-  const typing = typed < step.line.length;
+  const typing = typed < text.length;
   const next = useCallback(() => {
-    if (typing) return setTyped(step.line.length);
+    if (typing) return setTyped(text.length);
     if (last) return setOpen(false);
     go(i + 1);
-  }, [typing, last, step, go, i]);
+  }, [typing, last, text, go, i]);
   const back = useCallback(() => i > 0 && go(i - 1), [i, go]);
   const close = useCallback(() => {
     setOpen(false);
@@ -182,6 +203,8 @@ export function DemoTour() {
   }
 
   const full = step.art === "full";
+  // He talks while the line types, then settles into the step's mood.
+  const pose: Pose = typing ? "talking" : (step.mood ?? "normal");
   // The guide stands on the side away from what's lit.
   const guideLeft = !rect || rect.x + rect.w / 2 > window.innerWidth / 2;
   const progress = (i + 1) / STEPS.length;
@@ -205,19 +228,26 @@ export function DemoTour() {
           transition={{ type: "spring", stiffness: 260, damping: 26 }}
         >
           <motion.div
-            className="tour__art"
+            className={`tour__art ${typing ? "is-talking" : ""}`}
             initial={{ x: guideLeft ? -40 : 40, opacity: 0 }}
             animate={{ x: 0, opacity: 1 }}
             transition={{ type: "spring", stiffness: 200, damping: 22, delay: 0.05 }}
           >
-            <Image
-              src={full ? "/media/arjun/full.webp" : "/media/arjun/bust.webp"}
-              alt="Arjun, StudyLoop's software and research developer"
-              width={full ? 439 : 322}
-              height={full ? 1100 : 520}
-              priority
-              className={guideLeft ? "" : "is-flipped"}
-            />
+            {/* All three poses stay loaded and cross-fade, so a change of pose never flickers. */}
+            <span className={`tour__poses ${guideLeft ? "" : "is-flipped"}`}>
+              {POSES.map((p) => (
+                <Image
+                  key={p}
+                  src={`/media/arjun/${p}${full ? "" : "-bust"}.webp`}
+                  alt={p === pose ? "Arjun, StudyLoop's software and research developer" : ""}
+                  aria-hidden={p !== pose}
+                  width={full ? 458 : 530}
+                  height={full ? 1100 : 560}
+                  priority
+                  className={p === pose ? "is-shown" : ""}
+                />
+              ))}
+            </span>
           </motion.div>
 
           <div className="tour__bubble">
@@ -230,12 +260,13 @@ export function DemoTour() {
             </div>
             <p className="tour__title">{step.title}</p>
             <p className="tour__line" aria-hidden>
-              {step.line.slice(0, typed)}
+              {typedLine(step.line, typed)}
               {typing && <span className="tour__caret" />}
             </p>
             <p className="sr-only" aria-live="polite">
-              {step.line}
+              {text}
             </p>
+            {step.beats && <HowItWorks auto />}
             <div className="tour__bar" aria-hidden>
               <span style={{ transform: `scaleX(${progress})` }} />
             </div>

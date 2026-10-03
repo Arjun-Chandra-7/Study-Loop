@@ -1,0 +1,146 @@
+/* ═════════════════════════════════════════════════════════════
+   HOW IT WORKS · three beats, read in seconds
+   ═════════════════════════════════════════════════════════════ */
+.how {
+  container-type: inline-size;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+}
+/* Story-style progress: one bar per beat. */
+.how__bars {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+.how__bars span {
+  position: relative;
+  height: 3px;
+  border-radius: 3px;
+  background: var(--line-2);
+  overflow: hidden;
+}
+.how__bars span::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--measured);
+  transform: scaleX(0);
+  transform-origin: left;
+}
+.how__bars span.is-done::after {
+  transform: scaleX(1);
+}
+.how__bars span.is-now::after {
+  animation: how-fill linear forwards;
+  animation-duration: inherit;
+}
+@keyframes how-fill {
+  to {
+    transform: scaleX(1);
+  }
+}
+
+.how__beats {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--s-3);
+}
+.how__beat {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  min-width: 0;
+  opacity: 0.32;
+  transform: translateY(4px);
+  transition:
+    opacity 0.5s var(--ease-out),
+    transform 0.5s var(--ease-out);
+}
+.how__beat.is-on {
+  opacity: 1;
+  transform: none;
+}
+.how__icon {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  color: var(--measured);
+  background: var(--measured-soft);
+  box-shadow: inset 0 0 0 1px var(--measured-line);
+}
+/* The beat being read breathes, so the eye knows where to look. */
+.how--auto .how__beat.is-now .how__icon::after {
+  content: "";
+  position: absolute;
+  inset: -5px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px rgb(var(--measured-rgb) / 0.6);
+  animation: how-ping 1.6s var(--ease-out) infinite;
+}
+@keyframes how-ping {
+  from {
+    opacity: 1;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 0;
+    transform: scale(1.35);
+  }
+}
+.how__text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: var(--fs-small);
+  line-height: 1.45;
+  color: var(--text-2);
+}
+.how__text b {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: var(--fs-body);
+  font-weight: 600;
+  color: var(--text-1);
+}
+.how__n {
+  font-size: var(--fs-label);
+  font-weight: 500;
+  color: var(--measured);
+}
+
+/* Narrow homes (a phone, a speech bubble): one beat per row, icon beside text. */
+@container (max-width: 400px) {
+  .how__beats {
+    grid-template-columns: 1fr;
+    gap: var(--s-3);
+  }
+  .how__beat {
+    flex-direction: row;
+    align-items: center;
+    gap: var(--s-3);
+    transform: translateX(-4px);
+  }
+  .how__icon {
+    flex: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .how__beat {
+    transition: none;
+    transform: none;
+  }
+  .how--auto .how__beat.is-now .how__icon::after,
+  .how__bars span.is-now::after {
+    animation: none;
+  }
+}

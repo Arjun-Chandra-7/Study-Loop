@@ -216,7 +216,7 @@ p {
   line-height: 1.05;
 }
 .login__body .login__serif {
-  margin: var(--s-3) 0 var(--s-6);
+  margin: var(--s-2) 0 var(--s-5);
   line-height: 1.3;
   font-size: var(--fs-title);
   color: var(--text-2);
@@ -254,26 +254,15 @@ p {
 .login__error:not(:empty) {
   margin-top: var(--s-3);
 }
-.login__notes {
+.login__how {
+  width: 100%;
+  margin-bottom: var(--s-6);
+}
+.login__note {
   display: flex;
-  flex-direction: column;
-  gap: var(--s-3);
-  margin: var(--s-5) 0 0;
-  padding: var(--s-5) 0 0;
-  border-top: 1px solid var(--line-1);
-  list-style: none;
-  font-size: var(--fs-small);
-  line-height: 1.45;
-  color: var(--text-2);
-}
-.login__notes li {
-  display: grid;
-  grid-template-columns: 16px 1fr;
-  gap: var(--s-3);
-  align-items: start;
-}
-.login__notes svg {
-  margin-top: 1px;
+  align-items: center;
+  gap: var(--s-2);
+  margin: var(--s-3) 0 0;
   color: var(--text-3);
 }
 .login__fine {
@@ -4511,6 +4500,10 @@ html.lenis body {
 }
 .intro__tag {
   margin: 0;
+  max-width: calc(100vw - 2 * var(--page-x));
+  text-align: center;
+  text-wrap: balance;
+  line-height: 1.8;
   font-size: var(--fs-label);
   letter-spacing: 0.32em;
   text-transform: uppercase;
@@ -5368,4 +5361,26 @@ html.lenis body {
   .palettes {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+}
+
+/* First visit: StudyLoop in three beats. */
+.prompt--how {
+  width: min(600px, 100%);
+  gap: var(--s-4);
+}
+.prompt__kicker {
+  margin: 0;
+  font-size: var(--fs-label);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--measured);
+}
+.prompt__title--lg {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(24px, 3vw, 32px);
+  letter-spacing: var(--tracking-display);
+  text-transform: uppercase;
+  line-height: 1.05;
+  text-wrap: balance;
 }

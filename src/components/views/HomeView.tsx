@@ -82,12 +82,12 @@ export function HomeView({ stageRef }: { stageRef: React.RefObject<HTMLDivElemen
       <motion.div className="hero__copy" style={{ x: textX }}>
         <p className="eyebrow">
           <span className="eyebrow__rule" aria-hidden />
-          Cognitive performance system
+          A study band + adaptive music
         </p>
         <h1 className="display hero__title">StudyLoop</h1>
-        <p className="serif hero__serif">Designed for deeper focus</p>
+        <p className="serif hero__serif">A band that feels stress. Music that answers it.</p>
         <p className="body hero__body">
-          A wearable and adaptive study interface built to understand how your physiology changes while you learn.
+          Wear the band while you study. It reads your heart rate and skin, learns your calm, and when stress climbs, your music slows and softens with you.
         </p>
         <div className="hero__ctas">
           <Magnetic>

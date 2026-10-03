@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { HowItWorks } from "@/components/ui/HowItWorks";
 import { Icon } from "@/components/ui/Icon";
 import { Logo } from "@/components/ui/Logo";
 import { useAuth } from "@/lib/auth";
@@ -114,10 +115,13 @@ export default function LoginPage() {
         <div className="login__body">
           <p className="eyebrow">
             <span className="eyebrow__rule" aria-hidden />
-            Sign in
+            For long study sessions
           </p>
-          <h1 className="display login__title">Study with a signal.</h1>
-          <p className="serif login__serif">Your sessions, under your name.</p>
+          <h1 className="display login__title">A band that feels stress.</h1>
+          <p className="serif login__serif">Music that answers it.</p>
+          <div className="login__how">
+            <HowItWorks auto />
+          </div>
 
           <div className="login__card">
             <button
@@ -133,25 +137,15 @@ export default function LoginPage() {
             <p id="login-error" className="small login__error" role="alert">
               {error}
             </p>
-            <ul className="login__notes">
-              <li>
-                <Icon name="user" size={16} />
-                StudyLoop reads only your name, email and profile photo.
-              </li>
-              <li>
-                <Icon name="baseline" size={16} />
-                Sessions, baselines and insights stay under your account.
-              </li>
-              <li>
-                <Icon name="check" size={16} />
-                Sign out any time from your profile.
-              </li>
-            </ul>
+            <p className="small login__note">
+              <Icon name="user" size={14} />
+              Reads only your name, email and photo. Sign out any time.
+            </p>
           </div>
 
           <button type="button" className="login__demo" onClick={startDemo}>
             <span className="login__demo-face" aria-hidden>
-              <Image src="/media/arjun/bust.webp" alt="" width={322} height={520} />
+              <Image src="/media/arjun/normal-bust.webp" alt="" width={530} height={560} />
             </span>
             <span className="login__demo-text">
               <b>Demo mode · Hackathon tour</b>
