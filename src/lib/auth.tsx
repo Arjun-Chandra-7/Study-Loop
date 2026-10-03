@@ -2,6 +2,7 @@
 
 import { onAuthStateChanged, signInWithPopup, signInWithRedirect, signOut as fbSignOut, updateProfile, type User } from "firebase/auth";
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { exitDemo, isDemo } from "./demo";
 import { firebaseConfigured, getFirebaseAuth, googleProvider } from "./firebase";
 
 type Status = "loading" | "signed-in" | "signed-out";
@@ -22,6 +23,15 @@ type AuthState = {
 
 const AuthContext = createContext<AuthState | null>(null);
 
+/** The guest a hackathon judge plays in demo mode: no Firebase account behind it. */
+const DEMO_USER = {
+  uid: "demo",
+  displayName: "Hackathon judge",
+  email: "Demo mode · nothing is saved",
+  photoURL: null,
+  providerData: [],
+} as unknown as User;
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [status, setStatus] = useState<Status>(firebaseConfigured ? "loading" : "signed-out");
@@ -29,6 +39,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [, setVersion] = useState(0);
 
   useEffect(() => {
+    if (isDemo()) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- demo mode is only knowable on the client
+      setUser(DEMO_USER);
+      setStatus("signed-in");
+      return;
+    }
     const auth = getFirebaseAuth();
     if (!auth) return;
     return onAuthStateChanged(auth, (u) => {
@@ -53,6 +69,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signOut = async () => {
+    if (isDemo()) return exitDemo();
     const auth = getFirebaseAuth();
     if (auth) await fbSignOut(auth);
   };

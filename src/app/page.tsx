@@ -12,6 +12,7 @@ import { MusicReturn } from "@/components/music/MusicReturn";
 import { QuietLock } from "@/components/motion/QuietLock";
 import { SessionPrompts } from "@/components/session/SessionPrompts";
 import { SessionRecovery } from "@/components/session/SessionRecovery";
+import { DemoTour } from "@/components/demo/DemoTour";
 import { ScrollFX } from "@/components/motion/ScrollFX";
 import { SmoothScroll } from "@/components/motion/SmoothScroll";
 
@@ -46,6 +47,7 @@ export default function Home() {
         <ScrollFX />
         <SessionPrompts />
         <SessionRecovery />
+        <DemoTour />
       </MotionPrefs>
     </AuthGate>
   );

@@ -6,6 +6,8 @@ import { useEffect, useState } from "react";
 import { Icon } from "@/components/ui/Icon";
 import { Logo } from "@/components/ui/Logo";
 import { useAuth } from "@/lib/auth";
+import { startDemo } from "@/lib/demo";
+import "@/components/demo/tour.css";
 
 /** What went wrong and how to fix it — next to the button, never a bare "Oops". */
 function describe(code: string | undefined): string {
@@ -146,6 +148,17 @@ export default function LoginPage() {
               </li>
             </ul>
           </div>
+
+          <button type="button" className="login__demo" onClick={startDemo}>
+            <span className="login__demo-face" aria-hidden>
+              <Image src="/media/arjun/bust.webp" alt="" width={322} height={520} />
+            </span>
+            <span className="login__demo-text">
+              <b>Demo mode · Hackathon tour</b>
+              <span>No account needed. Arjun walks you through every feature in about two minutes.</span>
+            </span>
+            <Icon name="arrow" size={18} className="login__demo-go" />
+          </button>
         </div>
         <p className="small muted login__fine">StudyLoop is a study tool, not a medical device.</p>
       </div>

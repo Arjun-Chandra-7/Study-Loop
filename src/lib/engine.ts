@@ -7,7 +7,7 @@ import {
   type Sample,
 } from "./sensors/classify";
 import { MockSensorProvider } from "./sensors/mock";
-import type { SensorProvider, SensorReading } from "./sensors/types";
+import type { MockScenario, SensorProvider, SensorReading } from "./sensors/types";
 import { EMPTY_READING } from "./sensors/types";
 
 export type Tab = "home" | "session" | "insights" | "research" | "music" | "profile";
@@ -182,6 +182,8 @@ export class StudyLoopEngine {
   };
 
   readonly serverSnapshot = this.snap;
+  /** How long a baseline takes. The demo tour shortens it so judges aren't kept waiting. */
+  baselineMs = BASELINE_MS;
   private storeKey: string | null = null;
   private lastSave = 0;
   private savedPhase: SessionPhase | null = null;
@@ -248,6 +250,11 @@ export class StudyLoopEngine {
   };
 
   disconnect = () => this.provider.disconnect();
+
+  /** Demo tour: drive the simulated band (e.g. a stress spike, then recovery). */
+  demoScenario = (scenario: MockScenario) => {
+    if (this.provider === this.sim) this.sim.setScenario(scenario);
+  };
 
   toggleConnection = () => {
     if (this.snap.reading.connection === "disconnected") void this.connect();
@@ -450,7 +457,7 @@ export class StudyLoopEngine {
     }
 
     if (session.phase === "baseline") {
-      const progress = Math.min(1, (Date.now() - this.baselineStart) / BASELINE_MS);
+      const progress = Math.min(1, (Date.now() - this.baselineStart) / this.baselineMs);
       session = { ...session, baselineProgress: progress };
       if (progress >= 1) {
         const baseline = computeBaseline(this.baselineSamples) ?? session.baseline;

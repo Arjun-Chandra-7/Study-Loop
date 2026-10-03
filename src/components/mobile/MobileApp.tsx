@@ -5,7 +5,7 @@ import { AnimatePresence, motion, useDragControls, useInView, type Variants } fr
 import { useIntroDone } from "@/lib/intro";
 import { useRef, useState } from "react";
 import { ThinkingOrb, type OrbState } from "thinking-orbs";
-import { BASELINE_MS, type Tab } from "@/lib/engine";
+import type { Tab } from "@/lib/engine";
 import { clock, signedPercent } from "@/lib/format";
 import { edaDelta, PHYSIO_LABEL } from "@/lib/sensors/classify";
 import { engine, useStudyLoop } from "@/lib/useStudyLoop";
@@ -178,7 +178,7 @@ function LiveCard() {
 
   const body = (() => {
     if (phase === "baseline") {
-      const left = Math.ceil(((1 - s.session.baselineProgress) * BASELINE_MS) / 1000);
+      const left = Math.ceil(((1 - s.session.baselineProgress) * engine.baselineMs) / 1000);
       return (
         <>
           <StateOrb {...orb} size={150} density={1.6} dotScale={0.7} />

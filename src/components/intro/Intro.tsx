@@ -3,6 +3,7 @@
 import { gsap } from "gsap";
 import { useGSAP } from "@gsap/react";
 import { useEffect, useRef, useState } from "react";
+import { isDemo } from "@/lib/demo";
 import { intro } from "@/lib/intro";
 import { lockScroll } from "../motion/SmoothScroll";
 import { WORDMARK_LETTERS, WORDMARK_VIEWBOX } from "./wordmark";
@@ -111,7 +112,8 @@ export function Intro() {
         seen = sessionStorage.getItem("sl-intro-seen") === "1";
         sessionStorage.setItem("sl-intro-seen", "1");
       } catch {}
-      tl.timeScale(seen ? 4 : 1);
+      // Judges are short on time: the film runs fast in demo mode.
+      tl.timeScale(seen ? 4 : isDemo() ? 2.2 : 1);
 
       whenLoaded().then(() => {
         loaded = true;

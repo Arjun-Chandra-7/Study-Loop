@@ -1,0 +1,350 @@
+/* ═════════════════════════════════════════════════════════════
+   DEMO MODE · HACKATHON TOUR
+   ═════════════════════════════════════════════════════════════ */
+.tour {
+  position: fixed;
+  inset: 0;
+  z-index: 190;
+}
+.tour__blocker {
+  position: fixed;
+  inset: 0;
+}
+/* The spotlight: a hole in the dark, gliding from part to part. */
+.tour__spot {
+  position: fixed;
+  border-radius: 18px;
+  pointer-events: none;
+  box-shadow:
+    0 0 0 200vmax rgba(11, 10, 7, 0.76),
+    0 0 0 2px rgb(var(--measured-rgb) / 0.9),
+    0 0 48px 4px rgb(var(--measured-rgb) / 0.28);
+  transition:
+    left 0.6s var(--ease-out),
+    top 0.6s var(--ease-out),
+    width 0.6s var(--ease-out),
+    height 0.6s var(--ease-out),
+    box-shadow 0.4s;
+}
+.tour__spot::after {
+  content: "";
+  position: absolute;
+  inset: -6px;
+  border-radius: 22px;
+  box-shadow: 0 0 0 1px rgb(var(--measured-rgb) / 0.5);
+  animation: tour-breathe 2.4s var(--ease-in-out) infinite;
+}
+.tour__spot.is-none {
+  left: 50%;
+  top: 50%;
+  width: 0;
+  height: 0;
+  box-shadow: 0 0 0 200vmax rgba(11, 10, 7, 0.82);
+}
+.tour__spot.is-none::after {
+  display: none;
+}
+@keyframes tour-breathe {
+  0%,
+  100% {
+    opacity: 0.2;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.012);
+  }
+}
+
+/* Arjun and his speech card, standing on the side away from the light. */
+.tour__guide {
+  position: fixed;
+  bottom: 0;
+  display: flex;
+  align-items: flex-end;
+  max-width: calc(100vw - 2 * var(--page-x));
+  pointer-events: none;
+}
+.tour__guide.is-left {
+  left: var(--page-x);
+}
+.tour__guide.is-right {
+  right: var(--page-x);
+  flex-direction: row-reverse;
+}
+.tour__art {
+  flex: none;
+  align-self: flex-end;
+  line-height: 0;
+}
+.tour__art img {
+  display: block;
+  width: auto;
+  height: min(300px, 38vh);
+  filter: drop-shadow(0 0 28px rgb(var(--measured-rgb) / 0.22)) drop-shadow(0 18px 30px rgba(0, 0, 0, 0.6));
+  -webkit-mask-image: linear-gradient(180deg, #000 82%, transparent);
+  mask-image: linear-gradient(180deg, #000 82%, transparent);
+}
+.tour__art img.is-flipped {
+  transform: scaleX(-1);
+}
+.tour__guide.is-full .tour__art img {
+  height: min(86vh, 860px);
+  -webkit-mask-image: none;
+  mask-image: none;
+}
+.tour__bubble {
+  position: relative;
+  pointer-events: auto;
+  width: min(460px, calc(100vw - 2 * var(--page-x) - 160px));
+  margin: 0 0 clamp(20px, 5vh, 48px);
+  padding: var(--s-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  border-radius: var(--r-panel);
+  background: linear-gradient(180deg, var(--surface-2), var(--surface-1));
+  box-shadow: inset 0 0 0 1px var(--line-2), var(--highlight), var(--shadow-float);
+}
+.tour__guide.is-full .tour__bubble {
+  width: min(520px, calc(100vw - 2 * var(--page-x) - 240px));
+  margin-bottom: 18vh;
+}
+/* Speech tail, pointing at Arjun. */
+.tour__bubble::before {
+  content: "";
+  position: absolute;
+  bottom: 40px;
+  width: 16px;
+  height: 16px;
+  background: var(--surface-1);
+  box-shadow: inset 1px -1px 0 var(--line-2);
+}
+.tour__guide.is-left .tour__bubble::before {
+  left: -8px;
+  transform: rotate(45deg);
+}
+.tour__guide.is-right .tour__bubble::before {
+  right: -8px;
+  transform: rotate(-135deg);
+}
+.tour__who {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-2);
+  font-size: var(--fs-small);
+  color: var(--text-3);
+}
+.tour__who b {
+  color: var(--measured);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+.tour__count {
+  margin-left: auto;
+  font-size: var(--fs-label);
+  letter-spacing: var(--tracking-label);
+}
+.tour__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(18px, 1.6vw, 22px);
+  letter-spacing: var(--tracking-display);
+  text-transform: uppercase;
+  color: var(--text-1);
+}
+.tour__line {
+  margin: 0;
+  min-height: 5.6em;
+  font-size: var(--fs-body);
+  line-height: 1.55;
+  color: var(--text-2);
+}
+.tour__caret {
+  display: inline-block;
+  width: 2px;
+  height: 1em;
+  margin-left: 2px;
+  vertical-align: -2px;
+  background: var(--measured);
+  animation: tour-caret 0.9s steps(1) infinite;
+}
+@keyframes tour-caret {
+  50% {
+    opacity: 0;
+  }
+}
+.tour__bar {
+  height: 2px;
+  border-radius: 2px;
+  background: var(--line-2);
+  overflow: hidden;
+}
+.tour__bar span {
+  display: block;
+  height: 100%;
+  background: var(--measured);
+  transform-origin: left;
+  transition: transform 0.5s var(--ease-out);
+}
+.tour__actions,
+.tour__end {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+}
+.tour__nav {
+  display: flex;
+  gap: var(--s-2);
+}
+.tour__skip {
+  font-size: var(--fs-small);
+  color: var(--text-3);
+  text-decoration: underline;
+  text-decoration-color: var(--line-3);
+  text-underline-offset: 3px;
+}
+.tour__skip:hover {
+  color: var(--text-1);
+}
+
+/* After the tour: a small pill to replay it or leave demo mode. */
+.tour-pill {
+  position: fixed;
+  left: var(--page-x);
+  bottom: calc(var(--s-4) + env(safe-area-inset-bottom, 0px));
+  z-index: 120;
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  padding: 6px 6px 6px 14px;
+  border-radius: var(--r-pill);
+  background: var(--surface-2);
+  box-shadow: inset 0 0 0 1px var(--line-2), var(--shadow-float);
+  font-size: var(--fs-small);
+}
+.tour-pill__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--action);
+  animation: pulse 1.8s var(--ease-in-out) infinite;
+}
+.tour-pill__label {
+  color: var(--text-2);
+  margin-right: var(--s-1);
+}
+.tour-pill button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 12px;
+  border-radius: var(--r-pill);
+  color: var(--text-1);
+  box-shadow: inset 0 0 0 1px var(--line-2);
+}
+.tour-pill button:hover {
+  box-shadow: inset 0 0 0 1px var(--line-3);
+}
+
+/* Sign-in page: the way in for judges. */
+.login__demo {
+  display: flex;
+  align-items: center;
+  gap: var(--s-4);
+  width: 100%;
+  padding: var(--s-3) var(--s-4) var(--s-3) var(--s-3);
+  border-radius: var(--r-card);
+  text-align: left;
+  background: linear-gradient(100deg, rgb(var(--measured-rgb) / 0.12), transparent 70%), var(--surface-1);
+  box-shadow: inset 0 0 0 1px rgb(var(--measured-rgb) / 0.32);
+  transition: box-shadow var(--dur-2), transform var(--dur-2) var(--ease-out);
+}
+.login__demo:hover {
+  box-shadow: inset 0 0 0 1px rgb(var(--measured-rgb) / 0.7);
+  transform: translateY(-1px);
+}
+.login__demo-face {
+  flex: none;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: var(--surface-3);
+  box-shadow: 0 0 0 2px rgb(var(--measured-rgb) / 0.6);
+}
+.login__demo-face img {
+  width: 100%;
+  height: auto;
+  margin-top: 2px;
+}
+.login__demo-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.login__demo-text b {
+  font-size: var(--fs-body);
+  font-weight: 600;
+  color: var(--text-1);
+}
+.login__demo-text span {
+  font-size: var(--fs-small);
+  color: var(--text-3);
+}
+.login__demo-go {
+  margin-left: auto;
+  flex: none;
+  color: var(--measured);
+}
+
+@media (max-width: 759px) {
+  .tour__guide,
+  .tour__guide.is-right {
+    left: var(--s-3);
+    right: var(--s-3);
+    flex-direction: row;
+  }
+  .tour__guide .tour__art {
+    position: absolute;
+    right: 0;
+    bottom: calc(100% - 24px);
+  }
+  .tour__art img {
+    height: 150px;
+  }
+  .tour__guide.is-full .tour__art {
+    position: static;
+  }
+  .tour__guide.is-full .tour__art img {
+    height: 40vh;
+  }
+  .tour__bubble,
+  .tour__guide.is-full .tour__bubble {
+    width: auto;
+    flex: 1;
+    min-width: 0;
+    margin-bottom: var(--s-3);
+    padding: var(--s-4);
+  }
+  .tour__guide.is-full {
+    flex-direction: column;
+    align-items: center;
+  }
+  .tour__bubble::before {
+    display: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tour__spot,
+  .tour__bar span {
+    transition: none;
+  }
+  .tour__spot::after,
+  .tour__caret {
+    animation: none;
+  }
+}
