@@ -336,6 +336,10 @@
   html[data-demo] .mx-today {
     padding-top: 52px;
   }
+  /* A sheet owns the screen while it's open: the pill steps aside instead of covering its header. */
+  html:has(.mx-sheet) .tour-pill {
+    display: none;
+  }
   /* Phones: the tab bar owns the bottom edge, so the pill sits under the top bar. */
   .tour-pill {
     left: 50%;

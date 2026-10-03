@@ -85,6 +85,11 @@ p {
   text-wrap: pretty;
 }
 /* Mona Sans has no true italic; emphasis is weight, never a slanted fake. */
+/* SVG labels are set small and then scaled with their viewBox; without this, Chrome spaces the
+   letters for the small size and scales the gaps up ("Statu slight"). */
+svg text {
+  text-rendering: geometricPrecision;
+}
 em,
 i {
   font-style: normal;
@@ -1137,6 +1142,17 @@ i {
   grid-row: 4;
   grid-column: 1 / 3;
 }
+/* Desktop: the top-right capsule already shows who you are and your band, so the pill would only
+   repeat it. Its row goes to the two metric cards above, which get the height they were missing. */
+@media (min-width: 1024px) {
+  .area-profile {
+    display: none;
+  }
+  .area-c,
+  .area-d {
+    grid-row: 3 / 5;
+  }
+}
 [class^="area-"] {
   min-width: 0;
   min-height: 0;
@@ -1478,6 +1494,7 @@ html[data-quiet] .foot__scroll {
 .player {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
   gap: var(--s-4);
   padding: var(--s-3);
 }
@@ -1493,7 +1510,8 @@ html[data-quiet] .foot__scroll {
   box-shadow: inset 0 0 0 1px var(--line-2);
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  justify-content: flex-end;
+  gap: 2px;
   padding: var(--s-3);
 }
 .player__code {
@@ -1693,6 +1711,65 @@ html[data-quiet] .foot__scroll {
   font-family: var(--font-serif);
   font-size: 1.08em;
   color: var(--text-1);
+}
+
+/* ── Lower row: every card fills exactly its slot, and sheds secondary lines when the slot is short ── */
+.area-player,
+.area-trend,
+.area-research {
+  container-type: size;
+}
+.area-player > .card,
+.area-trend > .card,
+.area-research > .card {
+  height: 100%;
+  overflow: hidden;
+}
+@container (max-height: 150px) {
+  .player__main .card__sub,
+  .player__times,
+  .player__orb {
+    display: none;
+  }
+  .player .play-btn {
+    width: 36px;
+    height: 36px;
+  }
+  .player .icon-btn {
+    width: 28px;
+    height: 28px;
+  }
+  .player__tile {
+    aspect-ratio: auto;
+    width: 88px;
+    padding: var(--s-2);
+  }
+  .player__mode {
+    white-space: nowrap;
+  }
+  /* Signal: the facts in one row; the mini chart only when there's a signal to draw. */
+  .trend {
+    gap: var(--s-2);
+  }
+  .trend__body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .trend__tile:has(> .small) {
+    display: none;
+  }
+  .trend__tile {
+    min-height: 0;
+  }
+  .trend__facts {
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: var(--s-6);
+  }
+}
+@container (max-height: 270px) {
+  .research-card__copy {
+    display: none;
+  }
 }
 
 /* ── Profile pill ── */
@@ -1936,8 +2013,9 @@ html[data-quiet] .foot__scroll {
 .profile,
 .empty {
   position: absolute;
-  inset: 0;
-  padding: var(--view-top) var(--s-7) calc(var(--foot-h) + var(--s-4));
+  /* Ends above the foot row, so scrolled content never slides under the foot's text. */
+  inset: 0 0 var(--foot-h) 0;
+  padding: var(--view-top) var(--s-7) var(--s-4);
   /* Never clip: if a view's content outgrows a short screen, it scrolls inside the panel. */
   overflow-y: auto;
   overscroll-behavior: contain;
@@ -2191,7 +2269,9 @@ html[data-quiet] .foot__scroll {
 .chart {
   position: relative;
   flex: 1;
-  min-height: 0;
+  /* The chart never draws shorter than 180px (SessionChart); its box agrees, so on a short
+     screen the view scrolls a little instead of the axis landing on the legend. */
+  min-height: 180px;
 }
 .chart svg {
   position: absolute;
@@ -2622,12 +2702,9 @@ html[data-quiet] .foot__scroll {
   position: relative;
 }
 .profile__render {
-  /* Sits in the empty right side of the "you" row without changing its height. */
-  position: absolute;
-  right: 0;
-  top: 50%;
-  translate: 0 -50%;
-  height: 140px;
+  /* The band's diagram, under its facts, at a size its labels can be read. */
+  width: 100%;
+  max-width: 520px;
   aspect-ratio: 5 / 3;
   border-radius: var(--r-card);
   overflow: hidden;
@@ -3117,6 +3194,7 @@ html.lenis body {
   mix-blend-mode: screen;
 }
 
+/* Top-right; the subject code and mode sit together at the bottom, clear of it. */
 .player__orb {
   position: absolute;
   top: 8px;
@@ -5188,6 +5266,13 @@ html.lenis body {
 }
 .music-player--empty {
   gap: var(--s-2);
+}
+/* Nothing playing yet: the playlist gets the whole panel; Now playing appears with the music. */
+.music:has(.music-player--empty) {
+  grid-template-columns: minmax(0, 1fr);
+}
+.music .music-player--empty {
+  display: none;
 }
 .music-player__name {
   margin: 0;

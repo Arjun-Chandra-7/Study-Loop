@@ -1,16 +1,20 @@
 import type { Metadata, Viewport } from "next";
-import { Mona_Sans } from "next/font/google";
+import localFont from "next/font/local";
 import { AuthProvider } from "@/lib/auth";
 import { prePaintScript } from "@/lib/palettes";
 import "./globals.css";
 
-// One family for everything: GitHub's Mona Sans, variable in weight and width.
+// One family for everything: GitHub's Mona Sans, variable in weight, width and optical size.
 // Interface text sits at normal width; headings use the expanded width (see tokens.css).
-const mona = Mona_Sans({
+// Self-hosted from GitHub's own release (SIL OFL, see fonts/OFL.txt): the Google Fonts build
+// mis-spaces some letters at text sizes ("o nly"), and lacks the optical-size axis.
+const mona = localFont({
+  src: "./fonts/MonaSansVF.woff2",
   variable: "--font-mona",
-  subsets: ["latin"],
-  axes: ["wdth"],
+  weight: "200 900",
+  style: "normal",
   display: "swap",
+  declarations: [{ prop: "font-stretch", value: "75% 125%" }],
 });
 
 export const metadata: Metadata = {
