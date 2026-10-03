@@ -90,7 +90,6 @@
   max-width: 100%;
   font-size: var(--fs-label);
   letter-spacing: var(--tracking-label);
-  text-transform: uppercase;
   color: var(--text-3);
   white-space: nowrap;
   overflow: hidden;
@@ -144,7 +143,6 @@
   margin: 0;
   font-size: var(--fs-label);
   letter-spacing: var(--tracking-label);
-  text-transform: uppercase;
   color: var(--text-3);
 }
 .mx-hero__title {
@@ -158,6 +156,7 @@
 }
 .mx-hero__title.is-clock {
   font-family: var(--font-display);
+  font-stretch: var(--stretch-display);
   font-size: 56px;
   font-weight: 400;
   line-height: 1;
@@ -237,7 +236,6 @@
   font-size: var(--fs-label);
   font-weight: 500;
   letter-spacing: var(--tracking-label);
-  text-transform: uppercase;
   color: var(--text-3);
 }
 
@@ -266,8 +264,7 @@
   align-items: center;
   gap: 6px;
   font-size: var(--fs-label);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  letter-spacing: 0.01em;
   color: var(--text-3);
 }
 .mx-dial__value {

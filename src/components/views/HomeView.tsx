@@ -62,7 +62,7 @@ export function HomeView({ stageRef }: { stageRef: React.RefObject<HTMLDivElemen
         </div>
         {/* Coordinates are in the render's own image space. */}
         <ul className="hero__callouts" aria-label="Band hardware">
-          <li data-side="up" style={{ left: "46%", top: "33%" }}>
+          <li style={{ left: "46%", top: "33%" }}>
             <span className="callout__dot" />
             <span className="callout__text">Status light</span>
           </li>
@@ -80,15 +80,12 @@ export function HomeView({ stageRef }: { stageRef: React.RefObject<HTMLDivElemen
       <motion.div className="hero__rim" style={{ x: glowX }} aria-hidden />
 
       <motion.div className="hero__copy" style={{ x: textX }}>
-        <p className="eyebrow">
-          <span className="eyebrow__rule" aria-hidden />
-          A study band + adaptive music
-        </p>
-        <h1 className="display hero__title">StudyLoop</h1>
-        <p className="serif hero__serif">A band that feels stress. Music that answers it.</p>
-        <p className="body hero__body">
-          Wear the band while you study. It reads your heart rate and skin, learns your calm, and when stress climbs, your music slows and softens with you.
-        </p>
+        {/* The logo already says StudyLoop: the headline says what it does. */}
+        <h1 className="display hero__title">
+          A band that feels stress.
+          <span className="hero__title-2">Music that answers it.</span>
+        </h1>
+        <p className="body hero__body">Wear it while you study. When stress climbs, your music slows and softens with you.</p>
         <div className="hero__ctas">
           <Magnetic>
             <button type="button" className="btn btn--primary" onClick={start}>
@@ -124,12 +121,6 @@ export function HomeFoot() {
               : "Start a session now, or pair your band from the top bar"}
         </span>
       </div>
-      <p className="foot__spec">
-        <span>PPG pulse</span>
-        <span>EDA electrodes</span>
-        <span>No screen</span>
-        <span>One button</span>
-      </p>
       <a className="foot__scroll" href="#story">
         Inside the band
         <Icon name="arrow" size={14} style={{ transform: "rotate(90deg)" }} />

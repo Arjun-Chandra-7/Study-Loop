@@ -174,9 +174,9 @@
 .tour__title {
   margin: 0;
   font-family: var(--font-display);
+  font-stretch: var(--stretch-display);
   font-size: clamp(18px, 1.6vw, 22px);
   letter-spacing: var(--tracking-display);
-  text-transform: uppercase;
   color: var(--text-1);
 }
 .tour__line {

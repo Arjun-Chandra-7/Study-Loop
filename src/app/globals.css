@@ -84,6 +84,13 @@ h3,
 p {
   text-wrap: pretty;
 }
+/* Mona Sans has no true italic; emphasis is weight, never a slanted fake. */
+em,
+i {
+  font-style: normal;
+  font-weight: 500;
+  color: var(--text-1);
+}
 
 /* Focused elements and anchors are never hidden under fixed bars (WCAG 2.4.11):
    below 1024px the dock is fixed at the bottom; on phones the top row is sticky too. */
@@ -359,7 +366,6 @@ p {
   font-size: var(--fs-label);
   line-height: 16px;
   letter-spacing: var(--tracking-label);
-  text-transform: uppercase;
   font-weight: 500;
   color: var(--text-3);
   margin: 0;
@@ -378,7 +384,6 @@ p {
   font-size: var(--fs-label);
   line-height: 16px;
   letter-spacing: var(--tracking-label);
-  text-transform: uppercase;
   font-weight: 500;
   color: var(--text-2);
   margin: 0;
@@ -399,10 +404,10 @@ p {
 
 .display {
   font-family: var(--font-display);
-  font-weight: 400;
-  text-transform: uppercase;
+  font-stretch: var(--stretch-display);
+  font-weight: 600;
   letter-spacing: var(--tracking-display);
-  line-height: 0.95;
+  line-height: 1.02;
   margin: 0;
 }
 .display--md {
@@ -412,11 +417,13 @@ p {
   font-size: clamp(40px, 6.4vw, 112px);
 }
 
+/* Formerly an italic serif accent: now the same face, lighter and quieter. */
 .serif {
-  font-family: var(--font-serif);
-  font-style: italic;
+  font-family: var(--font-ui);
+  font-style: normal;
   font-weight: 400;
-  letter-spacing: -0.005em;
+  letter-spacing: -0.01em;
+  color: var(--text-2);
   margin: 0;
 }
 .serif--md {
@@ -562,8 +569,7 @@ p {
   padding: 0 var(--s-2);
   border-radius: var(--r-pill);
   font-size: var(--fs-label);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  letter-spacing: 0.01em;
   font-weight: 500;
   white-space: nowrap;
   color: var(--text-2);
@@ -604,10 +610,9 @@ p {
   height: var(--h);
   padding: 0 var(--s-5);
   border-radius: var(--r-tile);
-  font-size: var(--fs-small);
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
   white-space: nowrap;
   transition:
     background var(--dur-2) var(--ease-out),
@@ -775,8 +780,7 @@ p {
   align-items: center;
   gap: 6px;
   font-size: var(--fs-label);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  letter-spacing: 0.01em;
   font-weight: 500;
   color: var(--measured);
   white-space: nowrap;
@@ -784,8 +788,9 @@ p {
 .state--lg {
   gap: var(--s-3);
   font-family: var(--font-display);
+  font-stretch: var(--stretch-display);
   font-size: clamp(20px, 2vw, 28px);
-  letter-spacing: 0.06em;
+  letter-spacing: 0.01em;
 }
 .state--changing {
   color: var(--m-300);
@@ -898,12 +903,16 @@ p {
    COCKPIT — the locked wireframe
    ═════════════════════════════════════════════════════════════ */
 
+/* The chassis fills the window on any laptop: room for the top capsule and the dock scales
+   with the window's height, so 1280x720 and 1920x1080 both show the whole cockpit. */
 .cockpit-shell {
+  --shell-t: clamp(40px, 6.5vh, 56px);
+  --shell-b: clamp(36px, 6.5vh, 64px);
   position: relative;
   display: grid;
   place-items: center;
   min-height: 100svh;
-  padding: 56px var(--page-x) 64px;
+  padding: var(--shell-t) var(--page-x) var(--shell-b);
 }
 /* The floor light from the wireframe — the chassis sits on a lit surface. */
 .cockpit-shell::before {
@@ -919,7 +928,9 @@ p {
 }
 
 .cockpit {
-  --row-c: clamp(136px, 17vh, 172px);
+  --row-c: clamp(112px, 16vh, 176px);
+  /* Where views begin, below the logo. */
+  --view-top: 84px;
   --row-b: calc(var(--row-c) + var(--gutter));
   --row-d: 56px;
   --foot-h: calc(var(--row-b) + var(--gutter));
@@ -928,7 +939,7 @@ p {
   position: relative;
   width: 100%;
   max-width: var(--chassis-max);
-  height: clamp(700px, calc(100svh - 120px), 1000px);
+  height: clamp(560px, calc(100svh - var(--shell-t) - var(--shell-b)), 1040px);
   display: grid;
   grid-template-columns: 0.77fr 0.77fr 1.95fr 1.69fr 1.29fr;
   grid-template-rows: minmax(0, 1fr) var(--row-b) var(--row-c) var(--row-d);
@@ -945,6 +956,17 @@ p {
 
 .m-header {
   display: none;
+}
+
+/* Short laptop screens (720–820px tall): a smaller logo, slimmer lower rows, more room for the view. */
+@media (min-width: 1024px) and (max-height: 820px) {
+  .cockpit {
+    --row-c: clamp(100px, 14vh, 120px);
+    --view-top: 68px;
+  }
+  .main__chip .logo {
+    height: 44px;
+  }
 }
 
 /* Main panel spans rows 1–2; notches carve the L-shape. */
@@ -978,8 +1000,7 @@ p {
   align-items: center;
   gap: 6px;
   font-size: var(--fs-label);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  letter-spacing: 0.01em;
   color: var(--action);
 }
 .rec::before {
@@ -1408,6 +1429,19 @@ html[data-quiet] .foot__scroll {
   background: rgba(236, 230, 217, 0.04);
   color: var(--text-3);
 }
+/* Offline already reads from the grey; a badge saying so is noise. */
+.metric.is-offline .card__head .chip {
+  display: none;
+}
+/* Short laptop screens: the decorative icon row goes, the reading keeps its room. */
+@media (min-width: 1024px) and (max-height: 820px) {
+  .metric .card__head {
+    display: none;
+  }
+  .metric {
+    justify-content: center;
+  }
+}
 
 .bars {
   display: inline-flex;
@@ -1464,13 +1498,13 @@ html[data-quiet] .foot__scroll {
 }
 .player__code {
   font-family: var(--font-display);
+  font-stretch: var(--stretch-display);
   font-size: var(--fs-title);
-  letter-spacing: 0.06em;
+  letter-spacing: 0.01em;
 }
 .player__mode {
   font-size: var(--fs-label);
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  letter-spacing: 0.01em;
   color: var(--text-2);
 }
 .player__main {
@@ -1554,7 +1588,7 @@ html[data-quiet] .foot__scroll {
   top: 6px;
   left: var(--s-2);
   font-size: var(--fs-label);
-  letter-spacing: 0.1em;
+  letter-spacing: 0.01em;
   color: var(--text-3);
 }
 .trend__facts {
@@ -1567,7 +1601,6 @@ html[data-quiet] .foot__scroll {
 .trend__facts dt {
   font-size: var(--fs-label);
   letter-spacing: var(--tracking-label);
-  text-transform: uppercase;
   color: var(--text-3);
 }
 .trend__facts dd {
@@ -1639,6 +1672,7 @@ html[data-quiet] .foot__scroll {
   display: flex;
   align-items: baseline;
   font-family: var(--font-display);
+  font-stretch: var(--stretch-display);
   font-size: var(--fs-title);
   line-height: 1;
 }
@@ -1647,7 +1681,7 @@ html[data-quiet] .foot__scroll {
   font-size: var(--fs-label);
   color: var(--text-2);
   margin-left: 4px;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.01em;
 }
 .research-card__copy {
   font-size: var(--fs-small);
@@ -1728,7 +1762,6 @@ html[data-quiet] .foot__scroll {
   margin: 0;
   font-size: var(--fs-label);
   letter-spacing: var(--tracking-label);
-  text-transform: uppercase;
   color: var(--text-3);
 }
 .foot__spec span + span::before {
@@ -1748,7 +1781,6 @@ html[data-quiet] .foot__scroll {
   min-height: 32px;
   font-size: var(--fs-label);
   letter-spacing: var(--tracking-label);
-  text-transform: uppercase;
   color: var(--text-2);
   text-decoration: none;
   white-space: nowrap;
@@ -1811,27 +1843,27 @@ html[data-quiet] .foot__scroll {
 .hero__copy {
   position: absolute;
   left: var(--s-7);
-  top: max(72px, calc((100% - var(--foot-h)) / 2 - 190px));
+  top: max(96px, calc((100% - var(--foot-h)) / 2 - 150px));
   z-index: 2;
   display: flex;
   flex-direction: column;
   gap: var(--s-4);
-  max-width: 560px;
+  max-width: min(760px, 52%);
 }
 .hero__title {
-  font-size: var(--fs-display);
-  white-space: nowrap;
+  display: flex;
+  flex-direction: column;
+  font-size: clamp(28px, min(3.1vw, 5.2vh), 52px);
+  line-height: 1.06;
   text-shadow: 0 2px 40px rgba(0, 0, 0, 0.6);
 }
-.hero__serif {
-  font-size: clamp(24px, 2.4vw, 36px);
-  line-height: 1;
-  color: var(--text-1);
-  margin-top: calc(-1 * var(--s-2));
+.hero__title-2 {
+  color: var(--text-2);
+  font-weight: 500;
 }
 .hero__body {
   color: var(--text-2);
-  max-width: 400px;
+  max-width: 380px;
 }
 .hero__ctas {
   display: flex;
@@ -1884,7 +1916,6 @@ html[data-quiet] .foot__scroll {
   gap: var(--s-2);
   font-size: var(--fs-label);
   letter-spacing: var(--tracking-label);
-  text-transform: uppercase;
   color: var(--text-2);
 }
 .callout__text::before {
@@ -1906,7 +1937,11 @@ html[data-quiet] .foot__scroll {
 .empty {
   position: absolute;
   inset: 0;
-  padding: 72px var(--s-7) calc(var(--foot-h) + var(--s-4));
+  padding: var(--view-top) var(--s-7) calc(var(--foot-h) + var(--s-4));
+  /* Never clip: if a view's content outgrows a short screen, it scrolls inside the panel. */
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
 }
 
 /* ── Session: setup ── */
@@ -1914,7 +1949,7 @@ html[data-quiet] .foot__scroll {
   display: grid;
   grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
   gap: var(--s-7);
-  padding-top: 84px;
+  padding-top: var(--view-top);
 }
 .setup__form {
   display: flex;
@@ -2122,7 +2157,6 @@ html[data-quiet] .foot__scroll {
 .stat-row dt {
   font-size: var(--fs-label);
   letter-spacing: var(--tracking-label);
-  text-transform: uppercase;
   color: var(--text-3);
 }
 .stat-row dd {
@@ -2141,7 +2175,7 @@ html[data-quiet] .foot__scroll {
   display: flex;
   flex-direction: column;
   gap: var(--s-3);
-  padding-top: 84px;
+  padding-top: var(--view-top);
 }
 .insights__head {
   display: flex;
@@ -2166,7 +2200,7 @@ html[data-quiet] .foot__scroll {
 }
 .chart__lane {
   font-size: var(--fs-label);
-  letter-spacing: 0.1em;
+  letter-spacing: 0.01em;
   fill: var(--text-3);
 }
 .chart__tick {
@@ -2214,8 +2248,7 @@ html[data-quiet] .foot__scroll {
 }
 .chart__tip-time {
   font-size: var(--fs-label);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  letter-spacing: 0.01em;
   color: var(--text-3);
 }
 .legend {
@@ -2308,8 +2341,9 @@ html[data-quiet] .foot__scroll {
   border-radius: var(--r-chip);
   background: var(--surface-2);
   font-family: var(--font-display);
+  font-stretch: var(--stretch-display);
   font-size: var(--fs-label);
-  letter-spacing: 0.06em;
+  letter-spacing: 0.01em;
 }
 .history__meta {
   display: flex;
@@ -2356,7 +2390,7 @@ html[data-quiet] .foot__scroll {
   grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
   grid-template-rows: auto 1fr;
   gap: var(--s-4) var(--s-7);
-  padding-top: 84px;
+  padding-top: var(--view-top);
 }
 .research__head {
   display: flex;
@@ -2500,7 +2534,6 @@ html[data-quiet] .foot__scroll {
   color: var(--text-3);
 }
 .papers--compact .papers__label {
-  text-transform: uppercase;
   letter-spacing: var(--tracking-label);
   font-size: var(--fs-label);
 }
@@ -2564,7 +2597,7 @@ html[data-quiet] .foot__scroll {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: var(--s-7);
-  padding-top: 84px;
+  padding-top: var(--view-top);
   overflow-y: auto;
   scrollbar-width: none;
 }
@@ -2611,11 +2644,12 @@ html[data-quiet] .foot__scroll {
 }
 .band-spec__kicker {
   font-size: 10px;
-  letter-spacing: 0.18em;
+  letter-spacing: 0.01em;
   fill: var(--text-3);
 }
 .band-spec__model {
   font-family: var(--font-display);
+  font-stretch: var(--stretch-display);
   font-size: 22px;
   fill: var(--text-1);
 }
@@ -2657,7 +2691,7 @@ html[data-quiet] .foot__scroll {
 .band-spec__callout text {
   font-size: 12px;
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.01em;
   fill: var(--measured);
 }
 .band-spec__callout .band-spec__note {
@@ -3224,7 +3258,6 @@ html.lenis body {
   padding-right: var(--s-5);
   font-size: var(--fs-label);
   letter-spacing: var(--tracking-label);
-  text-transform: uppercase;
   color: var(--text-2);
   white-space: nowrap;
 }
@@ -3354,6 +3387,7 @@ html.lenis body {
   height: 1em;
   overflow: hidden;
   font-family: var(--font-display);
+  font-stretch: var(--stretch-display);
   font-size: clamp(40px, 7vh, 72px);
   line-height: 1;
   color: var(--text-1);
@@ -3444,6 +3478,7 @@ html.lenis body {
 }
 .plate__n {
   font-family: var(--font-display);
+  font-stretch: var(--stretch-display);
   font-size: var(--fs-title);
   color: var(--text-3);
 }
@@ -3466,8 +3501,7 @@ html.lenis body {
   padding: 4px var(--s-2);
   border-radius: var(--r-chip);
   font-size: var(--fs-label);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  letter-spacing: 0.01em;
   color: var(--text-2);
   box-shadow: inset 0 0 0 1px var(--line-2);
 }
@@ -3526,6 +3560,7 @@ html.lenis body {
   align-items: baseline;
   gap: var(--s-2);
   font-family: var(--font-display);
+  font-stretch: var(--stretch-display);
   color: var(--measured);
   transition: color var(--dur-3);
 }
@@ -3601,9 +3636,9 @@ html.lenis body {
 }
 .sig__name {
   font-family: var(--font-display);
+  font-stretch: var(--stretch-display);
   font-size: clamp(20px, 2.6vw, 44px);
   line-height: 1;
-  text-transform: uppercase;
 }
 .sig__band[data-active] .sig__name {
   text-shadow: 0 0 30px rgb(var(--measured-rgb) / 0.45);
@@ -3696,7 +3731,6 @@ html.lenis body {
   border-radius: var(--r-pill);
   font-size: var(--fs-label);
   letter-spacing: var(--tracking-label);
-  text-transform: uppercase;
   color: var(--text-3);
   box-shadow: inset 0 0 0 1px var(--line-1);
   transition: all var(--dur-3) var(--ease-out);
@@ -3717,7 +3751,7 @@ html.lenis body {
     position: static;
     translate: none;
     padding: var(--s-1) var(--s-2);
-    letter-spacing: 0.06em;
+    letter-spacing: 0.01em;
   }
 }
 .flow__rail {
@@ -3895,7 +3929,6 @@ html.lenis body {
   background: var(--room);
   font-size: var(--fs-label);
   letter-spacing: var(--tracking-label);
-  text-transform: uppercase;
   color: var(--text-3);
   box-shadow: inset 0 0 0 1px var(--line-1);
   transition: all var(--dur-3) var(--ease-out);
@@ -3945,9 +3978,9 @@ html.lenis body {
 .finale__now {
   margin: 0;
   font-family: var(--font-display);
+  font-stretch: var(--stretch-display);
   font-size: var(--fs-title);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  letter-spacing: 0.01em;
   color: var(--measured);
 }
 .finale__word {
@@ -4505,8 +4538,7 @@ html.lenis body {
   text-wrap: balance;
   line-height: 1.8;
   font-size: var(--fs-label);
-  letter-spacing: 0.32em;
-  text-transform: uppercase;
+  letter-spacing: 0.01em;
   color: var(--text-3);
   opacity: 0;
 }
@@ -4520,7 +4552,6 @@ html.lenis body {
   border-radius: var(--r-pill);
   font-size: var(--fs-label);
   letter-spacing: var(--tracking-label);
-  text-transform: uppercase;
   color: var(--text-3);
   box-shadow: inset 0 0 0 1px var(--line-2);
   transition: color var(--dur-2), box-shadow var(--dur-2);
@@ -4534,7 +4565,7 @@ html.lenis body {
     width: 88vw;
   }
   .intro__tag {
-    letter-spacing: 0.2em;
+    letter-spacing: 0.01em;
   }
 }
 
@@ -4561,7 +4592,7 @@ html.lenis body {
   display: grid;
   grid-template-columns: minmax(0, 1.4fr) minmax(280px, 1fr);
   gap: var(--s-6);
-  padding-top: 56px;
+  padding-top: var(--view-top);
 }
 .music__lib {
   display: flex;
@@ -4677,7 +4708,6 @@ html.lenis body {
 .np-stats dt {
   font-size: var(--fs-label);
   letter-spacing: var(--tracking-label);
-  text-transform: uppercase;
   color: var(--text-3);
 }
 .np-stats dd {
@@ -5534,15 +5564,14 @@ html.lenis body {
   margin: 0;
   font-size: var(--fs-label);
   letter-spacing: var(--tracking-label);
-  text-transform: uppercase;
   color: var(--measured);
 }
 .prompt__title--lg {
   margin: 0;
   font-family: var(--font-display);
+  font-stretch: var(--stretch-display);
   font-size: clamp(24px, 3vw, 32px);
   letter-spacing: var(--tracking-display);
-  text-transform: uppercase;
   line-height: 1.05;
   text-wrap: balance;
 }

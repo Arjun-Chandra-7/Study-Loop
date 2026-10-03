@@ -1,22 +1,16 @@
 import type { Metadata, Viewport } from "next";
-import { Instrument_Serif, Michroma } from "next/font/google";
+import { Mona_Sans } from "next/font/google";
 import { AuthProvider } from "@/lib/auth";
 import { prePaintScript } from "@/lib/palettes";
 import "./globals.css";
 
-// Editorial accent — taglines, research statements, transitions.
-const instrumentSerif = Instrument_Serif({
-  variable: "--font-instrument-serif",
+// One family for everything: GitHub's Mona Sans, variable in weight and width.
+// Interface text sits at normal width; headings use the expanded width (see tokens.css).
+const mona = Mona_Sans({
+  variable: "--font-mona",
   subsets: ["latin"],
-  weight: "400",
-  style: ["normal", "italic"],
-});
-
-// Stand-in for ASTROZ until the licensed file is dropped into /public/fonts.
-const michroma = Michroma({
-  variable: "--font-display-fallback",
-  subsets: ["latin"],
-  weight: "400",
+  axes: ["wdth"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -40,16 +34,10 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" data-theme="dark" suppressHydrationWarning className={`${instrumentSerif.variable} ${michroma.variable}`}>
+    <html lang="en" data-theme="dark" suppressHydrationWarning className={mona.variable}>
       <head>
         {/* Apply the saved colour palette before first paint. */}
         <script dangerouslySetInnerHTML={{ __html: prePaintScript() }} />
-        {/* Satoshi is distributed by Fontshare, not Google Fonts. */}
-        <link rel="preconnect" href="https://api.fontshare.com" crossOrigin="" />
-        <link
-          rel="stylesheet"
-          href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700&display=swap"
-        />
       </head>
       <body>
         <AuthProvider>{children}</AuthProvider>
