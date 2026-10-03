@@ -64,7 +64,27 @@ export async function createFromSpotify(uid: string, url: unknown, spotifyToken?
 }
 
 export async function listBeatPlaylists(uid: string): Promise<BeatPlaylist[]> {
-  return (await q.all<Row>("SELECT * FROM music_beat_playlists WHERE user_id = ? ORDER BY created_at DESC", uid)).map(toPlaylist);
+  const playlists = (await q.all<Row>("SELECT * FROM music_beat_playlists WHERE user_id = ? ORDER BY created_at DESC", uid)).map(toPlaylist);
+  // Songs the model couldn't read when the playlist was made get another read now, and the playlist is updated.
+  return Promise.all(playlists.map((p) => (p.songs.some((s) => s.source === "basic") ? reread(uid, p) : p)));
+}
+
+async function reread(uid: string, p: BeatPlaylist): Promise<BeatPlaylist> {
+  const stale = p.songs.filter((s) => s.source === "basic");
+  const read = await readSongs(stale.map((s) => s.query));
+  const fresh = new Map(stale.map((s, i) => [s.query, read[i]]));
+  let changed = false;
+  const songs = p.songs.map((s) => {
+    const r = fresh.get(s.query);
+    if (!r || r.source !== "ai") return s;
+    changed = true;
+    // Keep Spotify's own names and artwork, take the new reading.
+    return { ...s, known: r.known, profile: r.profile, source: "ai" as const };
+  });
+  if (!changed) return p;
+  await q.run("UPDATE music_beat_playlists SET songs_json = ? WHERE id = ? AND user_id = ?", JSON.stringify(songs), p.id, uid);
+  log("beat_playlist_reread", { songs: stale.length });
+  return { ...p, songs };
 }
 
 export async function renameBeatPlaylist(uid: string, id: string, name: unknown): Promise<BeatPlaylist> {

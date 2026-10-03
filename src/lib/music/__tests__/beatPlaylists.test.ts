@@ -26,7 +26,13 @@ const model = (text: () => string) =>
     },
   });
 /** What the model says about the given demo songs. */
-const reading = (...i: number[]) => JSON.stringify({ songs: i.map((n) => ({ title: DEMO_SONGS[n].title, artist: DEMO_SONGS[n].artist, known: true, profile: DEMO_SONGS[n].profile })) });
+const reading = (...i: number[]) =>
+  JSON.stringify({
+    songs: i.map((n) => {
+      const { title, artist, profile: p } = DEMO_SONGS[n];
+      return { title, artist, known: true, tempoBpm: p.tempoBpm, key: p.key, mode: p.mode, progression: p.progression, chordsPerBar: p.harmonicRhythm ?? 1, drumFeel: p.drumFeel, instruments: p.palette, energy: p.energy, warmth: p.warmth, swing: p.swing, summary: p.summary, moods: p.moods };
+    }),
+  });
 
 const PLAYLIST = "37i9dQZF1DXcBWIGoYBM5M";
 const LINK = `https://open.spotify.com/playlist/${PLAYLIST}?si=abc`;
@@ -117,6 +123,25 @@ describe("beat playlists from Spotify", () => {
     expect(body.playlist.songs.map((s: { source: string; known: boolean }) => [s.source, s.known])).toEqual([["basic", false], ["basic", false]]);
     expect(body.playlist.songs[0].title).toBe("Get Lucky");
     expect((await q.all("SELECT 1 FROM music_vibes")).length).toBe(0);
+  });
+
+  it("reads songs that couldn't be read before the next time the Library opens", async () => {
+    setVibeModelForTests(model(() => { throw new Error("rate limited"); }));
+    await create();
+    setVibeModelForTests(model(() => reading(0, 1)));
+    const [p] = await list();
+    expect(p.songs.map((s: { source: string; title: string }) => [s.title, s.source])).toEqual([["Get Lucky", "ai"], ["Let It Be", "ai"]]);
+    expect(p.songs[0].profile.tempoBpm).toBe(116);
+    expect(p.songs[0].artworkUrl).toBe(`https://i.scdn.co/image/${"a".repeat(22)}`);
+    const callsBefore = calls;
+    await list();
+    expect(calls).toBe(callsBefore); // saved, so it isn't read again
+  });
+
+  it("brings a model's answer into range: flats, doubled tempos, unknown names", async () => {
+    setVibeModelForTests(model(() => JSON.stringify({ songs: [{ title: "Get Lucky", artist: "Daft Punk", known: true, tempoBpm: 232, key: "Gb", mode: "Minor", progression: [4, 6, 1, 9], drumFeel: "Four on floor", instruments: ["Electric Guitar", "kazoo"], energy: 2, warmth: 0.5, swing: 0, summary: "x", moods: [] }, "junk"] })));
+    const { body } = await create();
+    expect(body.playlist.songs[0].profile).toMatchObject({ tempoBpm: 116, key: "F#", mode: "minor", progression: [4, 6, 1], drumFeel: "four_on_floor", palette: ["electric_guitar"], energy: 1 });
   });
 
   it("asks to connect Spotify for a playlist, and needs sign-in", async () => {

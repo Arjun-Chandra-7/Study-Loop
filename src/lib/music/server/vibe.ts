@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import { google } from "@ai-sdk/google";
 import { groq } from "@ai-sdk/groq";
 import { generateText, Output, type LanguageModel } from "ai";
-import { VibeProfileSchema, type VibeProfile } from "../vibe/profile";
+import { fromModel, VibeProfileModelSchema, VibeProfileSchema, type VibeProfile } from "../vibe/profile";
 import { q } from "./db";
 import { ApiError } from "./http";
 import { log } from "./log";
@@ -66,7 +66,7 @@ export async function playlistVibe(uid: string, playlist: string | null, refresh
   try {
     const { output } = await generateText({
       model,
-      output: Output.object({ schema: VibeProfileSchema }),
+      output: Output.object({ schema: VibeProfileModelSchema }),
       system:
         "You are a music producer designing an original, lyric-free study beat that carries the feel of a listener's playlist. " +
         "From the song titles and artists, infer the typical tempo, key, harmony, groove and instrumentation of these songs, " +
@@ -74,7 +74,7 @@ export async function playlistVibe(uid: string, playlist: string | null, refresh
         "Keep energy moderate: this plays while studying.",
       prompt: `Playlist${playlist ? ` "${playlist}"` : ""} (${tracks.length} songs):\n${list.join("\n")}`,
     });
-    profile = output;
+    profile = fromModel(output);
   } catch (e) {
     // Keep the music playing: a simpler reading from keywords, not cached so the AI one replaces it later.
     log("vibe_failed", { model: modelId, error: (e as Error).name, detail: (e as Error).message.slice(0, 200) });

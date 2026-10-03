@@ -144,12 +144,12 @@ describe("Loops — Create", () => {
     expect(await screen.findByRole("button", { name: "Let It Be is in Saved beats" })).toBeTruthy();
   });
 
-  it("is upfront when a song is a best guess", async () => {
+  it("never labels a song as a guess", async () => {
     api.makeBeatPlaylist.mockResolvedValue({ playlist: nightDrive({ songs: [basicSong("Obscure Song — Someone")] }), updated: false });
     render(<MusicView />);
     await paste();
-    expect(await screen.findByText(/1 best guess/)).toBeTruthy();
-    expect(screen.getByText("Best guess", { selector: ".chip" })).toBeTruthy();
+    expect(await screen.findByText("Saved to your Library: Night Drive, 1 song as beats.")).toBeTruthy();
+    expect(screen.queryByText(/guess/i)).toBeNull();
   });
 });
 

@@ -41,6 +41,69 @@ export const VibeProfileSchema = z.object({
 });
 export type VibeProfile = z.infer<typeof VibeProfileSchema>;
 
+/**
+ * The same profile as asked of a model: plain types, every key present (strict structured output
+ * on Groq/OpenAI needs that), no ranges or lengths. Models often answer "Bb", 174 BPM or five
+ * moods, and a provider that validates the answer against tight limits rejects the whole batch.
+ * `fromModel` brings the answer into range instead.
+ */
+export const VibeProfileModelSchema = z.object({
+  summary: z.string().describe("One short line describing the sound, e.g. 'Disco-funk: choppy guitar, four-on-the-floor'."),
+  moods: z.array(z.string()).describe("2–4 single-word moods."),
+  tempoBpm: z.number().describe("Tempo in BPM, the recording's real tempo."),
+  key: z.string().describe("Tonic of the key, e.g. 'F#' or 'Bb'."),
+  mode: z.string().describe("'major' or 'minor'."),
+  progression: z.array(z.number()).describe("The chord loop as scale degrees 1–7 in order, 2–8 chords, e.g. [1,5,6,4]."),
+  harmonicRhythm: z.number().nullable().describe("Chords per bar: 1, 2 or 4."),
+  drumFeel: z.string().describe(`One of: ${DRUM_FEELS.join(", ")}.`),
+  groove: z
+    .object({ kick: z.string(), snare: z.string(), hat: z.string() })
+    .nullable()
+    .describe('The defining drum pattern, each as 16 characters for one bar of sixteenths: x = hit, o = soft hit, . = rest. E.g. kick "x.......x.x.....".'),
+  bassRhythm: z.string().nullable().describe("Bass notes over one bar, 16 characters: x = note, . = rest."),
+  palette: z.array(z.string()).describe(`1–3 instruments that carry the sound, most important first, from: ${INSTRUMENTS.join(", ")}.`),
+  energy: z.number().describe("0 = very calm … 1 = very energetic."),
+  warmth: z.number().describe("0 = bright and airy … 1 = warm and mellow."),
+  swing: z.number().describe("0 straight, ~0.3 lofi, 0.5 heavy."),
+});
+
+const FLATS: Record<string, (typeof KEYS)[number]> = { DB: "C#", EB: "D#", GB: "F#", AB: "G#", BB: "A#", CB: "B", FB: "E", "E#": "F", "B#": "C" };
+const clamp = (x: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, Number.isFinite(x) ? x : lo));
+
+/** A model's answer brought into range: flats to sharps, tempo into 60–180, unknown names dropped. */
+export function fromModel(p: z.infer<typeof VibeProfileModelSchema>): VibeProfile {
+  const raw = p.key.trim().replace(/♯/g, "#").replace(/♭/g, "b").replace(/\s*(major|minor|maj|min|m)$/i, "");
+  const acc = raw.charAt(1);
+  const name = raw.charAt(0).toUpperCase() + (acc === "#" ? "#" : acc.toLowerCase() === "b" ? "b" : "");
+  const key = (KEYS as readonly string[]).includes(name) ? (name as (typeof KEYS)[number]) : (FLATS[name.toUpperCase()] ?? "C");
+  let bpm = Math.round(p.tempoBpm);
+  while (bpm > 180) bpm = Math.round(bpm / 2);
+  while (bpm > 0 && bpm < 60) bpm *= 2;
+  const progression = p.progression.map(Math.round).filter((d) => d >= 1 && d <= 7).slice(0, 8);
+  const feel = p.drumFeel.trim().toLowerCase().replace(/[\s-]+/g, "_");
+  const palette = [...new Set(p.palette.map((i) => i.trim().toLowerCase().replace(/[\s-]+/g, "_")))].filter((i): i is (typeof INSTRUMENTS)[number] => (INSTRUMENTS as readonly string[]).includes(i)).slice(0, 3);
+  const hr = Math.round(p.harmonicRhythm ?? 1);
+  const gridOrNull = (g: string | null | undefined) => (g && /[xXoO]/.test(g) ? g.slice(0, 40) : undefined);
+  const groove = p.groove && gridOrNull(p.groove.kick) ? { kick: gridOrNull(p.groove.kick)!, snare: gridOrNull(p.groove.snare) ?? "................", hat: gridOrNull(p.groove.hat) ?? "................" } : undefined;
+  const bassRhythm = gridOrNull(p.bassRhythm);
+  return {
+    summary: p.summary.trim().slice(0, 160) || "Instrumental beat",
+    moods: p.moods.map((m) => m.trim().slice(0, 24)).filter(Boolean).slice(0, 4).concat(p.moods.length ? [] : ["focused"]),
+    tempoBpm: clamp(bpm, 60, 180),
+    key,
+    mode: /min/i.test(p.mode) ? "minor" : "major",
+    progression: progression.length >= 2 ? progression : [1, 5, 6, 4],
+    ...(hr === 2 || hr === 4 ? { harmonicRhythm: hr } : {}),
+    drumFeel: (DRUM_FEELS as readonly string[]).includes(feel) ? (feel as VibeProfile["drumFeel"]) : "lofi",
+    ...(groove ? { groove } : {}),
+    ...(bassRhythm ? { bassRhythm } : {}),
+    palette: palette.length ? palette : ["piano"],
+    energy: clamp(p.energy, 0, 1),
+    warmth: clamp(p.warmth, 0, 1),
+    swing: clamp(p.swing, 0, 0.6),
+  };
+}
+
 export interface BeatParams {
   bpm: number;
   /** 0–1 how busy the drums are (0 = no drums) */

@@ -64,7 +64,7 @@ export async function testDatabase() {
   return {
     executor,
     async reset() {
-      await pg.exec("DROP TABLE IF EXISTS music_outputs, music_jobs, music_tracks, music_sources, music_workers, music_vibes, music_loops CASCADE");
+      await pg.exec("DROP TABLE IF EXISTS music_outputs, music_jobs, music_tracks, music_sources, music_workers, music_vibes, music_loops, music_beat_playlists CASCADE");
       setExecutorForTests(executor); // re-applies the schema on next use
     },
     close: () => pg.close(),

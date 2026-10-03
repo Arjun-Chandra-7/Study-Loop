@@ -37,7 +37,6 @@ export function BeatPlaylistView({ playlist, onSaved }: { playlist: BeatPlaylist
   const { ours, playing, now } = usePlaylistPlayback(playlist);
   const [savedKeys, setSavedKeys] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const guesses = playlist.songs.filter((x) => !x.known || x.source === "basic").length;
   const current = playlist.songs[now ?? 0];
 
   const save = async (song: SongBeat) => {
@@ -120,7 +119,6 @@ export function BeatPlaylistView({ playlist, onSaved }: { playlist: BeatPlaylist
                 </span>
               </button>
               <span className="songs__end">
-                {(!song.known || song.source === "basic") && <span className="chip chip--muted">Best guess</span>}
                 {playlist.id !== "demo" && (
                   <button type="button" className="btn btn--sm btn--ghost" disabled={saved} aria-label={saved ? `${song.title} is in Saved beats` : `Save ${song.title}`} onClick={() => void save(song)}>
                     <Icon name={saved ? "check" : "plus"} size={14} />
@@ -131,11 +129,6 @@ export function BeatPlaylistView({ playlist, onSaved }: { playlist: BeatPlaylist
           );
         })}
       </ol>
-      {guesses > 0 && (
-        <p className="small muted beats__note">
-          <b>Best guess</b> means we couldn&apos;t place that exact song, so its beat follows the title and artist instead.
-        </p>
-      )}
     </section>
   );
 }

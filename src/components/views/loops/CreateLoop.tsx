@@ -49,10 +49,9 @@ export function CreateLoop({ onSaved }: { onSaved: () => void }) {
       memo.playlist = p;
       setPlaylist(p);
       setUrl("");
-      const guesses = p.songs.filter((x) => !x.known || x.source === "basic").length;
       setNote({
         ok: true,
-        text: `${updated ? "Refreshed" : "Saved to your Library"}: ${p.name}, ${p.songs.length} song${p.songs.length === 1 ? "" : "s"} as beats${guesses ? ` (${guesses} best guess${guesses === 1 ? "" : "es"})` : ""}.`,
+        text: `${updated ? "Refreshed" : "Saved to your Library"}: ${p.name}, ${p.songs.length} song${p.songs.length === 1 ? "" : "s"} as beats.`,
       });
       onSaved();
     } catch (e) {
