@@ -12,7 +12,7 @@ const TABS = [
 type TabId = (typeof TABS)[number]["id"];
 
 /**
- * Loops: music that breathes with you. Bring a Spotify playlist; StudyLoop reads its vibe and plays
+ * Loops: music that breathes with you. Type the songs you love; StudyLoop reads each one and plays
  * an original, lyric-free Loop in that style that calms down when the band reads stress.
  */
 export function MusicView() {

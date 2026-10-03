@@ -4763,6 +4763,86 @@ html.lenis body {
   margin: 0;
 }
 
+/* Songs → beats */
+.songs-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+.songs-form__input {
+  height: auto;
+  min-height: 112px;
+  padding: var(--s-3);
+  resize: vertical;
+  line-height: 1.5;
+  font: inherit;
+}
+.songs-form__row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--s-2);
+}
+.songs-form__row > span {
+  margin-right: auto;
+}
+.songs {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+.songs__row .mqueue__main {
+  padding: 2px 0;
+}
+.songs__facts {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.songs__end {
+  display: flex;
+  align-items: center;
+  gap: var(--s-1);
+}
+/* The playing song: three bars moving, in place of its number. */
+.songs__eq {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 12px;
+}
+.songs__eq i {
+  width: 3px;
+  height: 100%;
+  border-radius: 1px;
+  background: var(--measured);
+  transform-origin: bottom;
+  animation: songs-eq 0.9s var(--ease-in-out) infinite;
+}
+.songs__eq i:nth-child(2) {
+  animation-delay: -0.3s;
+}
+.songs__eq i:nth-child(3) {
+  animation-delay: -0.6s;
+}
+@keyframes songs-eq {
+  0%,
+  100% {
+    transform: scaleY(0.3);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .songs__eq i {
+    animation: none;
+  }
+}
+
 /* Queue */
 .mqueue {
   display: grid;
@@ -5018,6 +5098,12 @@ html.lenis body {
 }
 .music-player__title {
   min-width: 0;
+}
+.music-player__ctl {
+  display: flex;
+  align-items: center;
+  gap: var(--s-1);
+  flex: none;
 }
 .music-player__name {
   white-space: nowrap;

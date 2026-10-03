@@ -1,26 +1,10 @@
 import type { Tab } from "@/lib/engine";
-import type { LoopMeta } from "@/lib/music/vibe/engine";
-import { vibeEngine } from "@/lib/music/vibe/engine";
+import { songLoop, vibeEngine } from "@/lib/music/vibe/engine";
+import { DEMO_SONGS } from "@/lib/music/vibe/songs";
 import { engine } from "@/lib/useStudyLoop";
 
-/** A Loop the tour can play with no account and no server: a warm lo-fi profile. */
-export const DEMO_LOOP: LoopMeta = {
-  name: "Late Night Lo-fi",
-  playlistName: "Demo playlist",
-  profile: {
-    summary: "Warm lo-fi with soft keys and guitar",
-    moods: ["calm", "warm"],
-    tempoBpm: 80,
-    key: "D",
-    mode: "minor",
-    progression: [1, 6, 4, 5],
-    drumFeel: "lofi",
-    palette: ["rhodes", "acoustic_guitar"],
-    energy: 0.4,
-    warmth: 0.75,
-    swing: 0.3,
-  },
-};
+/** The tour's Loop: three well-known songs, read ahead of time, so it plays with no account. */
+export const DEMO_LOOP = songLoop(DEMO_SONGS, 0);
 
 export interface TourStep {
   id: string;
@@ -119,7 +103,7 @@ export const STEPS: TourStep[] = [
   {
     id: "music",
     title: "Loops",
-    line: "My favourite part. Paste any **Spotify playlist**, AI reads its vibe, and StudyLoop **composes original beats** live in your browser. Hear how it’s slower and softer? **That’s the stress.**",
+    line: "My favourite part. Type **any songs you love**, AI reads each one’s **tempo, key, chords and groove**, and StudyLoop plays a lyric-free beat that **sounds like it**. This is Get Lucky. Hear how it’s slower and softer? **That’s the stress.**",
     target: [".music"],
     tab: "music",
     run: () => {
@@ -129,7 +113,7 @@ export const STEPS: TourStep[] = [
   {
     id: "recover",
     title: "Back to the groove",
-    line: "Now the band calms down, and the beat **eases back** to its normal tempo. No song audio is ever used, so it works with **any playlist**.",
+    line: "Now the band calms down, and the beat **eases back** to the song’s real tempo. Every song gets its turn, then the **next one** comes in. No song audio is ever used.",
     target: [".music-player"],
     tab: "music",
     run: () => engine.demoScenario("recovery"),

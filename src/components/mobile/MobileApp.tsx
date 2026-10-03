@@ -263,7 +263,7 @@ function SoundRow() {
   const beats = useGammaBeats();
   const live = LIVE.includes(useStudyLoop().session.phase);
   const title = p.playing ? p.loop?.name : beats ? "40 Hz beats" : p.loop ? p.loop.name : "Nothing playing";
-  const sub = p.playing ? `${p.params?.bpm ?? "—"} BPM · following your band` : beats ? "Binaural on headphones" : "Make a Loop from a playlist";
+  const sub = p.playing ? `${p.params?.bpm ?? "—"} BPM · following your band` : beats ? "Binaural on headphones" : "Turn your songs into beats";
   return (
     <div className="mx-row">
       <button type="button" className="mx-row__main" onClick={() => engine.setTab("music")} aria-label="Open Music">

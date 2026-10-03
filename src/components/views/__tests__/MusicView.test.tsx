@@ -9,6 +9,7 @@ const api = vi.hoisted(() => ({
   spotifyConfig: vi.fn(),
   playlists: vi.fn(),
   vibe: vi.fn(),
+  songs: vi.fn(),
   loops: vi.fn(),
   saveLoop: vi.fn(),
   renameLoop: vi.fn(),
@@ -48,24 +49,26 @@ const fake = vi.hoisted(() => {
       toggle: vi.fn(async () => set({ playing: !snap.playing })),
       markSaved: vi.fn((id: string, name: string) => set({ loop: { ...(snap.loop as object), savedId: id, name } })),
       setState: vi.fn(),
+      skip: vi.fn(async () => {}),
     },
     reset: () => set({ playing: false, loop: null }),
   };
 });
-vi.mock("@/lib/music/vibe/engine", () => ({ vibeEngine: fake.vibeEngine }));
+vi.mock("@/lib/music/vibe/engine", async (actual) => ({ ...(await actual<object>()), vibeEngine: fake.vibeEngine }));
 
 import { MusicView } from "../MusicView";
 import { NowPlaying } from "../loops/NowPlaying";
+import { basicSong, DEMO_SONGS } from "@/lib/music/vibe/songs";
 
 const profile: VibeProfile = {
   summary: "Warm Hindi indie with acoustic guitar and soft Punjabi grooves",
   moods: ["romantic", "nostalgic"], tempoBpm: 84, key: "D", mode: "minor", progression: [1, 6, 4, 5],
   drumFeel: "dholak_groove", palette: ["acoustic_guitar", "sitar"], energy: 0.4, warmth: 0.7, swing: 0.3,
 };
-const vibe = (over: Partial<VibeProfile> = {}, source: "ai" | "basic" = "ai") => ({ profile: { ...profile, ...over }, source, playlistName: "💏", trackCount: 44 });
 
 beforeEach(() => {
   testUid++;
+  localStorage.clear();
   Object.values(api).forEach((f) => f.mockReset());
   fake.reset();
   api.loops.mockResolvedValue([]);
@@ -73,65 +76,71 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe("Loops — Create", () => {
+  const typeSongs = async () => {
+    await userEvent.type(screen.getByLabelText("Your songs"), "Get Lucky — Daft Punk{Enter}Let It Be — The Beatles");
+    await userEvent.click(screen.getByRole("button", { name: "Make my Loop" }));
+  };
+
   it("welcomes a first-timer with a clear next step", async () => {
-    api.playlists.mockResolvedValue([]);
     render(<MusicView />);
-    expect(await screen.findByText("Let's make your first Loop")).toBeTruthy();
-    expect(screen.getByPlaceholderText("Paste a Spotify playlist link")).toBeTruthy();
+    expect(screen.getByText("Your songs, as study beats")).toBeTruthy();
+    expect(screen.getByLabelText("Your songs")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Make my Loop" }).hasAttribute("disabled")).toBe(true);
+    await userEvent.click(screen.getByRole("button", { name: "Try an example" }));
+    expect((screen.getByLabelText("Your songs") as HTMLTextAreaElement).value).toContain("Get Lucky — Daft Punk");
     expect(screen.getByRole("region", { name: "Now playing" }).textContent).toContain("Nothing's playing yet");
   });
 
-  it("turns a pasted playlist into a Loop", async () => {
-    api.playlists.mockResolvedValueOnce([]).mockResolvedValue([{ name: "💏", count: 44 }]);
-    api.importSpotify.mockResolvedValue({ added: 44, total: 44, playlistName: "💏" });
-    api.vibe.mockResolvedValue(vibe());
+  it("reads every typed song for its own beat", async () => {
+    api.songs.mockResolvedValue(DEMO_SONGS.slice(0, 2));
     render(<MusicView />);
-    await screen.findByText("Let's make your first Loop");
-    await userEvent.type(screen.getByLabelText("Spotify playlist link"), "https://open.spotify.com/playlist/3otkFuN9NnmLTHUgX8qe2z?si=x");
-    await userEvent.click(screen.getByRole("button", { name: "Make a Loop" }));
-    expect(await screen.findByText(/Got it — 44 songs from 💏/)).toBeTruthy();
-    expect(await screen.findByText("Romantic Dholak Groove")).toBeTruthy();
-    const card = screen.getByRole("region", { name: "Your Loop" });
-    for (const chip of ["84 BPM", "D minor", "Dholak groove", "acoustic guitar", "sitar"]) expect(within(card).getByText(chip)).toBeTruthy();
-    expect(within(card).getByText(/The vibe we heard/)).toBeTruthy();
+    await typeSongs();
+    expect(api.songs).toHaveBeenCalledWith(["Get Lucky — Daft Punk", "Let It Be — The Beatles"]);
+    const list = await screen.findByRole("list", { name: "Songs in your Loop" });
+    expect(within(list).getByText("Daft Punk · 116 BPM · F# minor · Four-on-the-floor")).toBeTruthy();
+    expect(within(list).getByText("The Beatles · 72 BPM · C major · Downtempo")).toBeTruthy();
+    expect(within(list).queryByText("Best guess")).toBeNull();
   });
 
-  it("offers Connect Spotify when a playlist needs it", async () => {
-    const { MusicApiError } = await import("@/lib/music/client");
-    api.playlists.mockResolvedValue([]);
-    api.importSpotify.mockRejectedValue(new MusicApiError(409, "spotify_login_required", "Connect Spotify to import “💏”."));
-    render(<MusicView />);
-    await userEvent.type(await screen.findByLabelText("Spotify playlist link"), "https://open.spotify.com/playlist/3otkFuN9NnmLTHUgX8qe2z");
-    await userEvent.click(screen.getByRole("button", { name: "Make a Loop" }));
-    expect(await screen.findByRole("button", { name: "Connect Spotify" })).toBeTruthy();
-  });
-
-  it("plays, tries something else, and saves — and Now playing follows along", async () => {
-    api.playlists.mockResolvedValue([{ name: "💏", count: 44 }]);
-    api.vibe.mockResolvedValueOnce(vibe()).mockResolvedValue(vibe({ moods: ["dreamy"], drumFeel: "lofi", tempoBpm: 78 }));
+  it("plays the songs in order, any one on demand, and saves the one you like", async () => {
+    api.songs.mockResolvedValue(DEMO_SONGS.slice(0, 2));
     api.saveLoop.mockImplementation(async (l) => ({ id: "a".repeat(32), createdAt: 1, ...l }));
     render(<MusicView />);
-    await userEvent.click(await screen.findByRole("button", { name: "Play this Loop" }));
-    expect(fake.vibeEngine.play).toHaveBeenCalledWith(expect.objectContaining({ name: "Romantic Dholak Groove", playlistName: "💏" }), expect.anything());
+    await typeSongs();
+    await userEvent.click(await screen.findByRole("button", { name: "Play your Loop" }));
+    expect(fake.vibeEngine.play).toHaveBeenLastCalledWith(expect.objectContaining({ name: "Get Lucky", index: 0 }), expect.anything());
     const np = screen.getByRole("region", { name: "Now playing" });
-    expect(within(np).getByText("Romantic Dholak Groove")).toBeTruthy();
-    expect(within(np).getByText("From 💏")).toBeTruthy();
+    expect(within(np).getByText("Get Lucky")).toBeTruthy();
+    expect(within(np).getByText("Daft Punk · song 1 of 2")).toBeTruthy();
 
-    await userEvent.click(screen.getByRole("button", { name: "Try something else?" }));
-    expect(api.vibe).toHaveBeenLastCalledWith("💏", true);
-    expect(await within(screen.getByRole("region", { name: "Your Loop" })).findByText("Dreamy Lo-fi Groove")).toBeTruthy();
-    expect(within(np).getByText("Dreamy Lo-fi Groove")).toBeTruthy(); // the playing Loop switched to the new take
+    await userEvent.click(within(np).getByRole("button", { name: "Next song" }));
+    expect(fake.vibeEngine.skip).toHaveBeenCalledWith(1);
 
-    await userEvent.click(screen.getByRole("button", { name: "Save to Your Loops" }));
-    expect(api.saveLoop).toHaveBeenCalledWith(expect.objectContaining({ name: "Dreamy Lo-fi Groove", playlistName: "💏" }));
-    expect(await screen.findByRole("button", { name: "In Your Loops" })).toBeTruthy();
+    await userEvent.click(screen.getByRole("button", { name: "Play Let It Be" }));
+    expect(fake.vibeEngine.play).toHaveBeenLastCalledWith(expect.objectContaining({ name: "Let It Be", index: 1 }), expect.anything());
+
+    await userEvent.click(screen.getByRole("button", { name: "Save Let It Be" }));
+    expect(api.saveLoop).toHaveBeenCalledWith({ name: "Let It Be beat", playlistName: "The Beatles", profile: DEMO_SONGS[1].profile });
+    expect(await screen.findByRole("button", { name: "Let It Be is in Your Loops" })).toBeTruthy();
   });
 
-  it("is upfront when it's a quick read instead of the full one", async () => {
-    api.playlists.mockResolvedValue([{ name: "💏", count: 44 }]);
-    api.vibe.mockResolvedValue(vibe({}, "basic"));
+  it("is upfront when a song is a best guess", async () => {
+    api.songs.mockResolvedValue([basicSong("Some Song Nobody Knows - Me")]);
     render(<MusicView />);
-    expect(await screen.findByText(/A quick read of your vibe/)).toBeTruthy();
+    await userEvent.type(screen.getByLabelText("Your songs"), "Some Song Nobody Knows - Me");
+    await userEvent.click(screen.getByRole("button", { name: "Make my Loop" }));
+    expect(await screen.findByText("Best guess", { selector: ".chip" })).toBeTruthy();
+  });
+
+  it("remembers your songs when you come back", async () => {
+    api.songs.mockResolvedValue(DEMO_SONGS.slice(0, 2));
+    render(<MusicView />);
+    await typeSongs();
+    await screen.findByRole("list", { name: "Songs in your Loop" });
+    cleanup();
+    render(<MusicView />);
+    expect(screen.getByRole("list", { name: "Songs in your Loop" })).toBeTruthy();
+    expect(api.songs).toHaveBeenCalledTimes(1);
   });
 });
 

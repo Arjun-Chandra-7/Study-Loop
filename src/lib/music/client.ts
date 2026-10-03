@@ -2,6 +2,7 @@
 
 import { getFirebaseAuth } from "../firebase";
 import type { VibeProfile } from "./vibe/profile";
+import type { SongBeat } from "./vibe/songs";
 
 export class MusicApiError extends Error {
   constructor(
@@ -57,6 +58,7 @@ export const musicApi = {
     call<{ profile: VibeProfile; source: "ai" | "basic"; playlistName: string | null; trackCount: number }>(
       `/api/music/vibe?${new URLSearchParams({ ...(playlist ? { playlist } : {}), ...(refresh ? { refresh: "1" } : {}) })}`,
     ),
+  songs: (songs: string[]) => call<{ songs: SongBeat[] }>("/api/music/songs", { method: "POST", body: JSON.stringify({ songs }) }).then((r) => r.songs),
   loops: () => call<{ loops: SavedLoop[] }>("/api/music/loops").then((r) => r.loops),
   saveLoop: (loop: { name: string; playlistName: string | null; profile: VibeProfile }) =>
     call<{ loop: SavedLoop }>("/api/music/loops", { method: "POST", body: JSON.stringify(loop) }).then((r) => r.loop),

@@ -19,6 +19,11 @@ export const FEEL: Record<VibeProfile["drumFeel"], string> = {
   lofi: "Lo-fi groove",
   dholak_groove: "Dholak groove",
   boom_bap: "Boom-bap",
+  trap: "Trap",
+  four_on_floor: "Four-on-the-floor",
+  funk: "Funk",
+  rock: "Rock",
+  reggaeton: "Reggaeton",
   downtempo: "Downtempo",
   ambient: "Ambient",
 };

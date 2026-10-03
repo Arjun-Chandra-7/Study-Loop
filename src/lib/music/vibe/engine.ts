@@ -1,7 +1,8 @@
 "use client";
 
 import type { PhysioState } from "../../sensors/classify";
-import { beatParams, chord, scale, type BeatParams, type VibeProfile } from "./profile";
+import { beatParams, chord, scale, stepGrid, type BeatParams, type VibeProfile } from "./profile";
+import type { SongBeat } from "./songs";
 
 type ToneNS = typeof import("tone");
 type Pattern = (number | 0)[]; // 16 steps, values are velocities 0–1
@@ -39,18 +40,65 @@ const PATTERNS: Record<VibeProfile["drumFeel"], [Pattern, Pattern, Pattern, Patt
     [0, 0, 0, 0, 0, 0, 0, 0, 0.3, 0, 0, 0, 0, 0, 0, 0],
     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
   ],
+  trap: [
+    // half-time: snare on 3, rolling hats
+    [1, 0, 0, 0, 0, 0, 0.8, 0, 0, 0, 0.7, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
+    [0.6, 0.3, 0.5, 0.3, 0.6, 0.3, 0.5, 0.3, 0.6, 0.3, 0.5, 0.4, 0.6, 0.5, 0.5, 0.5],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+  ],
+  four_on_floor: [
+    [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0],
+    [0, 0, 0, 0, 0.9, 0, 0, 0, 0, 0, 0, 0, 0.9, 0, 0, 0],
+    [0, 0, 0.7, 0, 0, 0, 0.7, 0, 0, 0, 0.7, 0, 0, 0, 0.7, 0.3],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+  ],
+  funk: [
+    [1, 0, 0, 0.6, 0, 0, 0.7, 0, 0, 0, 0.8, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 1, 0, 0, 0.35, 0, 0.35, 0, 0, 1, 0, 0, 0],
+    [0.6, 0.3, 0.5, 0.3, 0.6, 0.3, 0.5, 0.3, 0.6, 0.3, 0.5, 0.3, 0.6, 0.3, 0.5, 0.3],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+  ],
+  rock: [
+    [1, 0, 0, 0, 0, 0, 0.8, 0, 0.9, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
+    [0.6, 0, 0.5, 0, 0.6, 0, 0.5, 0, 0.6, 0, 0.5, 0, 0.6, 0, 0.5, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+  ],
+  reggaeton: [
+    // dembow
+    [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0],
+    [0, 0, 0, 0.9, 0, 0, 0.8, 0, 0, 0, 0, 0.9, 0, 0, 0.8, 0],
+    [0.5, 0, 0.4, 0, 0.5, 0, 0.4, 0, 0.5, 0, 0.4, 0, 0.5, 0, 0.4, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+  ],
 };
 
 const RAMP_S = 6;
+/** Each song in a queue plays for about this long before the next one comes in. */
+const SONG_S = 90;
 
-/** What's playing: a Loop is a vibe profile plus where it came from. */
+/** What's playing: a Loop is a beat profile plus where it came from. */
 export interface LoopMeta {
   name: string;
   playlistName: string | null;
   profile: VibeProfile;
   /** Set once it's in "Your Loops". */
   savedId?: string;
+  /** A queue of songs, each played as its own beat; `profile` is the current one's. */
+  queue?: SongBeat[];
+  index?: number;
 }
+
+/** The Loop for song `i` of a queue. */
+export function songLoop(queue: SongBeat[], i: number, playlistName: string | null = "Your songs"): LoopMeta {
+  const n = ((i % queue.length) + queue.length) % queue.length;
+  const song = queue[n];
+  return { name: song.title, playlistName, profile: song.profile, queue, index: n };
+}
+
+/** Chords per bar, kept to a value that divides a 16-step bar. */
+const chordsPerBar = (p: VibeProfile) => (p.harmonicRhythm === 2 || p.harmonicRhythm === 4 ? p.harmonicRhythm : 1);
 
 export interface LoopSnapshot {
   playing: boolean;
@@ -72,6 +120,12 @@ export class VibeEngine {
   private state: PhysioState = "stable";
   private step = 0;
   private lastNote = 0;
+  private songBars = Infinity;
+  /** Funk-style 16th-note guitar chops instead of a slow arpeggio. */
+  private choppy = false;
+  private advancing = false;
+  /** A song's own drum and bass grids, when it has them. */
+  private grooves: { kick: number[] | null; snare: number[] | null; hat: number[] | null; bass: number[] | null } = { kick: null, snare: null, hat: null, bass: null };
   private master: { filter: import("tone").Filter; reverb: import("tone").Freeverb; volume: import("tone").Volume } | null = null;
   playing = false;
   private meta: LoopMeta | null = null;
@@ -105,10 +159,37 @@ export class VibeEngine {
     transport.swing = profile.swing;
     transport.swingSubdivision = "16n";
     this.step = 0;
+    this.advancing = false;
+    // Long enough to sink in, and always a whole number of passes through the chord loop.
+    const loopBars = Math.max(1, Math.ceil(profile.progression.length / chordsPerBar(profile)));
+    this.songBars = Math.max(16, Math.ceil(SONG_S / (240 / profile.tempoBpm) / loopBars) * loopBars);
+    this.grooves = {
+      kick: stepGrid(profile.groove?.kick),
+      snare: stepGrid(profile.groove?.snare),
+      hat: stepGrid(profile.groove?.hat),
+      bass: stepGrid(profile.bassRhythm),
+    };
     this.repeatId = transport.scheduleRepeat((time) => this.tick(time), "16n");
     transport.start("+0.1");
     this.playing = true;
     this.emit();
+  }
+
+  /** Jump through a song queue: +1 next, -1 previous. Needs a user gesture if nothing is playing. */
+  async skip(by: number) {
+    const m = this.meta;
+    if (!m?.queue || m.queue.length < 2) return;
+    await this.play(songLoop(m.queue, (m.index ?? 0) + by, m.playlistName), this.state);
+  }
+
+  /** The current song has had its turn: fade it out and bring in the next. */
+  private advance() {
+    if (this.advancing) return;
+    this.advancing = true;
+    this.master?.volume.volume.rampTo(-48, 1.2);
+    setTimeout(() => {
+      if (this.playing) void this.skip(1);
+    }, 1300);
   }
 
   /** Follow the band: changes glide over a few seconds, never jump. */
@@ -179,21 +260,37 @@ export class VibeEngine {
     this.master = { filter, reverb, volume };
 
     const pal = new Set(p.palette);
-    // Chords: electric piano / piano / pads / strings, softly.
+    // Chords: the first keys-type instrument in the palette leads (it's ordered by importance).
+    const keys = p.palette.find((i) => i === "rhodes" || i === "synth" || i === "pad" || i === "strings" || i === "piano");
     const chordVoice =
-      pal.has("rhodes")
+      keys === "rhodes"
         ? new T.PolySynth(T.FMSynth, { harmonicity: 3, modulationIndex: 1.6, envelope: { attack: 0.01, decay: 1.2, sustain: 0.25, release: 1.6 } })
-        : pal.has("pad") || pal.has("strings")
-          ? new T.PolySynth(T.Synth, { oscillator: { type: "fatsawtooth", count: 3, spread: 18 }, envelope: { attack: 0.8, decay: 0.5, sustain: 0.7, release: 2.5 } })
-          : new T.PolySynth(T.Synth, { oscillator: { type: "triangle" }, envelope: { attack: 0.005, decay: 1.4, sustain: 0.15, release: 1.4 } });
-    chordVoice.volume.value = pal.has("pad") || pal.has("strings") ? -20 : -14;
+        : keys === "synth"
+          ? new T.PolySynth(T.Synth, { oscillator: { type: "fatsawtooth", count: 3, spread: 24 }, envelope: { attack: 0.01, decay: 0.35, sustain: 0.35, release: 0.5 } })
+          : keys === "pad" || keys === "strings"
+            ? new T.PolySynth(T.Synth, { oscillator: { type: "fatsawtooth", count: 3, spread: 18 }, envelope: { attack: 0.8, decay: 0.5, sustain: 0.7, release: 2.5 } })
+            : new T.PolySynth(T.Synth, { oscillator: { type: "triangle" }, envelope: { attack: 0.005, decay: 1.4, sustain: 0.15, release: 1.4 } });
+    chordVoice.volume.value = keys === "pad" || keys === "strings" ? -20 : keys === "synth" ? -21 : -14;
     this.voices.chords = keep(chordVoice).connect(filter);
 
-    // Guitar/sitar-like plucked arpeggios.
-    if (pal.has("acoustic_guitar") || pal.has("sitar")) {
-      const pluck = new T.PluckSynth({ attackNoise: pal.has("sitar") ? 2.5 : 1, dampening: pal.has("sitar") ? 5200 : 3200, resonance: pal.has("sitar") ? 0.97 : 0.9 });
-      pluck.volume.value = -10;
-      this.voices.pluck = keep(pluck).connect(filter);
+    // Guitars and sitar: plucked; electric guitar brighter, choppier and a little driven.
+    if (pal.has("acoustic_guitar") || pal.has("sitar") || pal.has("electric_guitar")) {
+      const electric = pal.has("electric_guitar") && !pal.has("acoustic_guitar") && !pal.has("sitar");
+      const pluck = new T.PluckSynth({
+        attackNoise: pal.has("sitar") ? 2.5 : electric ? 1.6 : 1,
+        dampening: pal.has("sitar") ? 5200 : electric ? 6400 : 3200,
+        resonance: pal.has("sitar") ? 0.97 : electric ? 0.8 : 0.9,
+      });
+      pluck.volume.value = electric ? -12 : -10;
+      if (electric) {
+        const drive = keep(new T.Distortion(0.25)).connect(filter);
+        this.voices.pluck = keep(pluck).connect(drive);
+      } else {
+        this.voices.pluck = keep(pluck).connect(filter);
+      }
+      this.choppy = electric;
+    } else {
+      this.choppy = false;
     }
 
     // Sparse lead: flute (sine + vibrato), bells (FM), else soft piano.
@@ -217,7 +314,8 @@ export class VibeEngine {
     this.voices.bass = keep(bass).connect(comp); // keep the low end out of the darkening filter
 
     {
-      const kick = new T.MembraneSynth({ pitchDecay: 0.04, octaves: 6, envelope: { attack: 0.001, decay: 0.38, sustain: 0 } });
+      const trap = p.drumFeel === "trap"; // a long, tuned 808
+      const kick = new T.MembraneSynth({ pitchDecay: trap ? 0.08 : 0.04, octaves: trap ? 4 : 6, envelope: { attack: 0.001, decay: trap ? 0.9 : 0.38, sustain: 0 } });
       kick.volume.value = p.drumFeel === "dholak_groove" ? -14 : -10;
       this.voices.kick = keep(kick).connect(comp);
       const snareFilter = keep(new T.Filter(2200, "bandpass")).connect(filter);
@@ -241,23 +339,35 @@ export class VibeEngine {
     const v = this.voices;
     const s = this.step % 16;
     const bar = Math.floor(this.step / 16);
+    const span = 16 / chordsPerBar(p); // steps per chord
+    const at = this.step % span; // step within the current chord
+    const degree = p.progression[Math.floor(this.step / span) % p.progression.length];
     this.step++;
     const midi = (n: number) => T.Frequency(n, "midi").toFrequency();
-    const degree = p.progression[bar % p.progression.length];
+    const g = this.grooves;
 
-    // Chords on the bar, with a soft re-hit on beat 3 for busier feels.
-    if (s === 0 || (s === 8 && params.drumDensity > 0.5 && p.drumFeel !== "ambient")) {
-      v.chords?.triggerAttackRelease(chord(p.key, p.mode, degree, 3).map(midi), s === 0 ? "1m" : "2n", time, s === 0 ? 0.55 : 0.3);
+    // A queued song has had its turn: hand over to the next one on a bar line.
+    if (s === 0 && bar >= this.songBars && (this.meta?.queue?.length ?? 0) > 1) this.advance();
+
+    // Chords on each change, with a soft re-hit halfway through a whole-bar chord for busier feels.
+    if (at === 0 || (span === 16 && s === 8 && params.drumDensity > 0.5 && p.drumFeel !== "ambient")) {
+      v.chords?.triggerAttackRelease(chord(p.key, p.mode, degree, 3).map(midi), at === 0 ? (span === 16 ? "1m" : "2n") : "2n", time, at === 0 ? 0.55 : 0.3);
     }
-    // Bass: root on 1, fifth-ish movement on 3.
+    // Bass: the song's own rhythm on the chord root, or root on 1 with a fifth on 3.
     const root = chord(p.key, p.mode, degree, 2)[0];
-    if (s === 0) v.bass?.triggerAttackRelease(midi(root), "4n", time, 0.8);
-    if (s === 10 && params.drumDensity > 0.3) v.bass?.triggerAttackRelease(midi(root + 7), "8n", time, 0.55);
+    if (g.bass) {
+      if (g.bass[s] && Math.random() < Math.max(0.5, params.drumDensity + 0.2)) v.bass?.triggerAttackRelease(midi(root), "8n", time, 0.8 * g.bass[s]);
+    } else {
+      if (at === 0) v.bass?.triggerAttackRelease(midi(root), "4n", time, 0.8);
+      if (s === 10 && params.drumDensity > 0.3) v.bass?.triggerAttackRelease(midi(root + 7), "8n", time, 0.55);
+    }
 
-    // Plucked arpeggio over the chord.
-    if (v.pluck && s % 4 === 2) {
+    // Guitar: choppy 16ths on the off-beats for electric, else a plucked arpeggio over the chord.
+    if (v.pluck) {
       const tones = chord(p.key, p.mode, degree, 4);
-      v.pluck.triggerAttack(midi(tones[(s / 2 + bar) % tones.length]), time);
+      if (this.choppy ? s % 4 === 2 || (s % 4 === 3 && Math.random() < params.drumDensity * 0.5) : s % 4 === 2) {
+        v.pluck.triggerAttack(midi(tones[(Math.floor(s / 2) + bar) % tones.length]), time);
+      }
     }
 
     // Sparse lead: a gentle random walk on the pentatonic subset of the scale.
@@ -271,9 +381,13 @@ export class VibeEngine {
     }
 
     // Drums, thinned by the current density (stress → sparser).
-    const [kick, snare, hat, perc] = PATTERNS[p.drumFeel];
+    const [baseKick, baseSnare, baseHat, perc] = PATTERNS[p.drumFeel] ?? PATTERNS.lofi;
+    const kick = g.kick ?? baseKick;
+    const snare = g.snare ?? baseSnare;
+    const hat = g.hat ?? baseHat;
     const hit = (vel: number, floor = 0) => vel > 0 && Math.random() < Math.max(floor, params.drumDensity) * (0.6 + 0.4 * vel);
-    if (hit(kick[s], s === 0 ? 0.9 : 0)) v.kick?.triggerAttackRelease(p.drumFeel === "dholak_groove" ? "D2" : "C1", "8n", time, kick[s]);
+    const kickNote = p.drumFeel === "dholak_groove" ? "D2" : p.drumFeel === "trap" ? midi(chord(p.key, p.mode, degree, 1)[0]) : "C1";
+    if (hit(kick[s], s === 0 ? 0.9 : 0)) v.kick?.triggerAttackRelease(kickNote, "8n", time, kick[s]);
     if (hit(snare[s])) v.snare?.triggerAttackRelease("16n", time, snare[s]);
     if (hit(hat[s])) v.hat?.triggerAttackRelease("32n", time, hat[s]);
     if (hit(perc[s])) v.perc?.triggerAttackRelease(s % 4 === 2 ? "A3" : "E3", "16n", time, perc[s]);
