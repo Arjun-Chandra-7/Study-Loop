@@ -1,214 +1,136 @@
 "use client";
 
-import { useId, useState, type FormEvent } from "react";
+import { useEffect, useId, useState, type FormEvent } from "react";
 import { MusicApiError, musicApi } from "@/lib/music/client";
 import { isDemo } from "@/lib/demo";
-import { songLoop, vibeEngine } from "@/lib/music/vibe/engine";
-import { basicSong, DEMO_SONGS, MAX_SONGS, parseSongs, songKey, type SongBeat } from "@/lib/music/vibe/songs";
+import { spotifyToken, startSpotifyLogin, takePendingImport } from "@/lib/music/spotifyAuth";
+import { demoPlaylist, type BeatPlaylist } from "@/lib/music/vibe/songs";
 import { useAuth } from "@/lib/auth";
-import { useStudyLoop } from "@/lib/useStudyLoop";
 import { Icon } from "../../ui/Icon";
-import { FEEL, useLoopPlayer } from "./shared";
+import { BeatPlaylistView } from "./BeatPlaylistView";
 
-interface Saved {
-  text: string;
-  songs: SongBeat[] | null;
-}
+/** The playlist just made, kept across tab switches for the same signed-in person. */
+const memo: { uid: string | null; playlist: BeatPlaylist | null } = { uid: null, playlist: null };
 
-const storeKey = (uid: string | null) => `sl-songs:${uid ?? "anon"}`;
+/** What's happening while a playlist turns into beats; one long request, told in steps. */
+const STEPS = ["Finding your songs on Spotify…", "Reading each song’s tempo, key and groove…", "Building your beats…"];
 
-/** What they typed and what we read, kept across tab switches and reloads, per person. */
-function recall(uid: string | null): Saved {
-  try {
-    const v = JSON.parse(localStorage.getItem(storeKey(uid)) ?? "null");
-    if (v && typeof v.text === "string") return { text: v.text, songs: Array.isArray(v.songs) ? v.songs : null };
-  } catch {}
-  return { text: "", songs: null };
-}
-function remember(uid: string | null, v: Saved) {
-  try {
-    localStorage.setItem(storeKey(uid), JSON.stringify(v));
-  } catch {}
-}
-
-/** Demo mode has no account: the three built-in songs, and a quick guess for anything else. */
-const offline = (list: string[]) => list.map((q) => DEMO_SONGS.find((d) => songKey(d.query) === songKey(q) || songKey(d.title) === songKey(q)) ?? basicSong(q));
-
-const EXAMPLE = DEMO_SONGS.map((s) => s.query).join("\n");
-
-/** Type the songs you love; hear each one as a beat. */
+/** Paste a Spotify link; get the same playlist back as beats, saved to your library. */
 export function CreateLoop({ onSaved }: { onSaved: () => void }) {
   const { user } = useAuth();
   const uid = user?.uid ?? null;
-  const s = useStudyLoop();
-  const player = useLoopPlayer();
-  const [initial] = useState<Saved>(() => {
-    if (typeof window === "undefined") return { text: "", songs: null };
-    const saved = recall(uid);
-    // A judge lands on the songs the tour is already playing.
-    return saved.songs || !isDemo() ? saved : { text: EXAMPLE, songs: DEMO_SONGS };
-  });
-  const [text, setText] = useState(initial.text);
-  const [songs, setSongs] = useState<SongBeat[] | null>(initial.songs);
+  if (memo.uid !== uid) Object.assign(memo, { uid, playlist: null });
+  const [playlist, setPlaylist] = useState<BeatPlaylist | null>(() => memo.playlist ?? (typeof window !== "undefined" && isDemo() ? demoPlaylist() : null));
+  const [url, setUrl] = useState("");
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [savedKeys, setSavedKeys] = useState<string[]>([]);
+  const [step, setStep] = useState(0);
+  const [note, setNote] = useState<{ ok: boolean; text: string; connect?: boolean } | null>(null);
   const id = useId();
 
-  const list = parseSongs(text);
-  const ours = Boolean(songs && player.loop?.queue === songs);
-  const now = ours ? (player.loop?.index ?? 0) : null;
+  useEffect(() => {
+    if (!busy) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- restart the steps for each request
+    setStep(0);
+    const t = setInterval(() => setStep((n) => Math.min(STEPS.length - 1, n + 1)), 3500);
+    return () => clearInterval(t);
+  }, [busy]);
 
-  const make = async () => {
-    if (!list.length) return;
+  const make = async (link: string) => {
+    if (!link.trim()) return;
+    setNote(null);
+    if (isDemo()) {
+      setPlaylist(demoPlaylist());
+      setNote({ ok: true, text: "Demo mode can’t reach Spotify, so here’s a demo playlist made the same way." });
+      return;
+    }
     setBusy(true);
-    setError(null);
     try {
-      const read = isDemo() ? offline(list) : await musicApi.songs(list);
-      setSongs(read);
-      remember(uid, { text, songs: read });
+      const { playlist: p, updated } = await musicApi.makeBeatPlaylist(link, await spotifyToken());
+      memo.playlist = p;
+      setPlaylist(p);
+      setUrl("");
+      const guesses = p.songs.filter((x) => !x.known || x.source === "basic").length;
+      setNote({
+        ok: true,
+        text: `${updated ? "Refreshed" : "Saved to your Library"}: ${p.name}, ${p.songs.length} song${p.songs.length === 1 ? "" : "s"} as beats${guesses ? ` (${guesses} best guess${guesses === 1 ? "" : "es"})` : ""}.`,
+      });
+      onSaved();
     } catch (e) {
-      setError(e instanceof MusicApiError ? e.message : "We couldn't read those songs just now. Give it another go.");
+      const apiErr = e instanceof MusicApiError ? e : null;
+      setNote({ ok: false, text: apiErr?.message ?? "That didn’t go through. Try again.", connect: apiErr?.code === "spotify_login_required" });
     } finally {
       setBusy(false);
     }
   };
 
-  const playAt = (i: number) => {
-    if (!songs) return;
-    if (ours && now === i) return void vibeEngine.toggle();
-    void vibeEngine.play(songLoop(songs, i), s.physio);
-  };
+  // Back from "Connect Spotify": finish the import they started.
+  useEffect(() => {
+    const pending = takePendingImport();
+    if (pending) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- resume the link they pasted before connecting
+      setUrl(pending);
+      void make(pending);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once on mount
+  }, []);
 
-  const save = async (song: SongBeat) => {
+  const connectSpotify = async () => {
     try {
-      const loop = await musicApi.saveLoop({ name: `${song.title} beat`, playlistName: song.artist || null, profile: song.profile });
-      setSavedKeys((k) => [...k, song.query]);
-      if (ours && songs?.[now ?? -1] === song) vibeEngine.markSaved(loop.id, loop.name);
-      onSaved();
-    } catch (e) {
-      setError(e instanceof MusicApiError ? e.message : "Couldn't save that one. Try again.");
+      const { clientId } = await musicApi.spotifyConfig();
+      if (!clientId) throw new Error();
+      await startSpotifyLogin(clientId, url.trim() || null);
+    } catch {
+      setNote({ ok: false, text: "Spotify isn’t hooked up on this server yet." });
     }
   };
-
-  const current = songs?.[now ?? 0];
-  const guesses = songs?.filter((x) => !x.known || x.source === "basic").length ?? 0;
 
   return (
     <div className="beats">
       <form
-        className="songs-form"
+        className="music-import__row"
         onSubmit={(e: FormEvent) => {
           e.preventDefault();
-          void make();
+          void make(url);
         }}
       >
-        <label className="label" htmlFor={`${id}-songs`}>
-          Your songs
+        <label className="sr-only" htmlFor={`${id}-url`}>
+          Spotify link
         </label>
-        <textarea
-          id={`${id}-songs`}
-          className="input songs-form__input"
-          rows={4}
-          placeholder={"One song per line, like\nGet Lucky — Daft Punk\nLet It Be — The Beatles"}
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          data-lenis-prevent
-        />
-        <div className="songs-form__row">
-          <span className="small muted tnum">
-            {list.length ? `${list.length} song${list.length === 1 ? "" : "s"}` : `Up to ${MAX_SONGS} songs`}
-          </span>
-          {!text.trim() && (
-            <button type="button" className="btn btn--sm btn--ghost" onClick={() => setText(EXAMPLE)}>
-              Try an example
-            </button>
-          )}
-          <button type="submit" className="btn btn--solid" disabled={busy || !list.length}>
-            {busy ? "Listening…" : "Make my Loop"}
-          </button>
-        </div>
+        <input id={`${id}-url`} className="input" type="url" inputMode="url" placeholder="Paste a Spotify playlist, album or song link" value={url} onChange={(e) => setUrl(e.target.value)} required disabled={busy} />
+        <button type="submit" className="btn btn--solid" disabled={busy || !url.trim()}>
+          {busy ? "Working…" : "Make beats"}
+        </button>
       </form>
 
-      {error && (
-        <p className="small is-error" role="alert">
-          {error}
+      {busy && (
+        <p className="music-import__note small bp-progress" role="status" aria-live="polite">
+          <span className="bp-progress__dot" aria-hidden />
+          {STEPS[step]}
         </p>
       )}
+      {note && !busy && (
+        <p className={`music-import__note small ${note.ok ? "" : "is-error"}`} role="status" aria-live="polite">
+          <Icon name={note.ok ? "check" : "alert"} size={14} />
+          {note.text}
+        </p>
+      )}
+      {note?.connect && !busy && (
+        <button type="button" className="btn btn--sm btn--primary music-import__connect" onClick={() => void connectSpotify()}>
+          Connect Spotify
+        </button>
+      )}
 
-      {!songs ? (
+      {playlist ? (
+        <BeatPlaylistView playlist={playlist} onSaved={onSaved} />
+      ) : (
         <div className="loops-empty">
           <Icon name="music" size={22} />
-          <p className="loops-empty__title">Your songs, as study beats</p>
+          <p className="loops-empty__title">Your playlist, as study beats</p>
           <p className="small muted">
-            Type the songs you love. We read each one, its tempo, key, chords and groove, and play a lyric-free beat that sounds like it, one after
-            another. When stress climbs, it slows and softens with you.
+            Paste any Spotify playlist. StudyLoop finds every song, reads its tempo, key, chords and groove, and builds the same playlist as lyric-free
+            beats that sound like the originals. It’s saved to your Library, and it eases off when stress climbs.
           </p>
         </div>
-      ) : (
-        <section className="card beats__card" aria-label="Your Loop" aria-busy={busy}>
-          <div className="beats__top">
-            <div className="beats__meta">
-              <p className="label">
-                Your Loop · {songs.length} song{songs.length === 1 ? "" : "s"}
-              </p>
-              <p className="beats__name">{current?.title ?? "Your songs"}</p>
-              {current && <p className="small muted beats__summary">{current.profile.summary}</p>}
-            </div>
-            <div className="beats__actions">
-              {songs.length > 1 && (
-                <button type="button" className="btn btn--sm btn--ghost" aria-label="Previous song" disabled={!ours} onClick={() => void vibeEngine.skip(-1)}>
-                  <Icon name="prev" size={14} />
-                </button>
-              )}
-              <button
-                type="button"
-                className="play-btn play-btn--lg"
-                aria-label={ours && player.playing ? "Pause" : "Play your Loop"}
-                data-running={(ours && player.playing) || undefined}
-                onClick={() => (ours ? void vibeEngine.toggle() : playAt(0))}
-              >
-                <Icon name={ours && player.playing ? "pause" : "play"} size={20} />
-              </button>
-              {songs.length > 1 && (
-                <button type="button" className="btn btn--sm btn--ghost" aria-label="Next song" disabled={!ours} onClick={() => void vibeEngine.skip(1)}>
-                  <Icon name="next" size={14} />
-                </button>
-              )}
-            </div>
-          </div>
-
-          <ol className="songs" aria-label="Songs in your Loop">
-            {songs.map((song, i) => {
-              const isNow = ours && now === i;
-              const saved = savedKeys.includes(song.query);
-              return (
-                <li key={`${song.query}-${i}`} className="mqueue songs__row" data-now={isNow || undefined}>
-                  <span className="mqueue__n tnum" aria-hidden>
-                    {isNow && player.playing ? <span className="songs__eq"><i /><i /><i /></span> : i + 1}
-                  </span>
-                  <button type="button" className="mqueue__main" onClick={() => playAt(i)} aria-label={`${isNow && player.playing ? "Pause" : "Play"} ${song.title}`}>
-                    <span className="card__title">{song.title}</span>
-                    <span className="small muted songs__facts">
-                      {[song.artist, `${song.profile.tempoBpm} BPM`, `${song.profile.key} ${song.profile.mode}`, FEEL[song.profile.drumFeel]].filter(Boolean).join(" · ")}
-                    </span>
-                  </button>
-                  <span className="songs__end">
-                    {(!song.known || song.source === "basic") && <span className="chip chip--muted">Best guess</span>}
-                    <button type="button" className="btn btn--sm btn--ghost" disabled={saved} aria-label={saved ? `${song.title} is in Your Loops` : `Save ${song.title}`} onClick={() => void save(song)}>
-                      <Icon name={saved ? "check" : "plus"} size={14} />
-                    </button>
-                  </span>
-                </li>
-              );
-            })}
-          </ol>
-          {guesses > 0 && (
-            <p className="small muted beats__note">
-              <b>Best guess</b> means we didn&apos;t recognise that exact song, so its beat follows the title and artist instead.
-            </p>
-          )}
-        </section>
       )}
     </div>
   );

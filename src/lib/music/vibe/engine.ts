@@ -88,13 +88,15 @@ export interface LoopMeta {
   /** A queue of songs, each played as its own beat; `profile` is the current one's. */
   queue?: SongBeat[];
   index?: number;
+  /** The beat playlist the queue came from. */
+  playlistId?: string;
 }
 
-/** The Loop for song `i` of a queue. */
-export function songLoop(queue: SongBeat[], i: number, playlistName: string | null = "Your songs"): LoopMeta {
+/** The Loop for song `i` of a playlist's queue. */
+export function songLoop(queue: SongBeat[], i: number, from: { name: string | null; id?: string } = { name: null }): LoopMeta {
   const n = ((i % queue.length) + queue.length) % queue.length;
   const song = queue[n];
-  return { name: song.title, playlistName, profile: song.profile, queue, index: n };
+  return { name: song.title, playlistName: from.name, profile: song.profile, queue, index: n, playlistId: from.id };
 }
 
 /** Chords per bar, kept to a value that divides a 16-step bar. */
@@ -179,7 +181,7 @@ export class VibeEngine {
   async skip(by: number) {
     const m = this.meta;
     if (!m?.queue || m.queue.length < 2) return;
-    await this.play(songLoop(m.queue, (m.index ?? 0) + by, m.playlistName), this.state);
+    await this.play(songLoop(m.queue, (m.index ?? 0) + by, { name: m.playlistName, id: m.playlistId }), this.state);
   }
 
   /** The current song has had its turn: fade it out and bring in the next. */

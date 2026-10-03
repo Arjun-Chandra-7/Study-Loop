@@ -4,7 +4,7 @@ import { DEMO_SONGS } from "@/lib/music/vibe/songs";
 import { engine } from "@/lib/useStudyLoop";
 
 /** The tour's Loop: three well-known songs, read ahead of time, so it plays with no account. */
-export const DEMO_LOOP = songLoop(DEMO_SONGS, 0);
+export const DEMO_LOOP = songLoop(DEMO_SONGS, 0, { name: "Demo playlist", id: "demo" });
 
 export interface TourStep {
   id: string;
@@ -103,7 +103,7 @@ export const STEPS: TourStep[] = [
   {
     id: "music",
     title: "Loops",
-    line: "My favourite part. Type **any songs you love**, AI reads each one’s **tempo, key, chords and groove**, and StudyLoop plays a lyric-free beat that **sounds like it**. This is Get Lucky. Hear how it’s slower and softer? **That’s the stress.**",
+    line: "My favourite part. Paste **any Spotify playlist**: StudyLoop finds every song, reads its **tempo, key, chords and groove**, and rebuilds the playlist as **beats that sound like the originals**, saved to your Library. This is Get Lucky. Slower and softer? **That’s the stress.**",
     target: [".music"],
     tab: "music",
     run: () => {

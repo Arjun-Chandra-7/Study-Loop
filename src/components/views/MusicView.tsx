@@ -3,17 +3,17 @@
 import { useState } from "react";
 import { CreateLoop } from "./loops/CreateLoop";
 import { NowPlaying } from "./loops/NowPlaying";
-import { YourLoops } from "./loops/YourLoops";
+import { Library } from "./loops/Library";
 
 const TABS = [
   { id: "create", label: "Create" },
-  { id: "saved", label: "Your Loops" },
+  { id: "library", label: "Library" },
 ] as const;
 type TabId = (typeof TABS)[number]["id"];
 
 /**
- * Loops: music that breathes with you. Type the songs you love; StudyLoop reads each one and plays
- * an original, lyric-free Loop in that style that calms down when the band reads stress.
+ * Loops: music that breathes with you. Paste a Spotify playlist; StudyLoop rebuilds it as beats,
+ * one per song, saved to the Library, that calm down when the band reads stress.
  */
 export function MusicView() {
   const [view, setView] = useState<TabId>("create");
@@ -45,7 +45,7 @@ export function MusicView() {
           {view === "create" ? (
             <CreateLoop onSaved={() => setSavedVersion((v) => v + 1)} />
           ) : (
-            <YourLoops version={savedVersion} onCreate={() => setView("create")} />
+            <Library version={savedVersion} onCreate={() => setView("create")} />
           )}
         </div>
       </div>

@@ -2,7 +2,7 @@
 
 import { getFirebaseAuth } from "../firebase";
 import type { VibeProfile } from "./vibe/profile";
-import type { SongBeat } from "./vibe/songs";
+import type { BeatPlaylist } from "./vibe/songs";
 
 export class MusicApiError extends Error {
   constructor(
@@ -58,7 +58,15 @@ export const musicApi = {
     call<{ profile: VibeProfile; source: "ai" | "basic"; playlistName: string | null; trackCount: number }>(
       `/api/music/vibe?${new URLSearchParams({ ...(playlist ? { playlist } : {}), ...(refresh ? { refresh: "1" } : {}) })}`,
     ),
-  songs: (songs: string[]) => call<{ songs: SongBeat[] }>("/api/music/songs", { method: "POST", body: JSON.stringify({ songs }) }).then((r) => r.songs),
+  beatPlaylists: () => call<{ playlists: BeatPlaylist[] }>("/api/music/beat-playlists").then((r) => r.playlists),
+  makeBeatPlaylist: (url: string, spotifyToken?: string | null) =>
+    call<{ playlist: BeatPlaylist; updated: boolean }>("/api/music/beat-playlists", {
+      method: "POST",
+      body: JSON.stringify({ url, ...(spotifyToken ? { spotifyToken } : {}) }),
+    }),
+  renameBeatPlaylist: (id: string, name: string) =>
+    call<{ playlist: BeatPlaylist }>(`/api/music/beat-playlists/${id}`, { method: "PATCH", body: JSON.stringify({ name }) }).then((r) => r.playlist),
+  deleteBeatPlaylist: (id: string) => call<null>(`/api/music/beat-playlists/${id}`, { method: "DELETE" }),
   loops: () => call<{ loops: SavedLoop[] }>("/api/music/loops").then((r) => r.loops),
   saveLoop: (loop: { name: string; playlistName: string | null; profile: VibeProfile }) =>
     call<{ loop: SavedLoop }>("/api/music/loops", { method: "POST", body: JSON.stringify(loop) }).then((r) => r.loop),

@@ -2,12 +2,10 @@ import { z } from "zod";
 import { KEYS, VibeProfileSchema, type VibeProfile } from "./profile";
 
 /**
- * Songs → beats. A listener types the songs they love; each one is read for its production
+ * Songs → beats. Every song in a listener's Spotify playlist is read for its production
  * fingerprint (tempo, key, chord loop, groove, sound) and played back as a generated, lyric-free
  * beat that sounds like it. Melodies and lyrics are never reproduced.
  */
-
-export const MAX_SONGS = 12;
 
 export const SongBeatSchema = z.object({
   title: z.string().max(120).describe("The song's title as officially written."),
@@ -16,28 +14,26 @@ export const SongBeatSchema = z.object({
   profile: VibeProfileSchema,
 });
 export type SongBeat = z.infer<typeof SongBeatSchema> & {
-  /** What the listener typed, so a reading can be matched back to its line. */
+  /** "Title — Artist" as it was read, the song's cache key. */
   query: string;
   /** "ai": read by the model; "basic": a keyword guess when the model isn't available. */
   source: "ai" | "basic";
+  /** From the Spotify playlist it came from. */
+  artworkUrl?: string | null;
+  spotifyUrl?: string | null;
 };
 
-/** One song per line; numbering, bullets and blank lines are ignored, repeats kept once. */
-export function parseSongs(text: string): string[] {
-  const seen = new Set<string>();
-  const out: string[] = [];
-  for (const raw of text.split(/\r?\n/)) {
-    const line = raw.replace(/^\s*(?:\d+[.)]|[-*•])\s*/, "").replace(/\s+/g, " ").trim().slice(0, 160);
-    const key = songKey(line);
-    if (!line || seen.has(key)) continue;
-    seen.add(key);
-    out.push(line);
-    if (out.length === MAX_SONGS) break;
-  }
-  return out;
+/** A Spotify playlist rebuilt as beats: same songs, same order, each played as its own beat. */
+export interface BeatPlaylist {
+  id: string;
+  name: string;
+  sourceUrl: string | null;
+  artworkUrl: string | null;
+  songs: SongBeat[];
+  createdAt: number;
 }
 
-/** Case- and punctuation-blind key for a typed song, used for caching and matching. */
+/** Case- and punctuation-blind key for a song, used for caching. */
 export const songKey = (q: string) => q.toLowerCase().normalize("NFKD").replace(/[^\p{L}\p{N}]+/gu, " ").trim();
 
 /** "Title — Artist", "Title - Artist" or "Title by Artist". */
@@ -100,6 +96,9 @@ export function basicSong(query: string): SongBeat {
     },
   };
 }
+
+/** Demo mode's playlist: what a Spotify import looks like, with no account and no model. */
+export const demoPlaylist = (): BeatPlaylist => ({ id: "demo", name: "Demo playlist", sourceUrl: null, artworkUrl: null, songs: DEMO_SONGS, createdAt: 0 });
 
 /**
  * Three well-known songs, fingerprinted by hand, so demo mode plays without an account or a model.
