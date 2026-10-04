@@ -340,8 +340,10 @@
   html:has(.mx-sheet) .tour-pill {
     display: none;
   }
-  /* Phones: the tab bar owns the bottom edge, so the pill sits under the top bar. */
+  /* Phones: the tab bar owns the bottom edge, so the pill sits under the top bar, on the page
+     rather than the screen, so it scrolls away instead of covering the story's headlines. */
   .tour-pill {
+    position: absolute;
     left: 50%;
     bottom: auto;
     top: calc(env(safe-area-inset-top, 0px) + 64px);

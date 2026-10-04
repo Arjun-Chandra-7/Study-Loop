@@ -148,16 +148,13 @@ export function Anatomy() {
   );
 
   return (
-    <section ref={root} className="anatomy" aria-label="Inside the band">
-      <span className="anatomy__ghost display" aria-hidden>
-        Inside · Inside · Inside
-      </span>
+    <section ref={root} className="anatomy field field--sage" aria-label="Inside the band">
       <div className="anatomy__head">
         <p className="eyebrow" data-reveal>
           <span className="eyebrow__rule" aria-hidden />
           Inside the band
         </p>
-        <h2 className="display display--md" data-split>
+        <h2 className="display campaign anatomy__title" data-split>
           Four parts.
         </h2>
         <p className="serif serif--lg" data-split="words">

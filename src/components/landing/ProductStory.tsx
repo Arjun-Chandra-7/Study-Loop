@@ -78,7 +78,7 @@ export function ProductStory() {
           scrollTrigger: {
             trigger: root.current,
             start: "top top",
-            end: "+=420%",
+            end: "+=300%",
             pin: true,
             scrub: 1,
             anticipatePin: 1,
@@ -146,7 +146,7 @@ export function ProductStory() {
           <span className="eyebrow__rule" aria-hidden />
           The band
         </p>
-        <h2 className="display story__title" data-split>
+        <h2 className="display campaign story__title" data-split>
           Focus,
           <br />
           measured

@@ -81,7 +81,7 @@ export function Flow() {
           <span className="eyebrow__rule" aria-hidden />
           How it works
         </p>
-        <h2 className="display display--md" data-split>
+        <h2 className="display campaign flow__title" data-split>
           Your session has a signal.
         </h2>
       </div>

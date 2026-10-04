@@ -15,6 +15,7 @@ import { SessionRecovery } from "@/components/session/SessionRecovery";
 import { DemoTour } from "@/components/demo/DemoTour";
 import { FirstRun } from "@/components/onboarding/FirstRun";
 import { ScrollFX } from "@/components/motion/ScrollFX";
+import "@/components/landing/campaign.css";
 import { SmoothScroll } from "@/components/motion/SmoothScroll";
 
 export default function Home() {

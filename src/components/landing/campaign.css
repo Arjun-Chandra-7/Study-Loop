@@ -1,0 +1,214 @@
+/* ═════════════════════════════════════════════════════════════
+   CAMPAIGN — the story below the cockpit, art-directed like a
+   training campaign: StudyLoop as performance gear for the mind.
+
+   One family, two widths: the app speaks in expanded Mona Sans;
+   the story shouts in condensed, extra-bold Mona Sans. Pace comes
+   from colour fields: dark → sage → dark → cinder (40 Hz) → dark.
+   ═════════════════════════════════════════════════════════════ */
+
+:root {
+  --ink: #12110f;
+  --ink-soft: rgba(18, 17, 15, 0.7);
+  --ink-line: rgba(18, 17, 15, 0.2);
+}
+
+/* ── Campaign type ── */
+.campaign {
+  margin: 0;
+  font-family: var(--font-ui);
+  font-stretch: 75%;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: -0.012em;
+  line-height: 0.84;
+  text-wrap: balance;
+}
+
+/* Body copy in the story reads at a comfortable size, not dashboard size. */
+:is(.story, .anatomy, .sig, .flow) .body {
+  font-size: clamp(16px, 1.15vw, 19px);
+  line-height: 1.5;
+}
+
+/* ── Story: the band, and the line it stands behind ── */
+.story .story__intro {
+  bottom: 7vh;
+  max-width: none;
+  gap: var(--s-5);
+}
+.story .story__title {
+  font-size: clamp(64px, min(13.5vw, 20vh), 250px);
+  color: var(--text-1);
+  text-shadow: 0 8px 60px rgba(0, 0, 0, 0.45);
+}
+.story .story__step {
+  width: min(460px, 84vw);
+  gap: var(--s-4);
+  padding: var(--s-7);
+}
+.story .story__step .h-section {
+  font-stretch: 75%;
+  font-weight: 800;
+  text-transform: uppercase;
+  font-size: clamp(36px, 3.4vw, 56px);
+  line-height: 0.9;
+  letter-spacing: -0.01em;
+}
+.story .story__count {
+  font-stretch: 75%;
+  font-weight: 800;
+  font-size: clamp(56px, 10vh, 112px);
+  color: var(--measured);
+}
+
+/* ── Colour field: sage. The band's insides, laid out on the brand colour. ── */
+.field--sage {
+  background: var(--m-500);
+  color: var(--ink);
+}
+.field--sage .eyebrow {
+  color: var(--ink);
+}
+.field--sage .eyebrow__rule {
+  background: var(--ink);
+  box-shadow: none;
+}
+.field--sage .serif {
+  color: var(--ink-soft);
+}
+.anatomy .anatomy__title {
+  font-size: clamp(72px, min(15vw, 22vh), 280px);
+  color: var(--ink);
+}
+.anatomy .anatomy__head {
+  gap: var(--s-4);
+}
+/* Dark plates on the field, like gear laid out on a coloured backdrop. */
+.field--sage .plate {
+  color: var(--text-1);
+  background:
+    radial-gradient(80% 60% at 50% 30%, rgb(var(--measured-rgb) / 0.1), transparent 70%),
+    var(--ink);
+  box-shadow: 0 30px 60px -30px rgba(18, 17, 15, 0.7), inset 0 0 0 1px rgba(236, 230, 217, 0.06);
+}
+.field--sage .plate .h-section {
+  font-stretch: 75%;
+  font-weight: 800;
+  text-transform: uppercase;
+  font-size: clamp(30px, 2.4vw, 40px);
+  line-height: 0.92;
+}
+.field--sage .anatomy__bar {
+  background: var(--ink-line);
+}
+.field--sage .anatomy__bar-fill {
+  background: var(--ink);
+  box-shadow: none;
+}
+
+/* ── Signals: dark, until 40 Hz floods the room in cinder ── */
+.sig {
+  background: var(--room);
+  transition:
+    background-color 0.7s var(--ease-out),
+    color 0.7s var(--ease-out);
+}
+.sig .sig__title {
+  font-size: clamp(56px, min(8.6vw, 13vh), 168px);
+  max-width: 11ch;
+}
+.sig .sig__hz {
+  font-stretch: 75%;
+  font-weight: 800;
+}
+.sig .sig__hz-num {
+  font-size: clamp(96px, min(15vw, 22vh), 280px);
+  line-height: 0.82;
+}
+.sig .sig__name {
+  font-stretch: 75%;
+  font-weight: 800;
+  text-transform: uppercase;
+  font-size: clamp(28px, 3.4vw, 56px);
+}
+.sig.is-exp {
+  background: var(--action);
+  color: var(--ink);
+}
+.sig.is-exp :is(.sig__hz, .sig__band, .sig__band[data-active], .sig__band--exp[data-active] .sig__name, .sig__range, .sig__band--exp .sig__range, .eyebrow, .serif) {
+  color: var(--ink);
+  text-shadow: none;
+}
+.sig.is-exp .sig__band:not([data-active]) {
+  opacity: 0.4;
+}
+.sig.is-exp :is(.muted, .sig__note) {
+  color: var(--ink-soft);
+}
+.sig.is-exp .sig__track {
+  background: var(--ink-line);
+}
+.sig.is-exp :is(.sig__fill, .sig__band--exp .sig__fill) {
+  background: var(--ink);
+  box-shadow: none;
+}
+.sig.is-exp .eyebrow__rule {
+  background: var(--ink);
+  box-shadow: none;
+}
+.sig.is-exp .chip--action-outline {
+  color: var(--ink);
+  background: transparent;
+  box-shadow: inset 0 0 0 1.5px var(--ink);
+}
+
+/* ── Flow ── */
+.flow .flow__title {
+  font-size: clamp(56px, min(9vw, 14vh), 176px);
+  max-width: 14ch;
+}
+.flow .flow__card .h-section {
+  font-stretch: 75%;
+  font-weight: 800;
+  text-transform: uppercase;
+  font-size: clamp(26px, 2vw, 36px);
+  line-height: 0.92;
+}
+
+/* ── Finale: the loop, inside the name ── */
+.finale .finale__line {
+  font-size: clamp(48px, min(7vw, 11vh), 140px);
+  color: var(--text-1);
+}
+.finale .finale__now {
+  font-stretch: 75%;
+  font-weight: 800;
+  text-transform: uppercase;
+  font-size: clamp(28px, 2.6vw, 44px);
+}
+.finale .finale__word {
+  padding: 0;
+  font-size: 23.4vw;
+  line-height: 0.78;
+  letter-spacing: -0.02em;
+  text-align: center;
+  color: var(--measured);
+  overflow: hidden;
+  margin-bottom: -0.06em;
+}
+.finale .finale__word::after {
+  background: linear-gradient(100deg, transparent 0%, transparent 40%, rgba(236, 230, 217, 0.85) 50%, transparent 60%, transparent 100%);
+  background-size: 250% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+
+@media (max-width: 759px) {
+  .story .story__step {
+    padding: var(--s-5);
+  }
+  .sig .sig__hz-num {
+    font-size: clamp(72px, 22vw, 120px);
+  }
+}
