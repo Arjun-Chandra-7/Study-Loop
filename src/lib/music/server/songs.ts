@@ -1,7 +1,7 @@
 import "server-only";
 import { createHash } from "node:crypto";
 import { generateText, type LanguageModel } from "ai";
-import { fromModel } from "../vibe/profile";
+import { fromModel, hookFields } from "../vibe/profile";
 import { basicSong, SongBeatSchema, songKey, type SongBeat } from "../vibe/songs";
 import { q } from "./db";
 import { log } from "./log";
@@ -20,8 +20,10 @@ const TRIES = 3;
  * strict schema mode makes some models (gpt-oss on Groq) return nothing at all, and one bad field
  * would sink the whole batch. Each song is parsed and brought into range on its own instead.
  * Drum grids aren't asked for: models don't know them and copy the example back, so the groove
- * comes from the hand-written pattern for the song's drum feel.
+ * comes from the hand-written pattern for the song's drum feel. The hook and bass line are what
+ * make a song recognisable, so they are asked for; one copied from the example is dropped.
  */
+const EXAMPLE_RIFF = "1:6 1:2 3:3 1:3 7,:2 6,:8 5,:8";
 const SYSTEM = `You are a record producer who knows exactly how famous recordings are built, across every genre and language (including Bollywood, Punjabi and other Indian music).
 For each song, identify the exact recording and describe its production as it really is:
 - tempoBpm: the recording's real tempo
@@ -30,10 +32,15 @@ For each song, identify the exact recording and describe its production as it re
 - drumFeel: the groove family it belongs to, one of lofi, dholak_groove (Punjabi/Bollywood/folk), boom_bap (classic hip-hop), trap (modern rap, 808s), four_on_floor (dance, disco, house, synth-pop), funk, rock, reggaeton (dembow, dancehall, latin), downtempo (ballads), ambient
 - instruments: 1-3 that carry its sound, most important first, from piano, rhodes, acoustic_guitar, electric_guitar, synth, sitar, flute, strings, pad, bells
 - energy and warmth 0-1, swing 0-0.6, summary (one short line about the sound), moods (2-4 words)
+- sevenths: true if its chords are jazzy 7th chords, false for plain triads (most pop, rock and soul)
+- riff: the ONE hook a listener would recognise in two seconds (the main instrumental riff, or else the chorus melody), played on an instrument, as notes in order. Each note is scale-degree:length, degree 1-7 of the key (# or b for a chromatic note, ' an octave up, , an octave down) and length in sixteenth notes (4 = a beat, 16 = a bar); r:4 is a rest. 1-8 bars, aligned so it starts on the first chord of the progression. Write it note-accurately.
+- bass: the bass line in the same notation, only if it's iconic (e.g. a walking or riff bass line), else ""
+- comp: the rhythm the keys or guitar play the chords in, as 16 characters for one bar (x = stab, o = soft, . = rest), or "" for held chords
+- Use "" for riff or bass when you are not sure of the exact notes: a wrong melody is worse than none.
 - known: true only if you recognise this exact recording
-This drives an instrumental, lyric-free beat in the style of the song. Never write melodies, vocal lines, riffs as notes, or lyrics.
+This drives an instrumental, lyric-free beat of the song. Never write lyrics.
 Answer with JSON only, no prose, in exactly this shape, one entry per song in the same order:
-{"songs":[{"title":"Get Lucky","artist":"Daft Punk","known":true,"tempoBpm":116,"key":"F#","mode":"minor","progression":[4,6,1,7],"chordsPerBar":1,"drumFeel":"four_on_floor","instruments":["electric_guitar","rhodes","synth"],"energy":0.65,"warmth":0.5,"swing":0.08,"summary":"Disco-funk: choppy guitar over four-on-the-floor","moods":["groovy","bright"]}]}`;
+{"songs":[{"title":"Seven Nation Army","artist":"The White Stripes","known":true,"tempoBpm":124,"key":"E","mode":"minor","progression":[1,1,6,5],"chordsPerBar":2,"drumFeel":"rock","instruments":["electric_guitar"],"sevenths":false,"riff":"${EXAMPLE_RIFF}","bass":"${EXAMPLE_RIFF}","comp":"","energy":0.6,"warmth":0.4,"swing":0,"summary":"One fuzzed-out riff over a stomping kick","moods":["driving","defiant"]}]}`;
 
 type Flat = Record<string, unknown>;
 const str = (v: unknown, d = "") => (typeof v === "string" ? v : typeof v === "number" ? String(v) : d);
@@ -44,26 +51,32 @@ const list = (v: unknown) => (Array.isArray(v) ? v : typeof v === "string" ? v.s
 function toBeat(f: Flat | undefined): Omit<SongBeat, "query" | "source"> | null {
   if (!f || typeof f !== "object" || !num(f.tempoBpm, 0) || !str(f.key)) return null;
   const grid = (v: unknown) => (typeof v === "string" ? v : null);
+  // An unknown song whose hook is the example's was copied, not read.
+  const copied = (v: unknown) => !/seven nation/i.test(str(f.title)) && str(v).replace(/\s+/g, " ").trim() === EXAMPLE_RIFF;
+  const hooks = hookFields({ riff: copied(f.riff) ? null : f.riff, bass: copied(f.bass) ? null : f.bass, comp: f.comp, sevenths: f.sevenths });
   return {
     title: str(f.title).slice(0, 120),
     artist: str(f.artist).slice(0, 120),
     known: f.known !== false,
-    profile: fromModel({
-      summary: str(f.summary),
-      moods: list(f.moods).map((m) => str(m)),
-      tempoBpm: num(f.tempoBpm, 100),
-      key: str(f.key),
-      mode: str(f.mode, "minor"),
-      progression: list(f.progression).map((d) => num(d, 0)),
-      harmonicRhythm: num(f.chordsPerBar, 1),
-      drumFeel: str(f.drumFeel, "lofi"),
-      groove: grid(f.kick) ? { kick: grid(f.kick)!, snare: grid(f.snare) ?? "", hat: grid(f.hat) ?? "" } : null,
-      bassRhythm: grid(f.bass),
-      palette: list(f.instruments).map((i) => str(i)),
-      energy: num(f.energy, 0.5),
-      warmth: num(f.warmth, 0.5),
-      swing: num(f.swing, 0),
-    }),
+    profile: {
+      ...fromModel({
+        summary: str(f.summary),
+        moods: list(f.moods).map((m) => str(m)),
+        tempoBpm: num(f.tempoBpm, 100),
+        key: str(f.key),
+        mode: str(f.mode, "minor"),
+        progression: list(f.progression).map((d) => num(d, 0)),
+        harmonicRhythm: num(f.chordsPerBar, 1),
+        drumFeel: str(f.drumFeel, "lofi"),
+        groove: grid(f.kick) ? { kick: grid(f.kick)!, snare: grid(f.snare) ?? "", hat: grid(f.hat) ?? "" } : null,
+        bassRhythm: null, // "bass" is now a line of notes, played by the bass line
+        palette: list(f.instruments).map((i) => str(i)),
+        energy: num(f.energy, 0.5),
+        warmth: num(f.warmth, 0.5),
+        swing: num(f.swing, 0),
+      }),
+      ...hooks,
+    },
   };
 }
 
@@ -99,7 +112,7 @@ export async function readSongsWith(model: LanguageModel, chunk: string[]) {
  */
 export async function readSongs(songs: string[]): Promise<SongBeat[]> {
   const [model, modelId] = vibeModel();
-  const keyOf = (s: string) => createHash("sha256").update(JSON.stringify([modelId, "v3", songKey(s)])).digest("hex");
+  const keyOf = (s: string) => createHash("sha256").update(JSON.stringify([modelId, "v4", songKey(s)])).digest("hex");
   const out = new Map<string, SongBeat>();
 
   for (const s of songs) {

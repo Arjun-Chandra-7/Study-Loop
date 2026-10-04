@@ -1,7 +1,7 @@
 "use client";
 
 import type { PhysioState } from "../../sensors/classify";
-import { beatParams, chord, scale, stepGrid, type BeatParams, type VibeProfile } from "./profile";
+import { beatParams, chord, hookMidi, parseHook, scale, stepGrid, usesSevenths, type BeatParams, type Hook, type VibeProfile } from "./profile";
 import type { SongBeat } from "./songs";
 
 type ToneNS = typeof import("tone");
@@ -74,6 +74,8 @@ const PATTERNS: Record<VibeProfile["drumFeel"], [Pattern, Pattern, Pattern, Patt
   ],
 };
 
+const SILENT: Pattern = Array(16).fill(0);
+
 const RAMP_S = 6;
 /** Each song in a queue plays for about this long before the next one comes in. */
 const SONG_S = 90;
@@ -128,6 +130,12 @@ export class VibeEngine {
   private advancing = false;
   /** A song's own drum and bass grids, when it has them. */
   private grooves: { kick: number[] | null; snare: number[] | null; hat: number[] | null; bass: number[] | null } = { kick: null, snare: null, hat: null, bass: null };
+  /** A song's own hook, bass line and chord-stab rhythm: the parts that make it recognisable. */
+  private hooks: { riff: Hook | null; bass: Hook | null; comp: number[] | null } = { riff: null, bass: null, comp: null };
+  /** Drum density at the song's own feel; below it (stress), hits start to drop out. */
+  private fullDensity = 1;
+  /** Octave the riff's tonic sits in, by instrument. */
+  private riffOctave = 4;
   private master: { filter: import("tone").Filter; reverb: import("tone").Freeverb; volume: import("tone").Volume } | null = null;
   playing = false;
   private meta: LoopMeta | null = null;
@@ -155,6 +163,7 @@ export class VibeEngine {
     this.profile = profile;
     this.state = state;
     this.params = beatParams(profile, state);
+    this.hooks = { riff: parseHook(profile.riff), bass: parseHook(profile.bassLine), comp: stepGrid(profile.comp) };
     this.build(T, profile, this.params);
     const transport = T.getTransport();
     transport.bpm.value = this.params.bpm;
@@ -171,6 +180,7 @@ export class VibeEngine {
       hat: stepGrid(profile.groove?.hat),
       bass: stepGrid(profile.bassRhythm),
     };
+    this.fullDensity = beatParams(profile, "stable").drumDensity;
     this.repeatId = transport.scheduleRepeat((time) => this.tick(time), "16n");
     transport.start("+0.1");
     this.playing = true;
@@ -262,6 +272,7 @@ export class VibeEngine {
     this.master = { filter, reverb, volume };
 
     const pal = new Set(p.palette);
+    const guitar = pal.has("acoustic_guitar") || pal.has("sitar") || pal.has("electric_guitar");
     // Chords: the first keys-type instrument in the palette leads (it's ordered by importance).
     const keys = p.palette.find((i) => i === "rhodes" || i === "synth" || i === "pad" || i === "strings" || i === "piano");
     const chordVoice =
@@ -273,10 +284,12 @@ export class VibeEngine {
             ? new T.PolySynth(T.Synth, { oscillator: { type: "fatsawtooth", count: 3, spread: 18 }, envelope: { attack: 0.8, decay: 0.5, sustain: 0.7, release: 2.5 } })
             : new T.PolySynth(T.Synth, { oscillator: { type: "triangle" }, envelope: { attack: 0.005, decay: 1.4, sustain: 0.15, release: 1.4 } });
     chordVoice.volume.value = keys === "pad" || keys === "strings" ? -20 : keys === "synth" ? -21 : -14;
-    this.voices.chords = keep(chordVoice).connect(filter);
+    // A guitar band with no keys (a riff-led rock song) gets no piano laid over it.
+    if (keys || !guitar) this.voices.chords = keep(chordVoice).connect(filter);
+    else chordVoice.dispose();
 
     // Guitars and sitar: plucked; electric guitar brighter, choppier and a little driven.
-    if (pal.has("acoustic_guitar") || pal.has("sitar") || pal.has("electric_guitar")) {
+    if (guitar) {
       const electric = pal.has("electric_guitar") && !pal.has("acoustic_guitar") && !pal.has("sitar");
       const pluck = new T.PluckSynth({
         attackNoise: pal.has("sitar") ? 2.5 : electric ? 1.6 : 1,
@@ -295,8 +308,10 @@ export class VibeEngine {
       this.choppy = false;
     }
 
-    // Sparse lead: flute (sine + vibrato), bells (FM), else soft piano.
-    if (pal.has("flute")) {
+    if (this.hooks.riff) {
+      this.voices.lead = this.riffVoice(T, p, filter, keep);
+    } else if (pal.has("flute")) {
+      // Sparse lead: flute (sine + vibrato), bells (FM), else soft piano.
       const vib = keep(new T.Vibrato(5, 0.12)).connect(filter);
       const lead = new T.Synth({ oscillator: { type: "sine" }, envelope: { attack: 0.12, decay: 0.3, sustain: 0.6, release: 0.9 } });
       lead.volume.value = -16;
@@ -311,8 +326,11 @@ export class VibeEngine {
       this.voices.lead = keep(lead).connect(filter);
     }
 
-    const bass = new T.MonoSynth({ oscillator: { type: "sine" }, filter: { Q: 1, type: "lowpass" }, envelope: { attack: 0.02, decay: 0.4, sustain: 0.6, release: 0.6 }, filterEnvelope: { baseFrequency: 120, octaves: 1.5 } });
-    bass.volume.value = -12;
+    // A played bass line needs harmonics to be heard on laptop speakers; a pad-like root doesn't.
+    const bass = this.hooks.bass
+      ? new T.MonoSynth({ oscillator: { type: "sawtooth" }, filter: { Q: 2, type: "lowpass", rolloff: -24 }, envelope: { attack: 0.005, decay: 0.3, sustain: 0.5, release: 0.15 }, filterEnvelope: { attack: 0.002, decay: 0.2, sustain: 0.3, baseFrequency: 160, octaves: 2.6 } })
+      : new T.MonoSynth({ oscillator: { type: "triangle" }, filter: { Q: 1, type: "lowpass" }, envelope: { attack: 0.02, decay: 0.4, sustain: 0.6, release: 0.6 }, filterEnvelope: { baseFrequency: 120, octaves: 1.5 } });
+    bass.volume.value = this.hooks.bass ? -11 : -12;
     this.voices.bass = keep(bass).connect(comp); // keep the low end out of the darkening filter
 
     {
@@ -334,6 +352,43 @@ export class VibeEngine {
     }
   }
 
+  /** The hook's instrument: the palette's lead sound, up front in the mix. */
+  private riffVoice(T: ToneNS, p: VibeProfile, out: import("tone").Filter, keep: <N extends { dispose(): void }>(n: N) => N) {
+    const lead = p.palette[0];
+    this.riffOctave = lead === "electric_guitar" || lead === "acoustic_guitar" ? 3 : 4;
+    if (lead === "electric_guitar") {
+      const drive = keep(new T.Distortion(0.5)).connect(out);
+      const v = new T.Synth({ oscillator: { type: "fatsawtooth", count: 2, spread: 12 }, envelope: { attack: 0.004, decay: 0.2, sustain: 0.7, release: 0.12 } });
+      v.volume.value = -17;
+      return keep(v).connect(drive);
+    }
+    if (lead === "acoustic_guitar" || lead === "sitar") {
+      const v = new T.PluckSynth({ attackNoise: lead === "sitar" ? 2.5 : 1.2, dampening: lead === "sitar" ? 5200 : 4200, resonance: 0.95 });
+      v.volume.value = -6;
+      return keep(v).connect(out);
+    }
+    if (lead === "flute") {
+      const vib = keep(new T.Vibrato(5, 0.1)).connect(out);
+      const v = new T.Synth({ oscillator: { type: "sine" }, envelope: { attack: 0.06, decay: 0.2, sustain: 0.8, release: 0.3 } });
+      v.volume.value = -9;
+      return keep(v).connect(vib);
+    }
+    if (lead === "bells") {
+      const v = new T.FMSynth({ harmonicity: 5.1, modulationIndex: 6, envelope: { attack: 0.001, decay: 1.2, sustain: 0, release: 1.2 } });
+      v.volume.value = -14;
+      return keep(v).connect(out);
+    }
+    if (lead === "synth" || lead === "pad" || lead === "strings") {
+      const v = new T.Synth({ oscillator: { type: lead === "synth" ? "square" : "sawtooth" }, envelope: { attack: lead === "synth" ? 0.005 : 0.05, decay: 0.2, sustain: 0.7, release: 0.25 } });
+      v.volume.value = lead === "synth" ? -18 : -16;
+      return keep(v).connect(out);
+    }
+    // piano, rhodes
+    const v = new T.Synth({ oscillator: { type: "triangle" }, envelope: { attack: 0.004, decay: 0.8, sustain: 0.3, release: 0.4 } });
+    v.volume.value = -9;
+    return keep(v).connect(out);
+  }
+
   private tick(time: number) {
     const T = this.T!;
     const p = this.profile!;
@@ -347,33 +402,58 @@ export class VibeEngine {
     this.step++;
     const midi = (n: number) => T.Frequency(n, "midi").toFrequency();
     const g = this.grooves;
+    const h = this.hooks;
+    const sixteenth = 15 / T.getTransport().bpm.value;
+    // At the song's own feel every hit lands; under stress they start to drop out.
+    const thin = Math.min(1, params.drumDensity / this.fullDensity);
+    const keeps = (vel: number) => thin >= 0.999 || Math.random() < thin * (0.6 + 0.4 * vel);
+    const chordNotes = (octave: number) => {
+      const c = chord(p.key, p.mode, degree, octave);
+      return usesSevenths(p) ? c : c.slice(0, 3);
+    };
 
     // A queued song has had its turn: hand over to the next one on a bar line.
     if (s === 0 && bar >= this.songBars && (this.meta?.queue?.length ?? 0) > 1) this.advance();
 
-    // Chords on each change, with a soft re-hit halfway through a whole-bar chord for busier feels.
-    if (at === 0 || (span === 16 && s === 8 && params.drumDensity > 0.5 && p.drumFeel !== "ambient")) {
-      v.chords?.triggerAttackRelease(chord(p.key, p.mode, degree, 3).map(midi), at === 0 ? (span === 16 ? "1m" : "2n") : "2n", time, at === 0 ? 0.55 : 0.3);
+    // Chords: stabbed in the song's own rhythm, else held on each change with a soft re-hit halfway
+    // through a whole-bar chord for busier feels.
+    if (h.comp) {
+      if (h.comp[s]) v.chords?.triggerAttackRelease(chordNotes(3).map(midi), this.choppy ? sixteenth * 0.9 : sixteenth * 3, time, 0.5 * h.comp[s]);
+    } else if (at === 0 || (span === 16 && s === 8 && params.drumDensity > 0.5 && p.drumFeel !== "ambient")) {
+      v.chords?.triggerAttackRelease(chordNotes(3).map(midi), at === 0 ? (span === 16 ? "1m" : "2n") : "2n", time, at === 0 ? 0.55 : 0.3);
     }
-    // Bass: the song's own rhythm on the chord root, or root on 1 with a fifth on 3.
+    // Bass: the song's own bass line, its rhythm on the chord root, or root on 1 with a fifth on 3.
     const root = chord(p.key, p.mode, degree, 2)[0];
-    if (g.bass) {
-      if (g.bass[s] && Math.random() < Math.max(0.5, params.drumDensity + 0.2)) v.bass?.triggerAttackRelease(midi(root), "8n", time, 0.8 * g.bass[s]);
+    if (h.bass) {
+      const pos = (this.step - 1) % h.bass.steps;
+      for (const n of h.bass.notes) if (n.step === pos) v.bass?.triggerAttackRelease(midi(hookMidi(p.key, p.mode, n, 2)), sixteenth * n.len * 0.9, time, 0.85);
+    } else if (g.bass) {
+      if (g.bass[s] && keeps(g.bass[s])) v.bass?.triggerAttackRelease(midi(root), "8n", time, 0.8 * g.bass[s]);
     } else {
       if (at === 0) v.bass?.triggerAttackRelease(midi(root), "4n", time, 0.8);
       if (s === 10 && params.drumDensity > 0.3) v.bass?.triggerAttackRelease(midi(root + 7), "8n", time, 0.55);
     }
 
-    // Guitar: choppy 16ths on the off-beats for electric, else a plucked arpeggio over the chord.
+    // Guitar: on the song's chord stabs; choppy 16ths on the off-beats for electric, else a plucked
+    // arpeggio over the chord. Quiet when a riff carries the song.
     if (v.pluck) {
-      const tones = chord(p.key, p.mode, degree, 4);
-      if (this.choppy ? s % 4 === 2 || (s % 4 === 3 && Math.random() < params.drumDensity * 0.5) : s % 4 === 2) {
-        v.pluck.triggerAttack(midi(tones[(Math.floor(s / 2) + bar) % tones.length]), time);
-      }
+      const tones = chordNotes(4);
+      const play = h.comp ? h.comp[s] > 0 : h.riff ? false : this.choppy ? s % 4 === 2 || (s % 4 === 3 && Math.random() < params.drumDensity * 0.5) : s % 4 === 2;
+      if (play) v.pluck.triggerAttack(midi(tones[h.comp ? tones.length - 1 : (Math.floor(s / 2) + bar) % tones.length]), time);
     }
 
-    // Sparse lead: a gentle random walk on the pentatonic subset of the scale.
-    if (v.lead && s % 2 === 0 && Math.random() < params.melodyDensity) {
+    // The hook, note for note: it's what makes the song recognisable, so it plays at every stress
+    // level, just softer as stress rises.
+    if (h.riff && v.lead) {
+      const pos = (this.step - 1) % h.riff.steps;
+      for (const n of h.riff.notes) {
+        if (n.step !== pos) continue;
+        const note = midi(hookMidi(p.key, p.mode, n, this.riffOctave));
+        if (v.lead instanceof T.PluckSynth) v.lead.triggerAttack(note, time);
+        else v.lead.triggerAttackRelease(note, sixteenth * n.len * 0.92, time, 0.45 + 0.4 * thin);
+      }
+    } else if (v.lead && !h.bass && s % 2 === 0 && Math.random() < params.melodyDensity) {
+      // No hook: a sparse, gentle random walk on the pentatonic subset of the scale.
       const sc = scale(p.key, p.mode, 5);
       const penta = p.mode === "major" ? [0, 1, 2, 4, 5] : [0, 2, 3, 4, 6];
       this.lastNote = Math.max(0, Math.min(penta.length - 1, this.lastNote + Math.round((Math.random() - 0.5) * 3)));
@@ -384,10 +464,11 @@ export class VibeEngine {
 
     // Drums, thinned by the current density (stress → sparser).
     const [baseKick, baseSnare, baseHat, perc] = PATTERNS[p.drumFeel] ?? PATTERNS.lofi;
+    const own = g.kick !== null; // the song's own groove: what it leaves out stays out
     const kick = g.kick ?? baseKick;
-    const snare = g.snare ?? baseSnare;
-    const hat = g.hat ?? baseHat;
-    const hit = (vel: number, floor = 0) => vel > 0 && Math.random() < Math.max(floor, params.drumDensity) * (0.6 + 0.4 * vel);
+    const snare = g.snare ?? (own ? SILENT : baseSnare);
+    const hat = g.hat ?? (own ? SILENT : baseHat);
+    const hit = (vel: number, floor = 0) => vel > 0 && (keeps(vel) || Math.random() < floor);
     const kickNote = p.drumFeel === "dholak_groove" ? "D2" : p.drumFeel === "trap" ? midi(chord(p.key, p.mode, degree, 1)[0]) : "C1";
     if (hit(kick[s], s === 0 ? 0.9 : 0)) v.kick?.triggerAttackRelease(kickNote, "8n", time, kick[s]);
     if (hit(snare[s])) v.snare?.triggerAttackRelease("16n", time, snare[s]);

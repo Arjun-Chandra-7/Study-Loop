@@ -3,8 +3,8 @@ import { KEYS, VibeProfileSchema, type VibeProfile } from "./profile";
 
 /**
  * Songs → beats. Every song in a listener's Spotify playlist is read for its production
- * fingerprint (tempo, key, chord loop, groove, sound) and played back as a generated, lyric-free
- * beat that sounds like it. Melodies and lyrics are never reproduced.
+ * fingerprint (tempo, key, chord loop, groove, sound) and its signature hook, and played back as a
+ * generated, instrumental beat you recognise at once. Lyrics are never reproduced.
  */
 
 export const SongBeatSchema = z.object({
@@ -121,7 +121,10 @@ export const DEMO_SONGS: SongBeat[] = [
       harmonicRhythm: 1,
       drumFeel: "four_on_floor",
       groove: { kick: "x...x...x...x...", snare: "....x.......x...", hat: "o.x.o.x.o.x.o.xo" },
-      bassRhythm: "x..x..x...x.x...",
+      // Octave-jumping funk bass on Bm7, D, F#m7, E; the guitar chops the chords in 16ths.
+      bassLine: "4:3 4:1 r:2 4':2 r:2 4:2 r:2 4:2 6,:3 6,:1 r:2 6:2 r:2 6,:2 r:2 6,:2 1:3 1:1 r:2 1':2 r:2 1:2 r:2 1:2 7,:3 7,:1 r:2 7:2 r:2 7,:2 r:2 7,:2",
+      comp: "x.xx.x.x.xx.x.xx",
+      sevenths: true,
       palette: ["electric_guitar", "rhodes", "synth"],
       energy: 0.65,
       warmth: 0.5,
@@ -145,6 +148,8 @@ export const DEMO_SONGS: SongBeat[] = [
       drumFeel: "downtempo",
       groove: { kick: "x.......x.......", snare: "....x.......x...", hat: "x.o.x.o.x.o.x.o." },
       bassRhythm: "x.......x.......",
+      comp: "x...x...x...x...",
+      sevenths: false,
       palette: ["piano", "pad"],
       energy: 0.35,
       warmth: 0.75,
@@ -167,11 +172,64 @@ export const DEMO_SONGS: SongBeat[] = [
       harmonicRhythm: 1,
       drumFeel: "funk",
       groove: { kick: "x.....x.x.......", snare: "....x.......x...", hat: "x.x.x.x.x.x.x.x." },
-      bassRhythm: "x..x..x.x..x..x.",
+      // The riff: A A C# E F# E C# B, then the same shape on F#m, D and E.
+      bassLine:
+        "1:6 1:2 3:4 5:4 6:4 5:4 3:4 2:4 6,:6 6,:2 1:4 3:4 4:4 3:4 1:4 7,:4 4,:6 4,:2 6,:4 1:4 5,:6 5,:2 7,:4 2:4 1:6 1:2 3:4 5:4 6:4 5:4 3:4 2:4",
+      sevenths: false,
       palette: ["strings", "acoustic_guitar"],
       energy: 0.45,
       warmth: 0.7,
       swing: 0.12,
+    },
+  },
+  {
+    query: "Seven Nation Army — The White Stripes",
+    source: "ai",
+    title: "Seven Nation Army",
+    artist: "The White Stripes",
+    known: true,
+    profile: {
+      summary: "One fuzzed-out riff over a stomping kick",
+      moods: ["driving", "defiant"],
+      tempoBpm: 124,
+      key: "E",
+      mode: "minor",
+      progression: [1, 1, 6, 5],
+      harmonicRhythm: 2,
+      drumFeel: "rock",
+      groove: { kick: "x...x...x...x...", snare: "................", hat: "o...o...o...o..." },
+      riff: "1:6 1:2 3:3 1:3 7,:2 6,:8 5,:8",
+      bassLine: "1:6 1:2 3:3 1:3 7,:2 6,:8 5,:8",
+      sevenths: false,
+      palette: ["electric_guitar"],
+      energy: 0.6,
+      warmth: 0.4,
+      swing: 0,
+    },
+  },
+  {
+    query: "Billie Jean — Michael Jackson",
+    source: "ai",
+    title: "Billie Jean",
+    artist: "Michael Jackson",
+    known: true,
+    profile: {
+      summary: "A tight drum machine and the bass line everyone knows, under soft synth chords",
+      moods: ["tense", "groovy"],
+      tempoBpm: 117,
+      // F# dorian, written in E major so the chords (F#m, G#m, A) come out right.
+      key: "E",
+      mode: "major",
+      progression: [2, 3, 4, 3],
+      harmonicRhythm: 1,
+      drumFeel: "funk",
+      groove: { kick: "x.......x.......", snare: "....x.......x...", hat: "x.x.x.x.x.x.x.x." },
+      bassLine: "2:2 6,:2 1:2 2:2 1:2 6,:2 5,:2 6,:2",
+      sevenths: false,
+      palette: ["pad", "synth"],
+      energy: 0.55,
+      warmth: 0.5,
+      swing: 0,
     },
   },
 ];
