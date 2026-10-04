@@ -31,10 +31,35 @@
   line-height: 1.5;
 }
 
-/* ── Story: the opening shot, then the details through a window ── */
+/* ── Story: the band, and the line it stands behind ── */
+.story .story__intro {
+  bottom: 7vh;
+  max-width: none;
+  gap: var(--s-5);
+}
 .story .story__title {
-  font-size: clamp(56px, min(12vw, 16vh), 230px);
+  font-size: clamp(64px, min(13.5vw, 20vh), 250px);
   color: var(--text-1);
+  text-shadow: 0 8px 60px rgba(0, 0, 0, 0.45);
+}
+.story .story__step {
+  width: min(460px, 84vw);
+  gap: var(--s-4);
+  padding: var(--s-7);
+}
+.story .story__step .h-section {
+  font-stretch: 75%;
+  font-weight: 800;
+  text-transform: uppercase;
+  font-size: clamp(36px, 3.4vw, 56px);
+  line-height: 0.9;
+  letter-spacing: -0.01em;
+}
+.story .story__count {
+  font-stretch: 75%;
+  font-weight: 800;
+  font-size: clamp(56px, 10vh, 112px);
+  color: var(--measured);
 }
 
 /* ── Colour field: sage. The band's insides, laid out on the brand colour. ── */
@@ -236,6 +261,9 @@
 }
 
 @media (max-width: 759px) {
+  .story .story__step {
+    padding: var(--s-5);
+  }
   .night {
     height: 100svh;
   }
