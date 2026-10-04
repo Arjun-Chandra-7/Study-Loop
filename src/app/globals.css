@@ -3364,112 +3364,53 @@ html.lenis body {
   inset: 0;
   overflow: hidden;
 }
-.story__camera {
+.story__hero,
+.story__shot {
   position: absolute;
   inset: 0;
-  will-change: transform;
+  overflow: hidden;
+}
+/* Detail shots fill the window only: the right half on laptops, the top on phones. */
+.story__shot:not(.story__shot--full) {
+  left: 50%;
 }
 .story__img {
   object-fit: cover;
 }
-.story__sweep {
-  position: absolute;
-  top: -20%;
-  bottom: -20%;
-  left: 0;
-  width: 30%;
-  background: linear-gradient(100deg, transparent, rgb(var(--measured-hi-rgb) / 0.1) 45%, rgba(236, 230, 217, 0.12) 50%, transparent 60%);
-  mix-blend-mode: screen;
-  transform: translateX(-120%) skewX(-12deg);
-  pointer-events: none;
+.story__img--tall {
+  display: none;
 }
-.story__vignette {
+.story__shade {
   position: absolute;
   inset: 0;
   background:
-    linear-gradient(90deg, rgba(11, 10, 7, 0.7), transparent 40%, transparent 55%, rgba(11, 10, 7, 0.75)),
-    linear-gradient(0deg, var(--room), transparent 30%),
-    linear-gradient(180deg, rgba(11, 10, 7, 0.8), transparent 18%);
+    linear-gradient(0deg, rgba(11, 10, 7, 0.9), transparent 45%),
+    linear-gradient(180deg, rgba(11, 10, 7, 0.55), transparent 22%);
   pointer-events: none;
-}
-.story__focus {
-  position: absolute;
-  top: 50%;
-  width: 96px;
-  height: 96px;
-  margin: -48px 0 0 -48px;
-  border-radius: 50%;
-  box-shadow: inset 0 0 0 1px var(--measured), 0 0 40px rgb(var(--measured-rgb) / 0.35);
-  pointer-events: none;
-}
-.story__focus span {
-  position: absolute;
-  inset: 30%;
-  border-radius: 50%;
-  box-shadow: inset 0 0 0 1px rgb(var(--measured-hi-rgb) / 0.6);
-  animation: ping 1.8s var(--ease-out) infinite;
-}
-@keyframes ping {
-  from {
-    transform: scale(0.6);
-    opacity: 1;
-  }
-  to {
-    transform: scale(2.4);
-    opacity: 0;
-  }
 }
 .story__intro {
   position: absolute;
   left: var(--page-x);
-  bottom: 9vh;
-  display: flex;
-  flex-direction: column;
-  gap: var(--s-4);
-  max-width: 90vw;
+  right: var(--page-x);
+  bottom: 7vh;
 }
-.story__title {
-  font-size: clamp(36px, min(6vw, 10.5vh), 112px);
-}
-.story__steps {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-.story__step {
-  position: absolute;
-  right: calc(var(--page-x) + 4vw);
-  top: 50%;
-  translate: 0 -50%;
-  width: min(400px, 84vw);
-  display: flex;
-  flex-direction: column;
-  gap: var(--s-3);
-  padding: var(--s-6);
-  border-radius: var(--r-panel);
-  background: rgba(15, 14, 11, 0.78);
-  -webkit-backdrop-filter: blur(14px);
-  backdrop-filter: blur(14px);
-  box-shadow: inset 0 0 0 1px var(--line-2), var(--shadow-float);
-  opacity: 0;
-}
-.story__n {
-  font-size: var(--fs-label);
-  letter-spacing: var(--tracking-label);
-  color: var(--measured);
-}
-.story__count {
+.story__meta {
   position: absolute;
   left: var(--page-x);
-  top: 12vh;
+  top: clamp(72px, 12vh, 128px);
+  display: flex;
+  align-items: center;
+  gap: var(--s-4);
+  visibility: hidden;
+}
+.story__count {
   height: 1em;
   overflow: hidden;
-  font-family: var(--font-display);
-  font-stretch: var(--stretch-display);
-  font-size: clamp(40px, 7vh, 72px);
+  font-stretch: 75%;
+  font-weight: 800;
+  font-size: clamp(20px, 2.2vh, 26px);
   line-height: 1;
-  color: var(--text-1);
-  opacity: 0.9;
+  color: var(--measured);
 }
 .story__count-track {
   display: flex;
@@ -3479,20 +3420,46 @@ html.lenis body {
   height: 1em;
 }
 .story__rail {
-  position: absolute;
-  left: var(--page-x);
-  top: calc(12vh + clamp(40px, 7vh, 72px) + 24px);
-  width: 1px;
-  height: 28vh;
+  position: relative;
+  width: clamp(120px, 14vw, 220px);
+  height: 1px;
   background: var(--line-2);
 }
 .story__rail-fill {
   position: absolute;
   inset: 0;
   background: var(--measured);
-  transform-origin: top;
-  transform: scaleY(0);
-  box-shadow: 0 0 8px var(--measured);
+  transform-origin: left;
+  transform: scaleX(0);
+}
+.story__steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.story__step {
+  position: absolute;
+  left: var(--page-x);
+  top: 50%;
+  translate: 0 -50%;
+  width: calc(50vw - 2 * var(--page-x));
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-5);
+  visibility: hidden;
+}
+.line-mask {
+  overflow: hidden;
+  padding-bottom: 0.08em;
+}
+.story__name {
+  font-size: clamp(52px, min(7vw, 12.5vh), 128px);
+  color: var(--text-1);
+}
+.story__body {
+  margin: 0;
+  max-width: 34ch;
+  color: var(--text-2);
 }
 
 /* ── Anatomy ── */
@@ -3912,13 +3879,31 @@ html.lenis body {
     inset 0 0 0 1px var(--measured-line),
     0 20px 50px -20px rgb(var(--measured-rgb) / 0.45);
 }
-.flow__orb {
-  margin-bottom: var(--s-2);
-  transition: transform var(--dur-3) cubic-bezier(0.3, 1.6, 0.5, 1);
-  transform-origin: left center;
+/* Each step's photo: dim and grey until it's the step you're on. */
+.flow__photo {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  max-height: 24vh;
+  margin: calc(-1 * var(--s-4) + var(--s-2)) calc(-1 * var(--s-5) + var(--s-2)) var(--s-2);
+  border-radius: calc(var(--r-card) - 6px);
+  overflow: hidden;
+  background: var(--surface-2);
 }
-.flow__step[data-active] .flow__orb {
-  transform: scale(1.25);
+.flow__photo img {
+  object-fit: cover;
+  filter: grayscale(1) brightness(0.55);
+  transform: scale(1.06);
+  transition:
+    filter 0.6s var(--ease-out),
+    transform 1.2s var(--ease-out);
+}
+.flow__step[data-active] .flow__photo img,
+.flow__step[data-done] .flow__photo img {
+  filter: none;
+  transform: none;
+}
+.flow__step[data-done] .flow__photo img {
+  filter: grayscale(0.4) brightness(0.8);
 }
 .flow__n {
   font-size: var(--fs-label);
@@ -4207,20 +4192,31 @@ html.lenis body {
 }
 
 @media (max-width: 759px) {
+  .story__img--wide {
+    display: none;
+  }
+  .story__img--tall {
+    display: block;
+  }
+  .story__shot:not(.story__shot--full) {
+    left: 0;
+    bottom: 46%;
+  }
   .story__step {
     left: var(--s-4);
     right: var(--s-4);
-    top: auto;
-    bottom: 8vh;
+    top: 57%;
     translate: none;
     width: auto;
-    padding: var(--s-5);
+    gap: var(--s-3);
+  }
+  .story__name {
+    font-size: clamp(40px, 12vw, 64px);
   }
   .story__intro {
-    bottom: 14vh;
+    bottom: 12vh;
   }
-  .story__count,
-  .story__rail {
+  .story__meta {
     display: none;
   }
   .anatomy {
@@ -4283,18 +4279,22 @@ html.lenis body {
 
 @media (prefers-reduced-motion: reduce) {
   .story__step {
-    opacity: 1;
+    visibility: visible;
     position: relative;
     inset: auto;
     translate: none;
-    margin: var(--s-4) var(--page-x);
+    width: auto;
+    margin: var(--s-6) var(--page-x);
   }
   .story {
     height: auto;
   }
   .story__frame {
     position: relative;
-    aspect-ratio: 3 / 2;
+    aspect-ratio: 16 / 9;
+  }
+  .story__shot {
+    display: none;
   }
   .story__intro {
     position: relative;

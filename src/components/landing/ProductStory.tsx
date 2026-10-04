@@ -9,46 +9,42 @@ import { useRef } from "react";
 gsap.registerPlugin(ScrollTrigger, useGSAP);
 
 /**
- * One photographed frame, one camera. The scroll drives a macro camera move
- * across the real render; each part gets a focus ring, a light sweep, and a
- * card that wipes in beside it.
+ * A photographed story. The opening shot fills the screen, then narrows into
+ * a tall window; each detail wipes up through it while the words change on
+ * the left. The last shot opens back out to the full frame.
  */
 const STOPS = [
   {
     n: "01",
     title: "Status light",
     body: "A single cyan line. It breathes during baseline, holds while you study, and never asks to be looked at.",
-    px: 0.46,
-    py: 0.37,
-    s: 1.75,
+    src: "/media/campaign/light.webp",
+    alt: "Close-up of the band's cyan status light glowing on the matte black enclosure.",
   },
   {
     n: "02",
     title: "One button",
     body: "Press to start. Press again to mark a moment. Hold to end the session.",
-    px: 0.6,
-    py: 0.45,
-    s: 1.9,
+    src: "/media/campaign/button.webp",
+    alt: "A thumb pressing the band's single button on a wrist.",
   },
   {
     n: "03",
     title: "Inner-wrist contacts",
     body: "Two electrodes read skin conductance. A PPG sensor between them reads your pulse.",
-    px: 0.46,
-    py: 0.62,
-    s: 1.6,
+    src: "/media/campaign/contacts.webp",
+    alt: "The underside of the band on slate, showing two brushed-steel electrodes.",
   },
   {
     n: "04",
     title: "Nothing else",
     body: "No screen, no notifications. A woven strap and a matte enclosure you forget you’re wearing.",
-    px: 0.5,
-    py: 0.5,
-    s: 1,
+    src: "/media/campaign/alone.webp",
+    alt: "The band standing alone on a dark surface, its status light glowing.",
   },
 ];
 
-const FOCUS_X = 0.4;
+const FULL = "inset(0% 0% 0% 0%)";
 
 export function ProductStory() {
   const root = useRef<HTMLElement>(null);
@@ -56,68 +52,61 @@ export function ProductStory() {
   useGSAP(
     () => {
       const mm = gsap.matchMedia();
-      mm.add("(prefers-reduced-motion: no-preference)", () => {
-        const q = gsap.utils.selector(root);
-        const steps = q(".story__step");
-        gsap.set(steps, { clipPath: "inset(0% 100% 0% 0%)", opacity: 1 });
-        gsap.set(q(".story__focus"), { scale: 0, opacity: 0 });
+      mm.add(
+        { wide: "(prefers-reduced-motion: no-preference) and (min-width: 760px)", phone: "(prefers-reduced-motion: no-preference) and (max-width: 759px)" },
+        (ctx) => {
+          const { wide } = ctx.conditions as { wide: boolean };
+          // The window the details show through: the right side on laptops, the top on phones.
+          const WINDOW = wide ? "inset(0% 0% 0% 50%)" : "inset(0% 0% 46% 0%)";
+          const SHUT = wide ? "inset(100% 0% 0% 50%)" : "inset(54% 0% 46% 0%)";
+          const q = gsap.utils.selector(root);
+          const steps = q(".story__step");
+          const shots = q(".story__shot");
+          // Detail shots live inside the window and reveal upward; the last one is full-frame.
+          const LOCAL_SHUT = "inset(100% 0% 0% 0%)";
 
-        // Entrance before pinning: the frame opens up from a letterbox.
-        gsap.fromTo(
-          q(".story__frame"),
-          { clipPath: "inset(12% 6% 12% 6% round 28px)" },
-          {
-            clipPath: "inset(0% 0% 0% 0% round 0px)",
-            ease: "none",
-            scrollTrigger: { trigger: root.current, start: "top bottom", end: "top top", scrub: true },
-          },
-        );
+          gsap.set(steps, { autoAlpha: 0 });
+          gsap.set(q(".story__hero"), { clipPath: FULL });
+          shots.forEach((el, i) => gsap.set(el, { clipPath: i === shots.length - 1 ? SHUT : LOCAL_SHUT }));
 
-        const tl = gsap.timeline({
-          defaults: { ease: "power3.inOut" },
-          scrollTrigger: {
-            trigger: root.current,
-            start: "top top",
-            end: "+=300%",
-            pin: true,
-            scrub: 1,
-            anticipatePin: 1,
-          },
-        });
-
-        tl.to(q(".story__intro"), { opacity: 0, y: -40, filter: "blur(8px)", duration: 0.5 }, 0.25);
-        STOPS.forEach((st, i) => {
-          const at = 0.35 + i * 1.25;
-          tl.to(
-            q(".story__camera"),
-            {
-              scale: st.s,
-              xPercent: (FOCUS_X - st.px) * 100 * st.s,
-              yPercent: (0.5 - st.py) * 100 * st.s,
-              rotate: i === 3 ? 0 : (i % 2 ? -1.2 : 1.2),
-              duration: 1,
-            },
-            at,
+          // Entrance before pinning: the opening shot settles as it arrives.
+          gsap.fromTo(
+            q(".story__hero img"),
+            { scale: 1.12 },
+            { scale: 1, ease: "none", scrollTrigger: { trigger: root.current, start: "top bottom", end: "top top", scrub: true } },
           );
-          tl.fromTo(q(".story__sweep"), { xPercent: -120 }, { xPercent: 220, duration: 0.8, ease: "power2.out" }, at + 0.25);
-          if (i < 3) {
-            tl.fromTo(
-              q(".story__focus"),
-              { scale: 0.4, opacity: 0 },
-              { scale: 1, opacity: 1, duration: 0.35, ease: "back.out(2)" },
-              at + 0.7,
-            );
-            tl.to(q(".story__focus"), { scale: 1.6, opacity: 0, duration: 0.3 }, at + 1.1);
-          }
-          tl.to(steps[i], { clipPath: "inset(0% 0% 0% 0%)", duration: 0.4, ease: "expo.out" }, at + 0.5);
-          tl.from(steps[i].querySelectorAll(".story__line"), { y: 24, opacity: 0, stagger: 0.06, duration: 0.35 }, at + 0.6);
-          if (i < STOPS.length - 1) {
-            tl.to(steps[i], { clipPath: "inset(0% 0% 0% 100%)", duration: 0.35, ease: "expo.in" }, at + 1.15);
-          }
-          tl.to(q(".story__count-track"), { yPercent: -(100 / STOPS.length) * i, duration: 0.4 }, at + 0.5);
-          tl.to(q(".story__rail-fill"), { scaleY: (i + 1) / STOPS.length, duration: 1, ease: "none" }, at);
-        });
-      });
+
+          const tl = gsap.timeline({
+            defaults: { ease: "power3.inOut" },
+            scrollTrigger: {
+              trigger: root.current,
+              start: "top top",
+              end: "+=360%",
+              pin: true,
+              scrub: 1,
+              anticipatePin: 1,
+            },
+          });
+
+          tl.to(q(".story__intro"), { autoAlpha: 0, y: -40, duration: 0.4 }, 0.2)
+            .to(q(".story__hero"), { clipPath: WINDOW, duration: 1 }, 0.3)
+            .fromTo(q(".story__meta"), { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.3 }, 0.9);
+
+          STOPS.forEach((_, i) => {
+            const at = 1.1 + i * 1.2;
+            const last = i === STOPS.length - 1;
+            tl.to(shots[i], { clipPath: last ? WINDOW : FULL, duration: 0.9 }, at);
+            tl.fromTo(shots[i].querySelector("img"), { scale: 1.25 }, { scale: 1, duration: 1.4, ease: "power2.out" }, at);
+            if (last) tl.to(shots[i], { clipPath: FULL, duration: 1 }, at + 0.8);
+            tl.fromTo(steps[i], { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.01 }, at + 0.35);
+            tl.from(steps[i].querySelectorAll(".story__line"), { yPercent: 110, stagger: 0.06, duration: 0.5, ease: "expo.out" }, at + 0.35);
+            if (!last) tl.to(steps[i].querySelectorAll(".story__line"), { yPercent: -110, stagger: 0.04, duration: 0.35, ease: "expo.in" }, at + 0.95);
+            tl.to(q(".story__count-track"), { yPercent: -(100 / STOPS.length) * i, duration: 0.5 }, at + 0.3);
+            tl.to(q(".story__rail-fill"), { scaleX: (i + 1) / STOPS.length, duration: 1, ease: "none" }, at);
+          });
+          tl.to({}, { duration: 0.5 });
+        },
+      );
     },
     { scope: root },
   );
@@ -125,27 +114,25 @@ export function ProductStory() {
   return (
     <section id="story" ref={root} className="story" aria-label="The band">
       <div className="story__frame">
-        <div className="story__camera">
+        <div className="story__hero">
           <Image
-            src="/media/studyloop-band.png"
-            alt="StudyLoop band: a matte black enclosure with a cyan status light and one button on a woven strap, two metal electrodes on the inside."
+            src="/media/campaign/hero.webp"
+            alt="A student writing at a desk at night, wearing the StudyLoop band with its cyan light on."
             fill
             sizes="100vw"
-            className="story__img"
+            className="story__img story__img--wide"
           />
+          <Image src="/media/campaign/hero-phone.webp" alt="" fill sizes="100vw" className="story__img story__img--tall" />
+          <div className="story__shade" aria-hidden />
         </div>
-        <div className="story__sweep" aria-hidden />
-        <div className="story__vignette" aria-hidden />
-        <div className="story__focus" aria-hidden style={{ left: `${FOCUS_X * 100}%` }}>
-          <span />
-        </div>
+        {STOPS.map((st, i) => (
+          <div key={st.n} className={`story__shot ${i === STOPS.length - 1 ? "story__shot--full" : ""}`}>
+            <Image src={st.src} alt={st.alt} fill sizes={i === STOPS.length - 1 ? "100vw" : "(min-width: 760px) 50vw, 100vw"} className="story__img" />
+          </div>
+        ))}
       </div>
 
       <div className="story__intro">
-        <p className="eyebrow" data-reveal>
-          <span className="eyebrow__rule" aria-hidden />
-          The band
-        </p>
         <h2 className="display campaign story__title" data-split>
           Focus,
           <br />
@@ -155,26 +142,31 @@ export function ProductStory() {
         </h2>
       </div>
 
+      <div className="story__meta" aria-hidden>
+        <div className="story__count">
+          <div className="story__count-track">
+            {STOPS.map((s) => (
+              <span key={s.n}>{s.n}</span>
+            ))}
+          </div>
+        </div>
+        <div className="story__rail">
+          <span className="story__rail-fill" />
+        </div>
+      </div>
+
       <ol className="story__steps">
         {STOPS.map((st) => (
           <li key={st.n} className="story__step">
-            <span className="story__n tnum story__line">{st.n} / 04</span>
-            <h3 className="h-section story__line">{st.title}</h3>
-            <p className="body muted story__line">{st.body}</p>
+            <div className="line-mask">
+              <h3 className="campaign story__line story__name">{st.title}</h3>
+            </div>
+            <div className="line-mask">
+              <p className="body story__line story__body">{st.body}</p>
+            </div>
           </li>
         ))}
       </ol>
-
-      <div className="story__count" aria-hidden>
-        <div className="story__count-track">
-          {STOPS.map((s) => (
-            <span key={s.n}>{s.n}</span>
-          ))}
-        </div>
-      </div>
-      <div className="story__rail" aria-hidden>
-        <span className="story__rail-fill" />
-      </div>
     </section>
   );
 }

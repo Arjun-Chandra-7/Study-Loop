@@ -4,6 +4,7 @@ import { Anatomy } from "@/components/landing/Anatomy";
 import { Finale, FinePrint } from "@/components/landing/Finale";
 import { Flow } from "@/components/landing/Flow";
 import { Frequencies } from "@/components/landing/Frequencies";
+import { Night } from "@/components/landing/Night";
 import { ProductStory } from "@/components/landing/ProductStory";
 import { Intro } from "@/components/intro/Intro";
 import { MobileApp } from "@/components/mobile/MobileApp";
@@ -43,6 +44,7 @@ export default function Home() {
           <Anatomy />
           <Frequencies />
           <Flow />
+          <Night />
           <Finale />
         </main>
         <FinePrint />

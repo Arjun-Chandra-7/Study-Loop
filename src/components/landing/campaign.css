@@ -31,35 +31,10 @@
   line-height: 1.5;
 }
 
-/* ── Story: the band, and the line it stands behind ── */
-.story .story__intro {
-  bottom: 7vh;
-  max-width: none;
-  gap: var(--s-5);
-}
+/* ── Story: the opening shot, then the details through a window ── */
 .story .story__title {
-  font-size: clamp(64px, min(13.5vw, 20vh), 250px);
+  font-size: clamp(56px, min(12vw, 16vh), 230px);
   color: var(--text-1);
-  text-shadow: 0 8px 60px rgba(0, 0, 0, 0.45);
-}
-.story .story__step {
-  width: min(460px, 84vw);
-  gap: var(--s-4);
-  padding: var(--s-7);
-}
-.story .story__step .h-section {
-  font-stretch: 75%;
-  font-weight: 800;
-  text-transform: uppercase;
-  font-size: clamp(36px, 3.4vw, 56px);
-  line-height: 0.9;
-  letter-spacing: -0.01em;
-}
-.story .story__count {
-  font-stretch: 75%;
-  font-weight: 800;
-  font-size: clamp(56px, 10vh, 112px);
-  color: var(--measured);
 }
 
 /* ── Colour field: sage. The band's insides, laid out on the brand colour. ── */
@@ -105,6 +80,18 @@
 .field--sage .anatomy__bar-fill {
   background: var(--ink);
   box-shadow: none;
+}
+
+/* The band taken apart, floating on the field ahead of its four parts. */
+.anatomy .anatomy__exploded {
+  position: relative;
+  width: clamp(320px, min(38vw, 58vh), 600px);
+  aspect-ratio: 1;
+  align-self: center;
+  filter: drop-shadow(0 40px 40px rgba(18, 17, 15, 0.35));
+}
+.anatomy .anatomy__exploded img {
+  object-fit: contain;
 }
 
 /* ── Signals: dark, until 40 Hz floods the room in cinder ── */
@@ -176,6 +163,50 @@
   line-height: 0.92;
 }
 
+/* ── Night: one full-bleed photograph, the line in its dark half ── */
+.night {
+  position: relative;
+  height: 110svh;
+  min-height: 640px;
+  overflow: hidden;
+  background: var(--room);
+}
+.night__frame {
+  position: absolute;
+  inset: 0;
+}
+.night__img {
+  object-fit: cover;
+  object-position: 0% 50%;
+}
+.night__frame::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, transparent 30%, rgba(11, 10, 7, 0.82) 58%),
+    linear-gradient(0deg, var(--room), transparent 25%),
+    linear-gradient(180deg, var(--room), transparent 20%);
+}
+.night__copy {
+  position: absolute;
+  right: var(--page-x);
+  top: 50%;
+  translate: 0 -50%;
+  width: min(44vw, 760px);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-6);
+}
+.night .night__title {
+  font-size: clamp(56px, min(8vw, 14vh), 168px);
+  color: var(--text-1);
+}
+.night .night__body {
+  max-width: 36ch;
+  color: var(--text-2);
+}
+
 /* ── Finale: the loop, inside the name ── */
 .finale .finale__line {
   font-size: clamp(48px, min(7vw, 11vh), 140px);
@@ -205,8 +236,28 @@
 }
 
 @media (max-width: 759px) {
-  .story .story__step {
-    padding: var(--s-5);
+  .night {
+    height: 100svh;
+  }
+  .night__img {
+    object-position: 22% 50%;
+  }
+  .night__frame::after {
+    background:
+      linear-gradient(0deg, var(--room) 8%, rgba(11, 10, 7, 0.75) 45%, transparent 70%),
+      linear-gradient(180deg, var(--room), transparent 20%);
+  }
+  .night__copy {
+    left: var(--s-4);
+    right: var(--s-4);
+    top: auto;
+    bottom: calc(8vh + 72px + env(safe-area-inset-bottom, 0px));
+    translate: none;
+    width: auto;
+    gap: var(--s-4);
+  }
+  .night .night__title {
+    font-size: clamp(44px, 13vw, 72px);
   }
   .sig .sig__hz-num {
     font-size: clamp(72px, 22vw, 120px);

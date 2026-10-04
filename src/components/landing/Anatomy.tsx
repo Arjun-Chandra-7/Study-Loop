@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
@@ -162,6 +163,14 @@ export function Anatomy() {
         </p>
       </div>
       <div className="anatomy__track">
+        <div className="plate-wrap anatomy__exploded">
+          <Image
+            src="/media/campaign/exploded.webp"
+            alt="Exploded view of the band: top shell with the status light, circuit board, optical pulse sensor, battery, and the base with two electrodes on the woven strap."
+            fill
+            sizes="(min-width: 760px) 40vw, 82vw"
+          />
+        </div>
         {PARTS.map((p) => (
           <div key={p.n} className="plate-wrap">
             <Tilt className="plate">
