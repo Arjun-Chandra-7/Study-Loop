@@ -85,7 +85,7 @@ export default function LoginPage() {
   return (
     <main className="login">
       <div className="login__visual">
-        <Image src="/media/studyloop-band.png" alt="" fill sizes="(max-width: 759px) 100vw, 55vw" preload className="login__img" />
+        <Image src="/media/studyloop-band-hd.png" alt="" fill sizes="(max-width: 759px) 100vw, 55vw" preload className="login__img" />
         <div className="login__logo">
           <Logo />
         </div>

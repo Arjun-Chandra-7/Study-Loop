@@ -34,7 +34,7 @@ export function Finale() {
   const [orbSize, setOrbSize] = useState(420);
 
   useEffect(() => {
-    const fit = () => setOrbSize(Math.round(Math.min(440, window.innerWidth * 0.7, window.innerHeight * 0.46)));
+    const fit = () => setOrbSize(Math.round(Math.min(440, window.innerWidth * 0.7, window.innerHeight * 0.4)));
     fit();
     window.addEventListener("resize", fit);
     return () => window.removeEventListener("resize", fit);

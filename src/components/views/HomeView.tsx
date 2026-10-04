@@ -52,7 +52,7 @@ export function HomeView({ stageRef }: { stageRef: React.RefObject<HTMLDivElemen
       <motion.div className="hero__product" style={{ x: imgX, y: imgY }}>
         <div className="hero__plate" aria-hidden>
           <Image
-            src="/media/studyloop-band.png"
+            src="/media/studyloop-band-hd.png"
             alt=""
             fill
             preload
