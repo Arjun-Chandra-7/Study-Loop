@@ -1,0 +1,514 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <title>StudyLoop — A band that feels stress (light)</title>
+    <script src="assets/gsap.min.js"></script>
+    <script src="assets/audio-data.js"></script>
+    <style>
+      @font-face {
+        font-family: "Mona Sans";
+        src: url("assets/fonts/MonaSansVF.woff2") format("woff2");
+        font-weight: 200 900;
+        font-stretch: 75% 125%;
+      }
+
+      :root {
+        --paper: #f4efe4;
+        --well: #ece6d9;
+        --card: #fbf8f2;
+        --ink: #12110f;
+        --ink-2: #4a463f;
+        --muted: #6b655b;
+        --sage: #9dba8e;
+        --sage-ink: #4f6b43;
+        --act: #cf4f33;
+        --act-ink: #a93f27;
+        --cyan: #3fc7e6;
+        --rule: rgba(18, 17, 15, 0.1);
+        --rule-2: rgba(18, 17, 15, 0.18);
+      }
+      * { box-sizing: border-box; }
+      body { margin: 0; background: var(--paper); color: var(--ink); font-family: "Mona Sans", sans-serif; }
+      #root { position: relative; width: 100%; height: 100%; overflow: hidden; background: var(--paper); }
+
+      /* Paper: grid, warm vignette, header, registration marks */
+      #paper { position: absolute; inset: 0; }
+      #grid {
+        position: absolute; inset: 0;
+        background-image:
+          linear-gradient(rgba(18,17,15,0.055) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(18,17,15,0.055) 1px, transparent 1px),
+          linear-gradient(rgba(18,17,15,0.025) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(18,17,15,0.025) 1px, transparent 1px);
+        background-size: 200px 200px, 200px 200px, 40px 40px, 40px 40px;
+        background-position: -40px -20px, -40px -20px, -40px -20px, -40px -20px;
+      }
+      #warm { position: absolute; inset: 0; background: radial-gradient(70% 80% at 50% 55%, rgba(255,250,240,0.0) 40%, rgba(207,79,51,0.07) 100%); }
+      #sun { position: absolute; left: 0; top: 0; width: 1400px; height: 900px; background: radial-gradient(55% 55% at 25% 15%, rgba(255,253,247,0.9), transparent 70%); }
+      #head {
+        position: absolute; left: 120px; right: 120px; top: 44px; height: 30px;
+        display: flex; align-items: center; justify-content: space-between;
+        font-stretch: 75%; font-weight: 600; font-size: 20px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted);
+      }
+      #head .l { display: flex; align-items: center; gap: 14px; }
+      #head .l i { display: block; width: 12px; height: 12px; border-radius: 50%; background: var(--act); }
+      #head-rule { position: absolute; left: 120px; right: 120px; top: 88px; height: 1px; background: var(--rule-2); }
+      .reg { position: absolute; width: 28px; height: 28px; }
+      .reg::before, .reg::after { content: ""; position: absolute; background: rgba(18,17,15,0.35); }
+      .reg::before { left: 13px; top: 0; width: 2px; height: 28px; }
+      .reg::after { left: 0; top: 13px; width: 28px; height: 2px; }
+
+      .scene { position: absolute; inset: 0; }
+      .in { position: absolute; inset: 0; }
+      .kicker {
+        display: flex; align-items: center; gap: 14px;
+        font-stretch: 75%; font-weight: 650; font-size: 24px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--act-ink);
+      }
+      .kicker i { display: block; width: 40px; height: 2px; background: var(--act); }
+      .card {
+        position: absolute; background: var(--card); border: 1px solid var(--rule); border-radius: 24px;
+        box-shadow: 0 1px 0 rgba(255,255,255,0.8) inset, 0 30px 80px -30px rgba(70,55,30,0.35), 0 4px 14px rgba(70,55,30,0.06);
+      }
+      .label { font-size: 22px; font-weight: 500; color: var(--ink-2); }
+      .chip {
+        display: inline-flex; align-items: center; gap: 10px; padding: 9px 18px; border-radius: 999px;
+        border: 1px solid var(--rule-2); background: var(--card); font-size: 22px; font-weight: 550; color: var(--ink); white-space: nowrap;
+      }
+      .chip b { display: block; width: 10px; height: 10px; border-radius: 50%; background: var(--sage); }
+      .num { font-stretch: 112%; font-weight: 650; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+
+      /* S1 · Hook */
+      #s1-wrap { position: absolute; left: 120px; top: 360px; width: 1680px; }
+      #s1-k { margin-bottom: 40px; }
+      .hook { font-size: 112px; line-height: 1.2; font-weight: 700; letter-spacing: -0.025em; white-space: nowrap; }
+      .hook .w { display: inline-block; margin-right: 0.24em; }
+      #s1-b { color: var(--act); margin-top: 14px; }
+
+      /* S2 · Inside the band */
+      .layer { position: absolute; left: 510px; width: 900px; overflow: hidden; }
+      .layer img { position: absolute; left: 0; width: 900px; height: 900px; display: block; }
+      #ly-a { top: 110px; height: 277px; }
+      #ly-a img { top: 0; }
+      #ly-b { top: 387px; height: 76px; }
+      #ly-b img { top: -277px; }
+      #ly-c { top: 463px; height: 78px; }
+      #ly-c img { top: -353px; }
+      #ly-d { top: 541px; height: 469px; }
+      #ly-d img { top: -431px; }
+      #light { position: absolute; left: 397px; top: 84px; width: 92px; height: 11px; border-radius: 6px; background: #bdf3ff;
+        box-shadow: 0 0 10px 3px rgba(63,199,230,0.85), 0 0 46px 14px rgba(63,199,230,0.4); }
+      #shadow { position: absolute; left: 600px; top: 975px; width: 720px; height: 60px; border-radius: 50%;
+        background: radial-gradient(50% 50% at 50% 50%, rgba(60,45,25,0.22), transparent 70%); }
+      #leaders { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; overflow: visible; }
+      .tag { position: absolute; width: 400px; }
+      .tag.l { text-align: right; }
+      .tag .n { font-stretch: 75%; font-weight: 650; font-size: 20px; letter-spacing: 0.14em; color: var(--act-ink); }
+      .tag .t { margin-top: 6px; font-size: 38px; font-weight: 680; letter-spacing: -0.01em; }
+      .tag .d { margin-top: 6px; font-size: 26px; color: var(--ink-2); }
+      #tg1 { left: 120px; top: 150px; }
+      #tg2 { left: 120px; top: 372px; }
+      #tg3 { left: 1400px; top: 590px; }
+      #tg4 { left: 1400px; top: 158px; }
+      #s2-title { position: absolute; left: 120px; top: 860px; }
+      #s2-title .h { margin-top: 14px; font-size: 64px; font-weight: 700; letter-spacing: -0.02em; }
+
+      /* S3 · Baseline */
+      #s3-left { position: absolute; left: 120px; top: 300px; width: 840px; }
+      #s3-head { margin-top: 28px; font-size: 96px; line-height: 1.02; font-weight: 720; letter-spacing: -0.03em; }
+      #s3-sub { margin-top: 28px; font-size: 38px; line-height: 1.25; color: var(--ink-2); width: 840px; }
+      #s3-card { left: 1000px; top: 160px; width: 800px; height: 780px; }
+      #s3-card .top { position: absolute; left: 48px; right: 48px; top: 44px; display: flex; align-items: center; justify-content: space-between; }
+      #s3-card .ttl { font-size: 34px; font-weight: 700; }
+      #ring { position: absolute; left: 250px; top: 140px; width: 300px; height: 300px; }
+      #ring svg { display: block; width: 300px; height: 300px; }
+      #ring-num { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 84px; }
+      #ring-set { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+      #ring-set svg { display: block; width: 110px; height: 110px; }
+      #s3-hint, #s3-done { position: absolute; left: 0; right: 0; top: 476px; text-align: center; font-size: 28px; }
+      #s3-hint { color: var(--ink-2); }
+      #s3-done { color: var(--sage-ink); font-weight: 650; }
+      #s3-tiles { position: absolute; left: 48px; right: 48px; top: 560px; display: flex; gap: 24px; }
+      .tile { flex: 1; height: 168px; border-radius: 16px; background: var(--well); padding: 26px 28px; }
+      .tile .v { margin-top: 10px; font-size: 64px; color: var(--ink); }
+      .tile .v small { font-size: 26px; font-weight: 500; color: var(--ink-2); margin-left: 10px; letter-spacing: 0; font-stretch: 100%; }
+
+      /* S4 · The answer */
+      #s4-cap { position: absolute; left: 120px; top: 128px; width: 1240px; font-size: 64px; line-height: 1.1; font-weight: 700; letter-spacing: -0.02em; }
+      #s4-panel { left: 120px; top: 330px; width: 1080px; height: 640px; }
+      #s4-row { position: absolute; left: 44px; right: 44px; top: 36px; height: 60px; display: flex; align-items: center; justify-content: space-between; }
+      #s4-row .ttl { font-size: 30px; font-weight: 700; }
+      #s4-row .ttl span { font-weight: 450; color: var(--ink-2); margin-left: 12px; font-size: 26px; }
+      #badges { position: absolute; right: 44px; top: 36px; width: 330px; height: 60px; }
+      .badge {
+        position: absolute; right: 0; top: 0; height: 60px; display: flex; align-items: center; gap: 12px;
+        padding: 0 24px; border-radius: 30px; border: 2px solid currentColor; background: var(--card);
+        font-size: 26px; font-weight: 650; white-space: nowrap;
+      }
+      .badge i { display: block; width: 14px; height: 14px; border-radius: 50%; background: currentColor; }
+      #b-stable, #b-recovering { color: var(--sage-ink); }
+      #b-changing { color: var(--ink-2); }
+      #b-elevated { color: var(--act-ink); background: #fbe9e2; }
+      #plot { position: absolute; left: 44px; top: 124px; width: 992px; height: 440px; border-radius: 12px; overflow: hidden; background: #fdfbf6; }
+      #plot svg { display: block; width: 992px; height: 440px; }
+      #plot-legend { position: absolute; left: 44px; top: 584px; display: flex; gap: 30px; font-size: 22px; color: var(--ink-2); }
+      #plot-legend span { display: flex; align-items: center; gap: 10px; }
+      #plot-legend i { display: block; width: 26px; height: 10px; border-radius: 5px; }
+      #now { left: 1250px; top: 330px; width: 550px; height: 640px; }
+      #now .lbl { position: absolute; left: 44px; top: 44px; }
+      #now .song { position: absolute; left: 44px; top: 86px; font-size: 36px; font-weight: 700; }
+      #tempo { position: absolute; left: 40px; top: 160px; font-size: 176px; line-height: 1; }
+      #tempo-u { position: absolute; left: 44px; top: 380px; font-size: 26px; color: var(--ink-2); }
+      #prog { position: absolute; left: 44px; right: 44px; top: 436px; height: 6px; border-radius: 3px; background: var(--well); overflow: hidden; }
+      #prog-f { width: 100%; height: 6px; background: var(--ink); transform-origin: 0 50%; }
+      #now-state { position: absolute; left: 44px; top: 478px; width: 462px; height: 140px; }
+      #ns-follow, #ns-elev { position: absolute; left: 0; top: 0; }
+      #ns-elev { border-color: rgba(207,79,51,0.5); color: var(--act-ink); background: #fbe9e2; }
+      #ns-elev b { background: var(--act); }
+      #ns-note { position: absolute; left: 0; top: 76px; font-size: 30px; font-weight: 650; color: var(--act-ink); }
+
+      /* S5 · The print */
+      #print { position: absolute; left: 190px; top: 150px; width: 600px; height: 800px; background: #fffdf8; padding: 24px 24px 0;
+        box-shadow: 0 2px 4px rgba(60,45,25,0.12), 0 40px 70px -30px rgba(60,45,25,0.5); }
+      #print img { display: block; width: 552px; height: 690px; object-fit: cover; }
+      #print .cap { margin-top: 22px; font-stretch: 75%; font-weight: 600; font-size: 20px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+      #tape { position: absolute; left: 400px; top: 126px; width: 200px; height: 56px; background: rgba(236,230,217,0.82); border: 1px solid rgba(18,17,15,0.06); }
+      #s5-right { position: absolute; left: 900px; top: 220px; width: 900px; }
+      #s5-head { margin-top: 28px; font-size: 76px; line-height: 1.06; font-weight: 720; letter-spacing: -0.025em; }
+      #stats { position: absolute; left: 900px; top: 640px; width: 900px; display: flex; gap: 24px; }
+      .stat { flex: 1; height: 196px; border-radius: 18px; background: var(--card); border: 1px solid var(--rule); padding: 26px 28px;
+        box-shadow: 0 20px 50px -30px rgba(70,55,30,0.4); }
+      .stat .n { font-size: 76px; line-height: 1.05; color: var(--sage-ink); }
+      .stat .n.act { color: var(--act-ink); }
+      .stat .label { margin-top: 10px; }
+      #s5-note { position: absolute; left: 900px; top: 870px; font-size: 22px; color: var(--muted); }
+
+      /* S6 · Logo */
+      #s6-wrap { position: absolute; left: 0; right: 0; top: 230px; display: flex; flex-direction: column; align-items: center; }
+      #logo { display: block; width: 1100px; height: 441px; }
+      #s6-tag { margin-top: 34px; font-size: 72px; font-weight: 700; letter-spacing: -0.02em; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-width="1920" data-height="1080" data-duration="24.6">
+      <div id="paper" class="clip" data-start="0" data-duration="24.6" data-track-index="0">
+        <div id="grid"></div>
+        <div id="sun"></div>
+        <div id="warm"></div>
+        <div id="head">
+          <div class="l"><i></i>StudyLoop · Field notes</div>
+          <div id="sheet">Sheet 01 / 06</div>
+        </div>
+        <div id="head-rule"></div>
+        <div class="reg" style="left:46px;top:46px"></div>
+        <div class="reg" style="right:46px;top:46px"></div>
+        <div class="reg" style="left:46px;bottom:46px"></div>
+        <div class="reg" style="right:46px;bottom:46px"></div>
+      </div>
+
+      <!-- S1 · Hook -->
+      <section id="s1" class="clip scene" data-start="0" data-duration="3.27" data-track-index="1">
+        <div class="in" id="s1-in">
+          <div id="s1-wrap">
+            <div class="kicker" id="s1-k"><i></i>SL-01 · The band</div>
+            <div class="hook" id="s1-a"><span class="w">A</span><span class="w">band</span><span class="w">that</span><span class="w">feels</span><span class="w">stress.</span></div>
+            <div class="hook" id="s1-b">Music that answers it.</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- S2 · Inside the band -->
+      <section id="s2" class="clip scene" data-start="3.27" data-duration="5.47" data-track-index="2">
+        <div class="in" id="s2-in">
+          <div id="shadow"></div>
+          <div class="layer" id="ly-d"><img data-layout-allow-overflow src="assets/img/exploded.webp" alt="" /></div>
+          <div class="layer" id="ly-c"><img data-layout-allow-overflow src="assets/img/exploded.webp" alt="" /></div>
+          <div class="layer" id="ly-b"><img data-layout-allow-overflow src="assets/img/exploded.webp" alt="" /></div>
+          <div class="layer" id="ly-a"><img data-layout-allow-overflow src="assets/img/exploded.webp" alt="Exploded view of the StudyLoop band" /><div id="light"></div></div>
+          <svg id="leaders" viewBox="0 0 1920 1080">
+            <g fill="none" stroke="#12110f" stroke-width="2">
+              <path id="ld1" d="M540 205 L940 205" pathLength="1" stroke-dasharray="1 1" stroke-dashoffset="1" />
+              <path id="ld2" d="M540 427 L940 421" pathLength="1" stroke-dasharray="1 1" stroke-dashoffset="1" />
+              <path id="ld3" d="M1380 640 L1220 640 L1072 608" pathLength="1" stroke-dasharray="1 1" stroke-dashoffset="1" />
+              <path id="ld4" d="M1380 212 L1140 212" pathLength="1" stroke-dasharray="1 1" stroke-dashoffset="1" />
+            </g>
+            <g fill="#fffdf8" stroke="#cf4f33" stroke-width="3">
+              <circle id="dt1" cx="953" cy="205" r="9" />
+              <circle id="dt2" cx="960" cy="421" r="9" />
+              <circle id="dt3" cx="1058" cy="605" r="9" />
+              <circle id="dt4" cx="1126" cy="212" r="9" />
+            </g>
+          </svg>
+          <div class="tag l" id="tg1"><div class="n">01</div><div class="t">Status light</div><div class="d">Breathes during baseline.</div></div>
+          <div class="tag l" id="tg2"><div class="n">02</div><div class="t">Pulse sensor</div><div class="d">Reads your pulse.</div></div>
+          <div class="tag" id="tg3"><div class="n">03</div><div class="t">EDA electrodes</div><div class="d">Read skin conductance.</div></div>
+          <div class="tag" id="tg4"><div class="n">04</div><div class="t">One button</div><div class="d">Press to mark a moment.</div></div>
+          <div id="s2-title"><div class="kicker"><i></i>Inside the band</div></div>
+        </div>
+      </section>
+
+      <!-- S3 · Baseline -->
+      <section id="s3" class="clip scene" data-start="8.74" data-duration="3.28" data-track-index="1">
+        <div class="in" id="s3-in">
+          <div id="s3-left">
+            <div class="kicker"><i></i>01 · Baseline</div>
+            <div id="s3-head">Twenty still seconds.</div>
+            <div id="s3-sub">The band learns what normal looks like today.</div>
+          </div>
+          <div class="card" id="s3-card">
+            <div class="top">
+              <div class="ttl">Capturing baseline</div>
+              <div class="chip"><b></b>Band ready</div>
+            </div>
+            <div id="ring">
+              <svg viewBox="0 0 300 300">
+                <circle cx="150" cy="150" r="130" fill="none" stroke="#ece6d9" stroke-width="14" />
+                <circle id="ring-arc" cx="150" cy="150" r="130" fill="none" stroke="#4f6b43" stroke-width="14" stroke-linecap="round" pathLength="1" stroke-dasharray="1 1" stroke-dashoffset="1" transform="rotate(-90 150 150)" />
+              </svg>
+              <div id="ring-num" class="num">0:20</div>
+              <div id="ring-set"><svg viewBox="0 0 110 110"><path d="M22 58 L46 80 L90 32" fill="none" stroke="#4f6b43" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" /></svg></div>
+            </div>
+            <div id="s3-hint" data-layout-allow-overlap>Capturing your baseline. Sit still.</div>
+            <div id="s3-done" data-layout-allow-overlap>Your baseline</div>
+            <div id="s3-tiles">
+              <div class="tile"><div class="label">Heart rate</div><div class="v num">68<small>bpm</small></div></div>
+              <div class="tile"><div class="label">Skin conductance</div><div class="v num">2.4<small>µS</small></div></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- S4 · The answer -->
+      <section id="s4" class="clip scene" data-start="12.02" data-duration="5.45" data-track-index="2">
+        <div class="in" id="s4-in">
+          <div id="s4-cap">When stress climbs, your music slows and softens with you.</div>
+          <div class="card" id="s4-panel">
+            <div id="s4-row"><div class="ttl">Skin conductance<span>vs. your baseline</span></div></div>
+            <div id="badges" data-layout-allow-overlap>
+              <div data-layout-allow-overlap class="badge" id="b-stable"><i></i>Stable</div>
+              <div data-layout-allow-overlap class="badge" id="b-changing"><i></i>Changing</div>
+              <div data-layout-allow-overlap class="badge" id="b-elevated"><i></i>Elevated</div>
+              <div data-layout-allow-overlap class="badge" id="b-recovering"><i></i>Recovering</div>
+            </div>
+            <div id="plot">
+              <svg viewBox="0 0 992 440" id="plot-svg">
+                <g id="plot-grid" stroke="rgba(18,17,15,0.07)" stroke-width="1"></g>
+                <rect x="0" y="262" width="992" height="76" fill="rgba(157,186,142,0.28)" />
+                <line x1="0" y1="300" x2="992" y2="300" stroke="#4f6b43" stroke-width="2" stroke-dasharray="8 8" />
+                <path id="eda-path" d="M0 300" fill="none" stroke="#12110f" stroke-width="4" stroke-linejoin="round" stroke-linecap="round" pathLength="1" stroke-dasharray="1 1" stroke-dashoffset="1" />
+                <circle id="pen" cx="0" cy="300" r="10" fill="#12110f" />
+              </svg>
+            </div>
+            <div id="plot-legend">
+              <span><i style="background:#12110f"></i>Skin conductance</span>
+              <span><i style="background:rgba(157,186,142,0.6)"></i>Your baseline</span>
+              <span><i style="background:#cf4f33"></i>Elevated</span>
+            </div>
+          </div>
+          <div class="card" id="now">
+            <div class="label lbl">Now playing</div>
+            <div class="song">Loop · Lo-fi groove</div>
+            <div id="tempo" class="num">92</div>
+            <div id="tempo-u">bpm · lyric-free</div>
+            <div id="prog"><div id="prog-f"></div></div>
+            <div id="now-state">
+              <div class="chip" id="ns-follow" data-layout-allow-overlap><b></b>Follows your band</div>
+              <div class="chip" id="ns-elev" data-layout-allow-overlap><b></b>Elevated · easing off</div>
+              <div id="ns-note">Slower and softer.</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- S5 · The print -->
+      <section id="s5" class="clip scene" data-start="17.47" data-duration="4.37" data-track-index="1">
+        <div class="in" id="s5-in">
+          <div id="print-wrap">
+            <div id="print">
+              <img src="assets/img/review.webp" alt="A student at a laptop showing the StudyLoop dashboard, the band on the wrist" />
+              <div class="cap">Review · 11:42 pm</div>
+            </div>
+            <div id="tape" data-layout-allow-overflow></div>
+          </div>
+          <div id="s5-right">
+            <div class="kicker"><i></i>03 · Review</div>
+            <div id="s5-head">See where your signals moved away from baseline.</div>
+          </div>
+          <div id="stats">
+            <div class="stat" id="st1"><div class="n num"><span id="n1">0</span>%</div><div class="label">Near baseline</div></div>
+            <div class="stat" id="st2"><div class="n act num" id="n2">0</div><div class="label">Elevated moments</div></div>
+            <div class="stat" id="st3"><div class="n num" id="n3">0</div><div class="label">Moments you marked</div></div>
+          </div>
+          <div id="s5-note">Sample session · 45 min</div>
+        </div>
+      </section>
+
+      <!-- S6 · Logo -->
+      <section id="s6" class="clip scene" data-start="21.84" data-duration="2.76" data-track-index="2">
+        <div class="in" id="s6-in">
+          <div id="s6-wrap">
+            <img id="logo" src="assets/img/studyloop-logo.png" alt="StudyLoop" />
+            <div id="s6-tag">Focus, measured differently.</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Audio -->
+      <audio id="music" src="assets/music/happy-beats-business-moves-vol-12-by-ende-dot-app.mp3" data-start="0" data-duration="24.6" data-track-index="10" data-volume="0.32"
+        data-automation='{"version":1,"lanes":[{"target":"volume","points":[{"t":0,"v":0},{"t":0.5,"v":1},{"t":23.2,"v":1},{"t":24.6,"v":0}]}]}'></audio>
+      <audio id="sfx-explode" src="assets/sfx/impactSoft_medium_001.ogg" data-start="3.80" data-duration="0.18" data-track-index="11" data-volume="0.55"></audio>
+      <audio id="sfx-l1" src="assets/sfx/drop_001.ogg" data-start="4.39" data-duration="0.11" data-track-index="12" data-volume="0.45"></audio>
+      <audio id="sfx-l2" src="assets/sfx/drop_002.ogg" data-start="5.34" data-duration="0.19" data-track-index="13" data-volume="0.45"></audio>
+      <audio id="sfx-l3" src="assets/sfx/drop_001.ogg" data-start="6.00" data-duration="0.11" data-track-index="12" data-volume="0.45"></audio>
+      <audio id="sfx-l4" src="assets/sfx/drop_002.ogg" data-start="6.56" data-duration="0.19" data-track-index="13" data-volume="0.45"></audio>
+      <audio id="sfx-lock" src="assets/sfx/click_003.ogg" data-start="10.93" data-duration="0.05" data-track-index="11" data-volume="0.6"></audio>
+      <audio id="sfx-elev" src="assets/sfx/switch_002.ogg" data-start="15.29" data-duration="0.2" data-track-index="12" data-volume="0.55"></audio>
+      <audio id="sfx-print" src="assets/sfx/card-slide-1.ogg" data-start="17.42" data-duration="0.6" data-track-index="13" data-volume="0.55"></audio>
+      <audio id="sfx-bell" src="assets/sfx/impactBell_heavy_000.ogg" data-start="22.37" data-duration="1.5" data-track-index="11" data-volume="0.65"></audio>
+    </div>
+
+    <script>
+      (function () {
+        var tl = gsap.timeline({ paused: true });
+        var FPS = 30, DUR = 24.6;
+        var AD = window.AUDIO_DATA;
+        function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+        function prog(t, a, b) { return clamp((t - a) / (b - a), 0, 1); }
+        function eo(p) { return 1 - Math.pow(1 - p, 3); }
+        function eio(p) { return p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2; }
+        function gauss(x, m, s) { return Math.exp(-((x - m) * (x - m)) / (2 * s * s)); }
+        var NS = "http://www.w3.org/2000/svg";
+
+        /* ── Plot: graph-paper grid + deterministic EDA trace ── */
+        var pg = document.getElementById("plot-grid"), i, ln;
+        for (i = 1; i < 25; i++) {
+          ln = document.createElementNS(NS, "line");
+          ln.setAttribute("x1", i * 40); ln.setAttribute("x2", i * 40); ln.setAttribute("y1", 0); ln.setAttribute("y2", 440);
+          pg.appendChild(ln);
+        }
+        for (i = 1; i < 11; i++) {
+          ln = document.createElementNS(NS, "line");
+          ln.setAttribute("y1", i * 40); ln.setAttribute("y2", i * 40); ln.setAttribute("x1", 0); ln.setAttribute("x2", 992);
+          pg.appendChild(ln);
+        }
+        // baseline band centre y=300; the climb peaks while the badge reads Elevated
+        function eda(u) { return 300 - 210 * gauss(u, 0.64, 0.13) + 7 * Math.sin(u * 53) + 4 * Math.sin(u * 19 + 1); }
+        var d = "", N = 220;
+        for (i = 0; i <= N; i++) { d += (i ? "L" : "M") + ((i / N) * 992).toFixed(1) + " " + eda(i / N).toFixed(1); }
+        document.getElementById("eda-path").setAttribute("d", d);
+        var T_PLOT0 = 12.4, T_PLOT1 = 17.1;
+
+        /* ── S1 · Hook ── */
+        tl.fromTo("#s1-k", { opacity: 0, x: -24 }, { opacity: 1, x: 0, duration: 0.45, ease: "expo.out" }, 0.15);
+        tl.fromTo("#s1-a .w", { opacity: 0, y: 36 }, { opacity: 1, y: 0, duration: 0.5, ease: "expo.out", stagger: 0.16 }, 0.3);
+        tl.fromTo("#s1-b", { opacity: 0, y: 36 }, { opacity: 1, y: 0, duration: 0.55, ease: "expo.out" }, 1.64); // beat-grid: 1.64
+        tl.to("#s1-in", { opacity: 0, y: -50, duration: 0.3, ease: "power2.in" }, 2.97);
+
+        /* ── S2 · Inside the band ── */
+        tl.fromTo("#s2-in", { opacity: 0 }, { opacity: 1, duration: 0.3, ease: "power1.out" }, 3.27);
+        tl.fromTo(["#ly-a", "#ly-b", "#ly-c", "#ly-d"], { y: function (k) { return [150, 70, -10, -120][k]; } },
+          { y: 0, duration: 0.7, ease: "expo.inOut", stagger: 0.04 }, 3.6); // beat-grid: separates on 3.82
+        tl.fromTo("#shadow", { scaleX: 0.75, opacity: 0.6 }, { scaleX: 1, opacity: 1, duration: 0.8, ease: "expo.out" }, 3.6);
+        tl.fromTo("#s2-title", { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.45, ease: "expo.out" }, 3.5);
+        // beat-grid: labels at 4.39 / 5.34 / 6.00 / 6.56; whole set holds to 8.45
+        [[1, 4.39], [2, 5.34], [3, 6.0], [4, 6.56]].forEach(function (p) {
+          var n = p[0], t = p[1];
+          tl.fromTo("#ld" + n, { attr: { "stroke-dashoffset": -1 } }, { attr: { "stroke-dashoffset": 0 }, duration: 0.35, ease: "power2.out" }, t - 0.05);
+          tl.fromTo("#dt" + n, { scale: 0, transformOrigin: "50% 50%" }, { scale: 1, duration: 0.3, ease: "back.out(3)" }, t);
+          tl.fromTo("#tg" + n, { opacity: 0, x: n < 3 ? -20 : 20 }, { opacity: 1, x: 0, duration: 0.4, ease: "expo.out" }, t + 0.08);
+        });
+        tl.to("#s2-in", { opacity: 0, y: -40, duration: 0.28, ease: "power2.in" }, 8.45);
+
+        /* ── S3 · Baseline ── */
+        tl.fromTo("#s3-card", { opacity: 0, y: 70 }, { opacity: 1, y: 0, duration: 0.6, ease: "expo.out" }, 8.74); // beat-locked: 8.74s
+        tl.fromTo("#s3-left", { opacity: 0, x: -40 }, { opacity: 1, x: 0, duration: 0.5, ease: "expo.out" }, 8.82);
+        tl.fromTo("#ring-arc", { attr: { "stroke-dashoffset": 1 } }, { attr: { "stroke-dashoffset": 0 }, duration: 1.85, ease: "power1.inOut" }, 9.05);
+        tl.set(["#ring-set", "#s3-done"], { opacity: 0 }, 0);
+        tl.to(["#ring-num", "#s3-hint"], { opacity: 0, duration: 0.1 }, 10.9);
+        tl.fromTo("#ring-set", { opacity: 0, scale: 0.6 }, { opacity: 1, scale: 1, duration: 0.4, ease: "back.out(2.4)", immediateRender: false }, 10.93); // beat-grid: 10.93
+        tl.fromTo("#s3-done", { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.3, ease: "expo.out", immediateRender: false }, 10.93);
+        tl.fromTo("#s3-tiles .tile", { opacity: 0.3 }, { opacity: 1, duration: 0.3, stagger: 0.1 }, 10.93);
+        tl.to("#s3-in", { opacity: 0, x: -60, duration: 0.26, ease: "power2.in" }, 11.76);
+
+        /* ── S4 · The answer ── */
+        tl.fromTo("#s4-cap", { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.5, ease: "expo.out" }, 12.06);
+        tl.fromTo("#s4-panel", { opacity: 0, x: 80 }, { opacity: 1, x: 0, duration: 0.55, ease: "expo.out" }, 12.1);
+        tl.fromTo("#now", { opacity: 0, x: 100 }, { opacity: 1, x: 0, duration: 0.55, ease: "expo.out" }, 12.2);
+        tl.fromTo("#eda-path", { attr: { "stroke-dashoffset": 1 } }, { attr: { "stroke-dashoffset": 0 }, duration: T_PLOT1 - T_PLOT0, ease: "none" }, T_PLOT0);
+        // beat-grid: badge steps 12.40 / 14.20 / 15.29 / 16.38 (one word each, held ≥1 s)
+        var badgeT = [["#b-stable", 12.4], ["#b-changing", 14.2], ["#b-elevated", 15.29], ["#b-recovering", 16.38]];
+        tl.set(".badge", { opacity: 0 }, 0);
+        badgeT.forEach(function (b, k) {
+          tl.fromTo(b[0], { opacity: 0, scale: 0.86 }, { opacity: 1, scale: 1, duration: 0.3, ease: "back.out(2.2)", immediateRender: false }, b[1]);
+          if (k < badgeT.length - 1) tl.to(b[0], { opacity: 0, duration: 0.1 }, badgeT[k + 1][1]);
+        });
+        tl.set(["#ns-elev", "#ns-note"], { opacity: 0 }, 0);
+        tl.to("#ns-follow", { opacity: 0, duration: 0.12 }, 15.29);
+        tl.fromTo("#ns-elev", { opacity: 0, scale: 0.9 }, { opacity: 1, scale: 1, duration: 0.3, ease: "back.out(2)", immediateRender: false }, 15.29);
+        tl.fromTo("#ns-note", { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: 0.35, ease: "expo.out", immediateRender: false }, 15.5);
+        tl.to("#s4-in", { opacity: 0, y: -40, duration: 0.26, ease: "power2.in" }, 17.2);
+
+        /* ── S5 · The print ── */
+        tl.fromTo("#print-wrap", { opacity: 0, y: -120, rotation: -9, scale: 1.08, transformOrigin: "50% 30%" },
+          { opacity: 1, y: 0, rotation: -3, scale: 1, duration: 0.6, ease: "expo.out" }, 17.47); // beat-locked: 17.47s
+        tl.fromTo("#s5-right", { opacity: 0, x: 40 }, { opacity: 1, x: 0, duration: 0.5, ease: "expo.out" }, 17.65);
+        // beat-grid: stats at 18.56 / 19.10 / 19.66, set holds to 21.6
+        ["#st1", "#st2", "#st3"].forEach(function (s, k) {
+          tl.fromTo(s, { opacity: 0, y: 26 }, { opacity: 1, y: 0, duration: 0.4, ease: "expo.out" }, [18.56, 19.1, 19.66][k]);
+        });
+        tl.fromTo("#s5-note", { opacity: 0 }, { opacity: 1, duration: 0.4 }, 19.9);
+        tl.to("#print-wrap", { y: -12, duration: 3.6, ease: "none" }, 18.1);
+        tl.to("#s5-in", { opacity: 0, y: -40, duration: 0.28, ease: "power2.in" }, 21.56);
+
+        /* ── S6 · Logo stamp ── */
+        tl.fromTo("#logo", { opacity: 0, scale: 1.35, rotation: -6 }, { opacity: 1, scale: 1, rotation: -2, duration: 0.24, ease: "power3.in" }, 22.13); // beat-locked: lands 22.37s
+        tl.to("#logo", { scale: 0.97, duration: 0.08, yoyo: true, repeat: 1, ease: "power1.out" }, 22.37);
+        tl.to("#logo", { rotation: -1.5, scale: 1.02, duration: 2.0, ease: "none" }, 22.55);
+        tl.fromTo("#s6-tag", { opacity: 0, y: 26 }, { opacity: 1, y: 0, duration: 0.5, ease: "expo.out" }, 22.75);
+
+        /* ── Per-frame: counters, pen, sheet number, audio-reactive light ── */
+        var ringNum = document.getElementById("ring-num"), tempo = document.getElementById("tempo");
+        var pen = document.getElementById("pen"), progF = document.getElementById("prog-f");
+        var n1 = document.getElementById("n1"), n2 = document.getElementById("n2"), n3 = document.getElementById("n3");
+        var light = document.getElementById("light"), warm = document.getElementById("warm"), logo = document.getElementById("logo");
+        var sheet = document.getElementById("sheet");
+        var cuts = [3.27, 8.74, 12.02, 17.47, 21.84];
+
+        function draw(f) {
+          var t = f / FPS;
+          var rms = AD && AD.rms[f] != null ? AD.rms[f] : 0.35;
+          var bass = AD && AD.bass[f] != null ? AD.bass[f] : 0.25;
+          warm.style.opacity = (0.55 + bass * 0.45).toFixed(3);
+          light.style.opacity = (0.55 + rms * 0.45).toFixed(3);
+
+          var s = 1; for (var k = 0; k < cuts.length; k++) if (t >= cuts[k]) s = k + 2;
+          sheet.textContent = "Sheet 0" + s + " / 06";
+
+          var left = Math.ceil(20 - 20 * eio(prog(t, 9.05, 10.9)));
+          ringNum.textContent = "0:" + (left < 10 ? "0" : "") + left;
+
+          var u = prog(t, T_PLOT0, T_PLOT1), y = eda(u);
+          pen.setAttribute("cx", (u * 992).toFixed(1));
+          pen.setAttribute("cy", y.toFixed(1));
+          pen.setAttribute("fill", y < 248 ? "#cf4f33" : "#12110f");
+          tempo.textContent = String(Math.round(92 - 17 * eio(prog(t, 15.29, 16.4))));
+          progF.style.transform = "scaleX(" + (0.18 + 0.5 * prog(t, 12.0, 17.5)).toFixed(4) + ")";
+
+          n1.textContent = String(Math.round(74 * eo(prog(t, 18.56, 19.3))));
+          n2.textContent = String(Math.round(3 * eo(prog(t, 19.1, 19.6))));
+          n3.textContent = String(Math.round(2 * eo(prog(t, 19.66, 20.1))));
+
+          logo.style.filter = "drop-shadow(0 " + (18 + bass * 14).toFixed(1) + "px 34px rgba(70,55,30," + (0.18 + rms * 0.12).toFixed(3) + "))";
+        }
+        var total = Math.round(DUR * FPS);
+        for (var fr = 0; fr <= total; fr++) {
+          tl.call((function (x) { return function () { draw(x); }; })(fr), [], fr / FPS);
+        }
+        draw(0);
+
+        window.__timelines["main"] = tl;
+      })();
+    </script>
+  </body>
+</html>
