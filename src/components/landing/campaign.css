@@ -62,6 +62,29 @@
   color: var(--measured);
 }
 
+/* ── Home hero: the same voice as the entry page ── */
+.hero .hero__title-1 {
+  display: block;
+  max-width: 13ch;
+  font-size: clamp(36px, min(4.2vw, 6.6vh), 88px);
+  color: var(--text-1);
+}
+.hero .hero__title-2 {
+  display: block;
+  margin-top: var(--s-3);
+  font-size: clamp(18px, min(1.6vw, 2.8vh), 28px);
+  font-weight: 500;
+  line-height: 1.2;
+  color: var(--measured);
+}
+
+/* Short screens: the green line already says what the paragraph would. */
+@media (min-width: 1024px) and (max-height: 820px) {
+  .hero .hero__body {
+    display: none;
+  }
+}
+
 /* ── Colour field: sage. The band's insides, laid out on the brand colour. ── */
 .field--sage {
   background: var(--m-500);

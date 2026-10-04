@@ -3,12 +3,13 @@
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { HowItWorks } from "@/components/ui/HowItWorks";
+import { BEATS, TAGLINE } from "@/components/ui/HowItWorks";
 import { Icon } from "@/components/ui/Icon";
 import { Logo } from "@/components/ui/Logo";
 import { useAuth } from "@/lib/auth";
 import { startDemo } from "@/lib/demo";
-import "@/components/demo/tour.css";
+import "@/components/landing/campaign.css";
+import "./entry.css";
 
 /** What went wrong and how to fix it — next to the button, never a bare "Oops". */
 function describe(code: string | undefined): string {
@@ -82,80 +83,76 @@ export default function LoginPage() {
 
   const busy = pending || status === "signed-in";
 
+  // The photo drifts a few pixels against the pointer: the room has depth, the words stay put.
+  const onMove = (e: React.PointerEvent<HTMLElement>) => {
+    if (e.pointerType !== "mouse") return;
+    const el = e.currentTarget;
+    el.style.setProperty("--mx", String(e.clientX / window.innerWidth - 0.5));
+    el.style.setProperty("--my", String(e.clientY / window.innerHeight - 0.5));
+  };
+
   return (
-    <main className="login">
-      <div className="login__visual">
-        <Image src="/media/studyloop-band-hd.png" alt="" fill sizes="(max-width: 759px) 100vw, 55vw" preload className="login__img" />
-        <div className="login__logo">
-          <Logo />
-        </div>
-        <ul className="login__facts" aria-label="What the band measures">
-          <li>
-            <Icon name="heart" size={16} />
-            <span>
-              <b>PPG</b> heart rate
-            </span>
-          </li>
-          <li>
-            <Icon name="eda" size={16} />
-            <span>
-              <b>EDA</b> skin conductance
-            </span>
-          </li>
-          <li>
-            <Icon name="band" size={16} />
-            <span>
-              <b>One button</b> no screen
-            </span>
-          </li>
-        </ul>
+    <main className="entry" onPointerMove={onMove}>
+      <div className="entry__photo" aria-hidden>
+        <Image src="/media/studyloop-band-hd.png" alt="" fill sizes="100vw" preload className="entry__img" />
       </div>
 
-      <div className="login__panel">
-        <div className="login__body">
-          <p className="eyebrow">
-            <span className="eyebrow__rule" aria-hidden />
-            For long study sessions
-          </p>
-          <h1 className="display login__title">A band that feels stress.</h1>
-          <p className="serif login__serif">Music that answers it.</p>
-          <div className="login__how">
-            <HowItWorks auto />
-          </div>
+      <header className="entry__top">
+        <Logo />
+        <p className="entry__tag">For long study sessions</p>
+      </header>
 
-          <div className="login__card">
-            <button
-              type="button"
-              className="btn btn--primary btn--lg login__cta"
-              onClick={start}
-              disabled={busy || !configured}
-              aria-describedby={error ? "login-error" : undefined}
-            >
-              <GoogleMark />
-              {busy ? "Opening Google…" : "Continue with Google"}
-            </button>
-            <p id="login-error" className="small login__error" role="alert">
-              {error}
-            </p>
-            <p className="small login__note">
-              <Icon name="user" size={14} />
-              Reads only your name, email and photo. Sign out any time.
-            </p>
-          </div>
+      <section className="entry__main">
+        <h1 className="campaign entry__title" aria-label={TAGLINE}>
+          <span className="entry__mask">
+            <span>A band that</span>
+          </span>
+          <span className="entry__mask">
+            <span>feels stress.</span>
+          </span>
+        </h1>
+        <p className="entry__sub">Music that answers it.</p>
 
-          <button type="button" className="login__demo" onClick={startDemo}>
-            <span className="login__demo-face" aria-hidden>
+        <div className="entry__actions">
+          <button
+            type="button"
+            className="btn btn--primary btn--lg entry__google"
+            onClick={start}
+            disabled={busy || !configured}
+            aria-describedby={error ? "login-error" : "login-note"}
+          >
+            <GoogleMark />
+            {busy ? "Opening Google…" : "Continue with Google"}
+          </button>
+          <button type="button" className="entry__demo" onClick={startDemo}>
+            <span className="entry__demo-face" aria-hidden>
               <Image src="/media/arjun/normal-bust.webp" alt="" width={530} height={560} />
             </span>
-            <span className="login__demo-text">
-              <b>Demo mode · Hackathon tour</b>
-              <span>No account needed. Arjun walks you through every feature in about two minutes.</span>
+            <span className="entry__demo-text">
+              <b>Try the demo</b>
+              <span>No account. A two-minute tour.</span>
             </span>
-            <Icon name="arrow" size={18} className="login__demo-go" />
+            <Icon name="arrow" size={18} />
           </button>
+          <p id="login-error" className="small entry__error" role="alert">
+            {error}
+          </p>
+          <p id="login-note" className="small entry__note">
+            Google sign-in reads only your name, email and photo.
+          </p>
         </div>
-        <p className="small muted login__fine">StudyLoop is a study tool, not a medical device.</p>
-      </div>
+      </section>
+
+      <ol className="entry__beats" aria-label="How it works">
+        {BEATS.map((b, i) => (
+          <li key={b.title}>
+            <span className="entry__n tnum">0{i + 1}</span>
+            <b>{b.title}</b>
+            <span>{b.body}</span>
+          </li>
+        ))}
+      </ol>
+      <p className="entry__fine">StudyLoop is a study tool, not a medical device.</p>
     </main>
   );
 }

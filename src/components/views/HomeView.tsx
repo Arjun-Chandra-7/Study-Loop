@@ -62,15 +62,15 @@ export function HomeView({ stageRef }: { stageRef: React.RefObject<HTMLDivElemen
         </div>
         {/* Coordinates are in the render's own image space. */}
         <ul className="hero__callouts" aria-label="Band hardware">
-          <li style={{ left: "46%", top: "33%" }}>
+          <li style={{ left: "50%", top: "36.5%" }}>
             <span className="callout__dot" />
             <span className="callout__text">Status light</span>
           </li>
-          <li style={{ left: "63.5%", top: "44%" }}>
+          <li style={{ left: "68.5%", top: "37%" }}>
             <span className="callout__dot" />
             <span className="callout__text">One button</span>
           </li>
-          <li data-side="down" style={{ left: "37%", top: "63%" }}>
+          <li data-side="down" style={{ left: "37.8%", top: "51%" }}>
             <span className="callout__dot" />
             <span className="callout__text">EDA electrodes</span>
           </li>
@@ -82,7 +82,7 @@ export function HomeView({ stageRef }: { stageRef: React.RefObject<HTMLDivElemen
       <motion.div className="hero__copy" style={{ x: textX }}>
         {/* The logo already says StudyLoop: the headline says what it does. */}
         <h1 className="display hero__title">
-          A band that feels stress.
+          <span className="campaign hero__title-1">A band that feels stress.</span>
           <span className="hero__title-2">Music that answers it.</span>
         </h1>
         <p className="body hero__body">Wear it while you study. When stress climbs, your music slows and softens with you.</p>
