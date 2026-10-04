@@ -76,7 +76,10 @@
   --font-ui: var(--font-mona), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-display: var(--font-ui);
   --font-serif: var(--font-ui);
-  --stretch-display: 118%;
+  /* Two voices from one family. Text and app headings: normal width.
+     Headlines and big numbers: narrow and heavy (--stretch-headline). Nothing is set wide. */
+  --stretch-display: 100%;
+  --stretch-headline: 75%;
 
   --fs-label: 12px;
   --fs-small: 13px;

@@ -28,7 +28,7 @@
   background: linear-gradient(180deg, var(--room) 75%, transparent);
 }
 .mx-top .logo {
-  height: 36px;
+  --logo-h: 40px;
   margin: 0 auto 0 -4px;
 }
 .mx-band,

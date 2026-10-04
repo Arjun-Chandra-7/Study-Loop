@@ -131,125 +131,6 @@ i {
   margin-bottom: var(--s-4);
 }
 
-/* Login: the band on the left, one sign-in card on the right. */
-.login {
-  display: grid;
-  grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
-  gap: var(--s-3);
-  min-height: 100svh;
-  padding: var(--s-3);
-}
-
-/* ── Visual ── */
-.login__visual {
-  position: relative;
-  overflow: hidden;
-  border-radius: var(--r-chassis);
-  background: var(--chassis);
-  box-shadow: inset 0 0 0 1px var(--line-1), var(--shadow-lift);
-  isolation: isolate;
-}
-.login__img {
-  z-index: -1;
-  object-fit: cover;
-  object-position: 40% 50%;
-}
-.login__visual::after {
-  /* Light falls off toward the caption so it stays legible. */
-  content: "";
-  position: absolute;
-  inset: 45% 0 0;
-  z-index: -1;
-  background: linear-gradient(180deg, rgba(11, 10, 7, 0), rgba(11, 10, 7, 0.85));
-}
-.login__logo {
-  position: absolute;
-  top: var(--s-6);
-  left: var(--s-6);
-}
-.login__logo .logo {
-  height: 72px;
-}
-.login__facts {
-  position: absolute;
-  left: var(--s-6);
-  right: var(--s-6);
-  bottom: var(--s-6);
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--s-2);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-.login__facts li {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--s-2);
-  height: 40px;
-  padding: 0 var(--s-4) 0 var(--s-3);
-  border-radius: var(--r-pill);
-  background: rgba(19, 18, 15, 0.72);
-  -webkit-backdrop-filter: blur(var(--blur-glass));
-  backdrop-filter: blur(var(--blur-glass));
-  box-shadow: inset 0 0 0 1px var(--line-2);
-  font-size: var(--fs-small);
-  color: var(--text-2);
-}
-.login__facts svg {
-  color: var(--measured);
-}
-.login__facts b {
-  font-weight: 500;
-  color: var(--text-1);
-}
-
-/* ── Form ── */
-.login__panel {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: var(--s-8);
-  padding: var(--s-8) clamp(var(--s-5), 4vw, var(--s-9));
-}
-.login__body {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  width: 100%;
-  max-width: 440px;
-  margin: auto 0;
-}
-.login__body .eyebrow {
-  margin-bottom: var(--s-4);
-}
-.login__title {
-  font-size: clamp(32px, 3vw, 44px);
-  line-height: 1.05;
-}
-.login__body .login__serif {
-  margin: var(--s-2) 0 var(--s-5);
-  line-height: 1.3;
-  font-size: var(--fs-title);
-  color: var(--text-2);
-}
-.login__card {
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  padding: var(--s-5);
-  border-radius: var(--r-panel);
-  background:
-    radial-gradient(90% 70% at 50% 0%, rgb(var(--measured-rgb) / 0.06), transparent 70%),
-    var(--surface-1);
-  box-shadow: inset 0 0 0 1px var(--line-2), var(--highlight), var(--shadow-rest);
-}
-.login__cta {
-  width: 100%;
-}
-.login__cta:disabled {
-  cursor: progress;
-}
 .g-mark {
   display: grid;
   place-items: center;
@@ -257,79 +138,6 @@ i {
   height: 28px;
   border-radius: var(--r-pill);
   background: #fff;
-}
-.login__error {
-  min-height: 0;
-  margin: 0;
-  color: var(--a-300);
-}
-.login__error:not(:empty) {
-  margin-top: var(--s-3);
-}
-.login__how {
-  width: 100%;
-  margin-bottom: var(--s-6);
-}
-.login__note {
-  display: flex;
-  align-items: center;
-  gap: var(--s-2);
-  margin: var(--s-3) 0 0;
-  color: var(--text-3);
-}
-.login__fine {
-  margin: 0;
-}
-
-/* Portrait tablets and phones stack: the band as a banner, the card below it. */
-@media (max-width: 1023px) {
-  .login {
-    grid-template-columns: 1fr;
-    align-content: start;
-  }
-  .login__visual {
-    aspect-ratio: 16 / 10;
-  }
-  .login__panel {
-    align-items: center;
-  }
-  .login__body {
-    margin: 0;
-  }
-}
-@media (max-width: 759px) {
-  .login__visual {
-    aspect-ratio: 5 / 4;
-  }
-  .login__facts li:last-child {
-    display: none;
-  }
-  .login__panel {
-    align-items: stretch;
-  }
-  .login__logo {
-    top: var(--s-4);
-    left: var(--s-4);
-  }
-  .login__logo .logo {
-    height: 52px;
-  }
-  .login__facts {
-    left: var(--s-4);
-    right: var(--s-4);
-    bottom: var(--s-4);
-  }
-  .login__facts li {
-    height: 32px;
-    padding: 0 var(--s-3) 0 var(--s-2);
-  }
-  .login__panel {
-    gap: var(--s-6);
-    padding: var(--s-5) var(--s-2) var(--s-4);
-  }
-  .login__card {
-    padding: var(--s-4);
-  }
 }
 
 .sr-only {
@@ -410,8 +218,8 @@ i {
 .display {
   font-family: var(--font-display);
   font-stretch: var(--stretch-display);
-  font-weight: 600;
-  letter-spacing: var(--tracking-display);
+  font-weight: 650;
+  letter-spacing: -0.028em;
   line-height: 1.02;
   margin: 0;
 }
@@ -448,8 +256,8 @@ i {
 .h-section {
   font-size: var(--fs-metric);
   line-height: 1.1;
-  font-weight: 500;
-  letter-spacing: -0.02em;
+  font-weight: 600;
+  letter-spacing: -0.025em;
   margin: 0;
 }
 .h-section .serif {
@@ -472,26 +280,45 @@ i {
 
 .timer {
   font-family: var(--font-ui);
-  font-weight: 500;
-  font-size: clamp(72px, 9.2vw, 164px);
+  font-stretch: var(--stretch-headline);
+  font-weight: 750;
+  font-size: clamp(80px, 10.4vw, 184px);
   line-height: 0.86;
-  letter-spacing: -0.045em;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
   margin: 0;
 }
 .timer--md {
   font-size: clamp(48px, 5vw, 80px);
 }
 
+/* Wordmark: the headline voice, slanted forward. Cinder STUDY, sage LOOP. */
 .logo {
-  display: block;
-  width: auto;
-  height: 60px;
+  --logo-h: 60px;
+  display: inline-flex;
+  align-items: baseline;
   flex-shrink: 0;
-  /* The lockup is slanted; let it lean a touch past its box rather than crowd neighbours. */
-  margin-left: -4px;
+  margin: 0;
+  font-family: var(--font-ui);
+  font-stretch: var(--stretch-headline);
+  font-weight: 900;
+  font-size: calc(var(--logo-h) * 0.5);
+  line-height: 1;
+  letter-spacing: -0.01em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  transform: skewX(-9deg);
+  transform-origin: 0 100%;
+  user-select: none;
+}
+.logo__a {
+  color: var(--action);
+}
+.logo__b {
+  color: var(--measured);
 }
 .logo--sm {
-  height: 64px;
+  --logo-h: 52px;
 }
 
 /* ═════════════════════════════════════════════════════════════
@@ -970,7 +797,7 @@ i {
     --view-top: 68px;
   }
   .main__chip .logo {
-    height: 44px;
+    --logo-h: 44px;
   }
 }
 
@@ -1405,10 +1232,11 @@ html[data-quiet] .foot__scroll {
   min-height: 32px;
 }
 .metric__num {
-  font-size: var(--fs-metric);
+  font-size: calc(var(--fs-metric) + 4px);
+  font-stretch: var(--stretch-headline);
   line-height: 1;
-  font-weight: 500;
-  letter-spacing: -0.03em;
+  font-weight: 700;
+  letter-spacing: -0.01em;
   font-variant-numeric: tabular-nums;
 }
 .metric__word {

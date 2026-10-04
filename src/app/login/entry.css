@@ -66,8 +66,7 @@
   animation: entry-fade 1.2s var(--ease-entry) 0.9s both;
 }
 .entry__top .logo {
-  height: clamp(36px, 5vh, 48px);
-  width: auto;
+  --logo-h: clamp(48px, 6.4vh, 64px);
 }
 .entry__tag {
   margin: 0;
