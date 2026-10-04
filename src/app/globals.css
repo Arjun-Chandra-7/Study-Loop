@@ -5506,3 +5506,25 @@ html.lenis body {
   line-height: 1.05;
   text-wrap: balance;
 }
+
+/* ═════════════════════════════════════════════════════════════
+   LITE — low-end machines (few cores, little memory, data saver, or ?lite).
+   Same layout and features; the expensive glass and idle decoration go.
+   ═════════════════════════════════════════════════════════════ */
+html[data-lite] * {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+/* Without blur, glass panels need a solid fill to stay legible. */
+html[data-lite] :is(.top-capsule, .dock, .mx-tabs, .story__step, .tour-pill, .entry__demo, .login__facts li) {
+  background-color: var(--surface-2);
+}
+/* Purely decorative loops that run forever. */
+html[data-lite] :is(.marquee__track, .wave-strip, .tour-pill__dot, .story__focus span),
+html[data-lite] .finale__word::after {
+  animation: none !important;
+}
+html[data-lite] .entry__img {
+  translate: none;
+  transition: none;
+}

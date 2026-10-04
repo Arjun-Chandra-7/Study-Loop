@@ -473,6 +473,9 @@ export class StudyLoopEngine {
     }
 
     patch.session = session;
+    // Nothing moved (no band, no session running): don't wake every subscriber four times a second.
+    const keys = Object.keys(patch) as (keyof Snapshot)[];
+    if (keys.every((k) => patch[k] === this.snap[k])) return;
     this.snap = { ...this.snap, ...patch };
     if (session.phase === "active" && session.elapsedMs >= session.config.minutes * 60_000) {
       this.complete();

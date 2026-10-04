@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import { AuthProvider } from "@/lib/auth";
 import { prePaintScript } from "@/lib/palettes";
+import { LITE_SCRIPT } from "@/lib/device";
 import "./globals.css";
 
 // One family for everything: GitHub's Mona Sans, variable in weight, width and optical size.
@@ -42,6 +43,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <head>
         {/* Apply the saved colour palette before first paint. */}
         <script dangerouslySetInnerHTML={{ __html: prePaintScript() }} />
+        <script dangerouslySetInnerHTML={{ __html: LITE_SCRIPT }} />
       </head>
       <body>
         <AuthProvider>{children}</AuthProvider>

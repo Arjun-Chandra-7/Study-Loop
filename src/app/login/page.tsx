@@ -2,11 +2,12 @@
 
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { BEATS, TAGLINE } from "@/components/ui/HowItWorks";
 import { Icon } from "@/components/ui/Icon";
 import { Logo } from "@/components/ui/Logo";
 import { useAuth } from "@/lib/auth";
+import { chromeIntent, inAppBrowser, isAndroid } from "@/lib/browser";
 import { startDemo } from "@/lib/demo";
 import "@/components/landing/campaign.css";
 import "./entry.css";
@@ -25,10 +26,21 @@ function describe(code: string | undefined): string {
       return "Google sign-in is turned off for this project. Enable it in Firebase under Authentication → Sign-in method.";
     case "app/not-configured":
       return "Sign-in isn’t set up on this build: the Firebase keys are missing.";
+    case "auth/web-storage-unsupported":
+      return "This browser is blocking the storage sign-in needs (often private mode or blocked cookies). Try a normal window, or allow cookies for this site.";
+    case "auth/internal-error":
+    case "auth/missing-initial-state":
+      return "Your browser’s privacy settings interrupted the sign-in. Try again in Chrome, or turn off “Block all cookies” / “Prevent cross-site tracking” for this site.";
+    case "auth/too-many-requests":
+      return "Too many sign-in attempts just now. Wait a minute and try again.";
+    case "auth/user-disabled":
+      return "This Google account has been turned off for StudyLoop.";
     default:
       return "Google sign-in didn’t quite finish. Let’s try that again.";
   }
 }
+
+const noop = () => () => {};
 
 function GoogleMark() {
   return (
@@ -44,7 +56,10 @@ function GoogleMark() {
 }
 
 export default function LoginPage() {
-  const { status, configured, signInWithGoogle } = useAuth();
+  const { status, configured, redirectError, signInWithGoogle } = useAuth();
+  // Which in-app browser we're inside, if any. Client-only: the server can't know.
+  const inApp = useSyncExternalStore(noop, () => inAppBrowser(), () => null);
+  const [copied, setCopied] = useState(false);
   const router = useRouter();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(configured ? null : describe("app/not-configured"));
@@ -82,6 +97,16 @@ export default function LoginPage() {
   };
 
   const busy = pending || status === "signed-in";
+  const shownError = error ?? (redirectError ? describe(redirectError) : null);
+
+  const copyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(location.href);
+      setCopied(true);
+    } catch {
+      setCopied(false);
+    }
+  };
 
   // The photo drifts a few pixels against the pointer: the room has depth, the words stay put.
   const onMove = (e: React.PointerEvent<HTMLElement>) => {
@@ -114,16 +139,35 @@ export default function LoginPage() {
         <p className="entry__sub">Music that answers it.</p>
 
         <div className="entry__actions">
-          <button
-            type="button"
-            className="btn btn--primary btn--lg entry__google"
-            onClick={start}
-            disabled={busy || !configured}
-            aria-describedby={error ? "login-error" : "login-note"}
-          >
-            <GoogleMark />
-            {busy ? "Opening Google…" : "Continue with Google"}
-          </button>
+          {inApp ? (
+            <div className="entry__inapp" role="note">
+              <p>
+                <b>Open StudyLoop in your browser to sign in.</b> Google doesn’t allow sign-in inside {inApp}.
+                {isAndroid() ? "" : " Tap ••• or the share button, then “Open in Safari”."}
+              </p>
+              <div className="entry__inapp-actions">
+                {isAndroid() && (
+                  <a className="btn btn--primary" href={chromeIntent(location.href)}>
+                    Open in Chrome
+                  </a>
+                )}
+                <button type="button" className="btn btn--ghost" onClick={copyLink}>
+                  {copied ? "Link copied" : "Copy link"}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              type="button"
+              className="btn btn--primary btn--lg entry__google"
+              onClick={start}
+              disabled={busy || !configured}
+              aria-describedby={shownError ? "login-error" : "login-note"}
+            >
+              <GoogleMark />
+              {busy ? "Opening Google…" : "Continue with Google"}
+            </button>
+          )}
           <button type="button" className="entry__demo" onClick={startDemo}>
             <span className="entry__demo-face" aria-hidden>
               <Image src="/media/arjun/normal-bust.webp" alt="" width={530} height={560} />
@@ -135,7 +179,7 @@ export default function LoginPage() {
             <Icon name="arrow" size={18} />
           </button>
           <p id="login-error" className="small entry__error" role="alert">
-            {error}
+            {shownError}
           </p>
           <p id="login-note" className="small entry__note">
             Google sign-in reads only your name, email and photo.
