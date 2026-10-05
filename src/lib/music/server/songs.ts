@@ -10,7 +10,7 @@ import { vibeModel } from "./vibe";
 /** A song's fingerprint is the same for everyone, so readings are cached once for all listeners. */
 const CACHE_USER = "_song";
 /** Songs per model call, and calls in flight at once: a 100-song playlist reads in two rounds. */
-const CHUNK = 4; // small: each song's melody takes real thought, and a long batch gets sloppy
+const CHUNK = 12;
 const PARALLEL = 4;
 /** Tries per batch; rate limits and hiccups usually clear in a second or two. */
 const TRIES = 3;
@@ -20,12 +20,21 @@ const TRIES = 3;
  * strict schema mode makes some models (gpt-oss on Groq) return nothing at all, and one bad field
  * would sink the whole batch. Each song is parsed and brought into range on its own instead.
  * Drum grids aren't asked for: models don't know them and copy the example back, so the groove
- * comes from the hand-written pattern for the song's drum feel. The hook and bass line are what
- * make a song recognisable, so they are asked for; one copied from an example is dropped.
+ * comes from the hand-written pattern for the song's drum feel.
+ * The chorus melody, riff and bass line are what make a song recognisable, but they're only asked
+ * of a strong model (MUSIC_VIBE_MODEL): the free Groq model writes wrong tunes at low reasoning,
+ * and at higher reasoning it hits its rate limit and the playlist never finishes. A wrong tune is
+ * worse than none. One copied from an example is dropped.
  */
+const askHooks = () => !!process.env.MUSIC_VIBE_MODEL;
 const EXAMPLE_RIFF = "1:6 1:2 3:3 1:3 7,:2 6,:8 5,:8";
 const EXAMPLE_MELODY = "3:4 3:4 4:4 5:4 5:4 4:4 3:4 2:4 1:4 1:4 2:4 3:4 3:6 2:2 2:8";
-const SYSTEM = `You are a record producer who knows exactly how famous recordings are built, across every genre and language (including Bollywood, Punjabi and other Indian music).
+const HOOKS = `- melody: the chorus's sung melody, the line a listener hums along to (for Indian songs, the mukhda / hook line), as notes in order. Each note is scale-degree:length, degree 1-7 of the key (# or b for a chromatic note, ' an octave up, , an octave down) and length in sixteenth notes (4 = a beat, 16 = a bar); r:4 is a rest. 2-8 bars, starting where the progression starts. Recall the real tune note by note before writing it: intervals and rhythm must match the record.
+- riff: the main instrumental riff in the same notation, only if the song has one people know (e.g. a guitar or synth hook), else ""
+- bass: the bass line in the same notation, only if it's iconic (e.g. a walking or riff bass line), else ""
+- Use "" for melody, riff or bass when you don't actually know the tune: a made-up melody is worse than none.
+`;
+const system = (hooks: boolean) => `You are a record producer who knows exactly how famous recordings are built, across every genre and language (including Bollywood, Punjabi and other Indian music).
 For each song, identify the exact recording and describe its production as it really is:
 - tempoBpm: the recording's real tempo
 - key and mode: the recording's real key (e.g. "F#", "minor")
@@ -34,15 +43,11 @@ For each song, identify the exact recording and describe its production as it re
 - instruments: 1-3 that carry its sound, most important first, from piano, rhodes, acoustic_guitar, electric_guitar, synth, sitar, flute, strings, pad, bells
 - energy and warmth 0-1, swing 0-0.6, summary (one short line about the sound), moods (2-4 words)
 - sevenths: true if its chords are jazzy 7th chords, false for plain triads (most pop, rock and soul)
-- melody: the chorus's sung melody, the line a listener hums along to (for Indian songs, the mukhda / hook line), as notes in order. Each note is scale-degree:length, degree 1-7 of the key (# or b for a chromatic note, ' an octave up, , an octave down) and length in sixteenth notes (4 = a beat, 16 = a bar); r:4 is a rest. 2-8 bars, starting where the progression starts. Recall the real tune note by note before writing it: intervals and rhythm must match the record.
-- riff: the main instrumental riff in the same notation, only if the song has one people know (e.g. a guitar or synth hook), else ""
-- bass: the bass line in the same notation, only if it's iconic (e.g. a walking or riff bass line), else ""
 - comp: the rhythm the keys or guitar play the chords in, as 16 characters for one bar (x = stab, o = soft, . = rest), or "" for held chords
-- Use "" for melody, riff or bass when you don't actually know the tune: a made-up melody is worse than none.
-- known: true only if you recognise this exact recording
-This drives an instrumental, lyric-free beat of the song. Never write lyrics.
+${hooks ? HOOKS : ""}- known: true only if you recognise this exact recording
+This drives an instrumental, lyric-free beat of the song. Never write lyrics${hooks ? "" : ", melodies or riffs"}.
 Answer with JSON only, no prose, in exactly this shape, one entry per song in the same order:
-{"songs":[{"title":"Seven Nation Army","artist":"The White Stripes","known":true,"tempoBpm":124,"key":"E","mode":"minor","progression":[1,1,6,5],"chordsPerBar":2,"drumFeel":"rock","instruments":["electric_guitar"],"sevenths":false,"melody":"","riff":"${EXAMPLE_RIFF}","bass":"${EXAMPLE_RIFF}","comp":"","energy":0.6,"warmth":0.4,"swing":0,"summary":"One fuzzed-out riff over a stomping kick","moods":["driving","defiant"]},{"title":"Ode to Joy","artist":"Ludwig van Beethoven","known":true,"tempoBpm":120,"key":"D","mode":"major","progression":[1,5,1,5],"chordsPerBar":1,"drumFeel":"downtempo","instruments":["strings","piano"],"sevenths":false,"melody":"${EXAMPLE_MELODY}","riff":"","bass":"","comp":"x...x...x...x...","energy":0.4,"warmth":0.6,"swing":0,"summary":"The hymn tune, carried by strings","moods":["uplifting","bright"]}]}`;
+{"songs":[{"title":"Seven Nation Army","artist":"The White Stripes","known":true,"tempoBpm":124,"key":"E","mode":"minor","progression":[1,1,6,5],"chordsPerBar":2,"drumFeel":"rock","instruments":["electric_guitar"],"sevenths":false,"comp":"",${hooks ? `"melody":"","riff":"${EXAMPLE_RIFF}","bass":"${EXAMPLE_RIFF}",` : ""}"energy":0.6,"warmth":0.4,"swing":0,"summary":"One fuzzed-out riff over a stomping kick","moods":["driving","defiant"]}${hooks ? `,{"title":"Ode to Joy","artist":"Ludwig van Beethoven","known":true,"tempoBpm":120,"key":"D","mode":"major","progression":[1,5,1,5],"chordsPerBar":1,"drumFeel":"downtempo","instruments":["strings","piano"],"sevenths":false,"comp":"x...x...x...x...","melody":"${EXAMPLE_MELODY}","riff":"","bass":"","energy":0.4,"warmth":0.6,"swing":0,"summary":"The hymn tune, carried by strings","moods":["uplifting","bright"]}` : ""}]}`;
 
 type Flat = Record<string, unknown>;
 const str = (v: unknown, d = "") => (typeof v === "string" ? v : typeof v === "number" ? String(v) : d);
@@ -95,16 +100,16 @@ function parseJson(text: string): { songs?: Flat[] } | null {
 }
 
 /** One model call for a batch of songs, in order; null where a song couldn't be read. */
-export async function readSongsWith(model: LanguageModel, chunk: string[]) {
+export async function readSongsWith(model: LanguageModel, chunk: string[], hooks = askHooks()) {
   const { text } = await generateText({
     model,
-    system: SYSTEM,
+    system: system(hooks),
     prompt: `Songs:\n${chunk.map((s, i) => `${i + 1}. ${s}`).join("\n")}`,
-    providerOptions: { groq: { reasoningEffort: "medium" } }, // low reasoning makes melodies up
-    maxOutputTokens: 16000, // the thinking that recalls melodies is long; a cut-off answer is lost
+    providerOptions: { groq: { reasoningEffort: "low" } },
   });
   const songs = parseJson(text)?.songs;
-  return { songs: chunk.map((_, i) => toBeat(Array.isArray(songs) ? songs[i] : undefined)), raw: text };
+  const beat = (f: Flat | undefined) => toBeat(hooks || !f ? f : { ...f, melody: undefined, riff: undefined, bass: undefined });
+  return { songs: chunk.map((_, i) => beat(Array.isArray(songs) ? songs[i] : undefined)), raw: text };
 }
 
 /**
@@ -115,7 +120,7 @@ export async function readSongsWith(model: LanguageModel, chunk: string[]) {
  */
 export async function readSongs(songs: string[]): Promise<SongBeat[]> {
   const [model, modelId] = vibeModel();
-  const keyOf = (s: string) => createHash("sha256").update(JSON.stringify([modelId, "v5", songKey(s)])).digest("hex");
+  const keyOf = (s: string) => createHash("sha256").update(JSON.stringify([modelId, "v6", songKey(s)])).digest("hex");
   const out = new Map<string, SongBeat>();
 
   for (const s of songs) {
