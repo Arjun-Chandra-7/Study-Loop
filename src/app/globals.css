@@ -1514,6 +1514,18 @@ html[data-quiet] .foot__scroll {
   align-items: center;
   gap: var(--s-1);
 }
+.hp-card__concept {
+  margin-left: 7px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  font-size: 0.62rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-dim, rgba(244, 241, 234, 0.6));
+  vertical-align: middle;
+  cursor: help;
+}
 .hp-card__x {
   display: grid;
   place-items: center;
@@ -3504,6 +3516,23 @@ html.lenis body {
 }
 .story__img {
   object-fit: cover;
+}
+.story__note {
+  position: absolute;
+  left: max(16px, env(safe-area-inset-left));
+  bottom: max(14px, env(safe-area-inset-bottom));
+  z-index: 3;
+  margin: 0;
+  max-width: min(32rem, 80%);
+  padding: 7px 11px;
+  border-radius: 10px;
+  background: rgba(8, 7, 5, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(6px);
+  color: rgba(244, 241, 234, 0.82);
+  font-size: 0.72rem;
+  line-height: 1.35;
+  letter-spacing: 0.01em;
 }
 .story__sweep {
   position: absolute;
@@ -5811,6 +5840,51 @@ html.lenis body {
   border-radius: 50%;
   background: var(--measured);
   animation: pulse 1.6s var(--ease-in-out) infinite;
+}
+
+/* Study-beats band picker: Theta / Alpha / 40 Hz / Blend. */
+.beats-bands {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.beats-bands__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: var(--fs-label, 0.72rem);
+  letter-spacing: var(--tracking-label);
+  color: var(--text-dim, rgba(244, 241, 234, 0.6));
+  margin-right: 2px;
+}
+.beats-pill {
+  padding: 0.34rem 0.7rem;
+  border-radius: 999px;
+  border: 1px solid var(--line, rgba(255, 255, 255, 0.14));
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 0.8rem;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    background 0.18s var(--ease-out),
+    border-color 0.18s var(--ease-out),
+    color 0.18s var(--ease-out);
+}
+.beats-pill:hover {
+  border-color: var(--measured, #9fd0c7);
+}
+.beats-pill.is-on {
+  background: var(--measured, #9fd0c7);
+  border-color: var(--measured, #9fd0c7);
+  color: #0c0b08;
+  font-weight: 600;
+}
+.beats-pill--blend.is-on {
+  background: linear-gradient(90deg, var(--measured, #9fd0c7), var(--accent, #d9b36a));
+  border-color: transparent;
 }
 @media (max-width: 1100px) {
   .palettes {

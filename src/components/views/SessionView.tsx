@@ -5,12 +5,12 @@ import { useLayoutEffect, useRef, useState } from "react";
 import type { StudyMode } from "@/lib/engine";
 import { clock } from "@/lib/format";
 import { PHYSIO_HINT } from "@/lib/sensors/classify";
-import { useGammaBeats } from "@/lib/music/gamma";
+import { BEAT_BANDS, BLEND, useBeats } from "@/lib/music/gamma";
 import { engine, useStudyLoop } from "@/lib/useStudyLoop";
 import { Sparkline } from "../charts/Sparkline";
 import { orbFor } from "../orb/orbState";
 import { StateOrb } from "../orb/StateOrb";
-import { toggleBeats } from "../session/SessionPrompts";
+import { playBlend, toggleBeatBand } from "../session/SessionPrompts";
 import { Icon } from "../ui/Icon";
 import { Magnetic } from "../ui/Magnetic";
 import { StateBadge } from "../ui/StateBadge";
@@ -330,7 +330,7 @@ export function SessionFoot() {
       <div className="foot">
         <p className="foot__status">{orb.label}</p>
         <div className="btn-row">
-          <BeatsButton />
+          <BeatsControl />
           <button type="button" className="btn btn--ghost" onClick={engine.end}>
             Cancel
           </button>
@@ -359,7 +359,7 @@ export function SessionFoot() {
     <div className="foot">
       <p className="foot__status">{orb.label}</p>
       <div className="btn-row">
-        <BeatsButton />
+        <BeatsControl />
         <button type="button" className="btn btn--ghost" onClick={engine.mark} disabled={paused}>
           <Icon name="flag" size={16} />
           Mark moment
@@ -377,20 +377,44 @@ export function SessionFoot() {
   );
 }
 
-/** 40 Hz beats for this session (a placeholder for the fuller beats system). */
-function BeatsButton() {
-  const on = useGammaBeats();
+/**
+ * Study beats for this session: pick a brainwave band — Theta, Alpha or 40 Hz — or the Focus
+ * blend (alpha + 40 Hz together). Bands mix live, so tapping more than one layers them.
+ * Binaural on headphones, pulsed on speakers. (A study aid, not therapy — see Research.)
+ */
+function BeatsControl() {
+  const { active, playing } = useBeats();
+  const isBlend = active.length === BLEND.length && BLEND.every((b) => active.includes(b));
   return (
-    <button
-      type="button"
-      className={`btn ${on ? "btn--solid" : "btn--ghost"} beats-btn`}
-      aria-pressed={on}
-      onClick={toggleBeats}
-      title="Binaural on headphones, pulsed on speakers"
-    >
-      <Icon name={on ? "pause" : "wave"} size={16} />
-      {on ? "40 Hz on" : "40 Hz beats"}
-      {on && <span className="beats-btn__pulse" aria-hidden />}
-    </button>
+    <div className={`beats-bands ${playing ? "is-live" : ""}`} role="group" aria-label="Study beats">
+      <span className="beats-bands__label">
+        <Icon name={playing ? "wave" : "wave"} size={14} />
+        Beats
+      </span>
+      {BEAT_BANDS.map((b) => {
+        const on = active.includes(b.id);
+        return (
+          <button
+            key={b.id}
+            type="button"
+            className={`beats-pill ${on ? "is-on" : ""}`}
+            aria-pressed={on}
+            onClick={() => toggleBeatBand(b.id)}
+            title={`${b.label} — ${b.sub}`}
+          >
+            {b.label}
+          </button>
+        );
+      })}
+      <button
+        type="button"
+        className={`beats-pill beats-pill--blend ${isBlend ? "is-on" : ""}`}
+        aria-pressed={isBlend}
+        onClick={playBlend}
+        title="Alpha + 40 Hz together — our focus blend"
+      >
+        Blend
+      </button>
+    </div>
   );
 }

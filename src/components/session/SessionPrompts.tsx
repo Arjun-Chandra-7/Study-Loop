@@ -2,7 +2,7 @@
 
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useRef, useSyncExternalStore } from "react";
-import { gammaBeats } from "@/lib/music/gamma";
+import { beats, BLEND, gammaBeats, type BeatBandId } from "@/lib/music/gamma";
 import { vibeEngine } from "@/lib/music/vibe/engine";
 import { isDemo } from "@/lib/demo";
 import { getPrefs, setPref } from "@/lib/prefs";
@@ -35,6 +35,35 @@ export function toggleBeats() {
     vibeEngine.stop();
   }
   void gammaBeats.start();
+}
+
+/** Starting beats while a Loop plays: pause the Loop, or ask first. Returns false if we asked. */
+function clearForBeats(): boolean {
+  if (beats.getSnapshot()) return true; // beats already on, the Loop is already stopped
+  if (vibeEngine.getSnapshot().playing) {
+    if (!getPrefs().autoPauseForBeats) {
+      show("beats-conflict");
+      return false;
+    }
+    vibeEngine.stop();
+  }
+  return true;
+}
+
+/** Turn one brainwave band on or off, blending with any others already playing. */
+export function toggleBeatBand(id: BeatBandId) {
+  const turningOn = !beats.getState().active.includes(id);
+  if (turningOn && !clearForBeats()) return;
+  void beats.toggleBand(id);
+}
+
+/** The Focus blend (alpha + 40 Hz). Toggles off if it's exactly what's already playing. */
+export function playBlend() {
+  const active = beats.getState().active;
+  const isBlend = active.length === BLEND.length && BLEND.every((b) => active.includes(b));
+  if (isBlend) return beats.stop();
+  if (!clearForBeats()) return;
+  void beats.setBands(BLEND);
 }
 
 if (typeof window !== "undefined") {

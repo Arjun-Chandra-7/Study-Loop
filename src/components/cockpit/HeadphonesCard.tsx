@@ -39,7 +39,12 @@ export function HeadphonesCard() {
       aria-label="Headphones"
     >
       <header className="card__head hp-card__head">
-        <p className="card__title">Headphones</p>
+        <p className="card__title">
+          Headphones
+          <span className="hp-card__concept" title="This 3D model is an abstract concept. StudyLoop is an early prototype; the real product will differ.">
+            concept
+          </span>
+        </p>
         <span className="hp-card__status">
           <StatusChip status={hp.status} playing={connected && hp.playing} preview={hp.preview} />
           {hp.preview && (

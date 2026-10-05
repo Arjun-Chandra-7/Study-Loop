@@ -139,6 +139,7 @@ export function ProductStory() {
         <div className="story__focus" aria-hidden style={{ left: `${FOCUS_X * 100}%` }}>
           <span />
         </div>
+        <p className="story__note">Concept render — an abstract of the idea. StudyLoop is an early prototype; the final hardware will differ.</p>
       </div>
 
       <div className="story__intro">
