@@ -4,13 +4,17 @@ import { DEMO_SONGS } from "../vibe/songs";
 
 /** A stand-in for Tone.js that records every note it's asked to play, as MIDI numbers. */
 vi.mock("tone", () => {
-  const param = () => ({ value: 0, rampTo() {} });
+  const param = () => ({ value: 0, rampTo() {}, setValueAtTime() {} });
   class Node {
     played: { note: number; step: number }[] = [];
     volume = param();
     wet = param();
     frequency = param();
+    gain = param();
     connect() {
+      return this;
+    }
+    start() {
       return this;
     }
     toDestination() {
@@ -40,7 +44,7 @@ vi.mock("tone", () => {
     clear() {},
   };
   transport.bpm.value = 120;
-  const names = ["Volume", "Compressor", "Freeverb", "Filter", "PolySynth", "Synth", "FMSynth", "PluckSynth", "MonoSynth", "MembraneSynth", "NoiseSynth", "Distortion", "Vibrato"];
+  const names = ["Volume", "Compressor", "Limiter", "EQ3", "Reverb", "Gain", "Chorus", "Filter", "PolySynth", "Synth", "FMSynth", "PluckSynth", "MonoSynth", "MembraneSynth", "NoiseSynth", "Distortion", "Vibrato"];
   return {
     ...Object.fromEntries(names.map((n) => [n, class extends Node {}])),
     clock,
@@ -94,5 +98,44 @@ describe("the beat engine", () => {
     expect(v.lead!.played.map((n) => n.step)).toEqual([0, 8, 16, 24, 32, 40, 48, 56, 128, 136, 144, 152, 160, 168, 176, 184]);
     expect(v.singer!.played.slice(0, 3).map((n) => [n.note, n.step])).toEqual([[60, 64], [62, 68], [64, 72]]); // C4 D4 E4
     expect(v.singer!.played.map((n) => n.step).every((st) => st >= 64 && st < 128)).toBe(true);
+  });
+});
+
+describe("playing a set", () => {
+  it("voices each chord close to the last, like a keyboard player's hands", async () => {
+    const { voiceLead } = await import("../vibe/engine");
+    const c = voiceLead([48, 52, 55], null); // C
+    const g = voiceLead([43, 47, 50], c); // G
+    const moved = g.reduce((sum, n, i) => sum + Math.abs(n - c[i]), 0);
+    expect(moved).toBeLessThanOrEqual(6); // C E G → B D G: a few semitones, not a leap
+    expect(Math.max(...g) - Math.min(...g)).toBeLessThan(12);
+  });
+
+  it("hands over to the next song on a downbeat, without stopping the beat", async () => {
+    const tone = (await import("tone")) as unknown as { clock: { step: number; tick: (t: number) => void } };
+    const { VibeEngine, songLoop } = await import("../vibe/engine");
+    const engine = new VibeEngine();
+    await engine.play(songLoop(DEMO_SONGS.slice(0, 2), 0, { name: "set", id: "set" }), "stable");
+    const internals = engine as unknown as { songBars: number; step: number };
+    const bars = internals.songBars;
+    for (let i = 0; i < bars * 16; i++) tone.clock.tick(0);
+    expect(engine.getSnapshot().loop?.index).toBe(0);
+    tone.clock.tick(0); // the downbeat after the song's last bar
+    expect(engine.getSnapshot().loop?.index).toBe(1);
+    expect(engine.playing).toBe(true);
+    expect(internals.step).toBe(1); // the new song started on its own first step
+  });
+
+  it("takes a skip on the next downbeat while playing", async () => {
+    const tone = (await import("tone")) as unknown as { clock: { step: number; tick: (t: number) => void } };
+    const { VibeEngine, songLoop } = await import("../vibe/engine");
+    const engine = new VibeEngine();
+    await engine.play(songLoop(DEMO_SONGS, 0, { name: "set", id: "set" }), "stable");
+    for (let i = 0; i < 5; i++) tone.clock.tick(0); // mid-bar
+    await engine.skip(1);
+    for (let i = 5; i < 16; i++) tone.clock.tick(0);
+    expect(engine.getSnapshot().loop?.index).toBe(0);
+    tone.clock.tick(0); // downbeat
+    expect(engine.getSnapshot().loop?.index).toBe(1);
   });
 });

@@ -126,6 +126,26 @@ export function brushedRoughness() {
   });
 }
 
+/**
+ * Handling marks: soft, low-frequency roughness variation (green channel), so glossy and metal
+ * parts don't reflect like perfect CG mirrors. Multiplies the material's roughness.
+ */
+export function smudgeRoughness() {
+  return once("smudge", () => {
+    const size = 256;
+    const data = new Uint8Array(size * size * 4);
+    for (let y = 0; y < size; y++)
+      for (let x = 0; x < size; x++) {
+        const n = fbm(x / size, y / size, 3, 4, 41);
+        const r = Math.round((0.45 + n * 0.55) * 255);
+        const i = (y * size + x) * 4;
+        data[i] = data[i + 1] = data[i + 2] = r;
+        data[i + 3] = 255;
+      }
+    return dataTexture(data, size, "smudge");
+  });
+}
+
 /** Woven textile — knit canopy, knit cushions, speaker cloth. */
 export function weaveNormal() {
   return once("weave", () => {

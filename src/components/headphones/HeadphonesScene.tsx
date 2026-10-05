@@ -5,11 +5,10 @@
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
-import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 import type { Finish, HeadphoneLook, HeadphoneModel } from "@/lib/headphones/catalog";
 import { meter } from "@/lib/headphones/store";
 import { basis, Loop, offsetPath, outlineShape, roundedBox, samplePath, superSection, sweep, sweepPath, type Ring } from "./geometry";
-import { brushedRoughness, grainNormal, leatherNormal, repeated, weaveNormal, wordmarkAlpha } from "./textures";
+import { brushedRoughness, grainNormal, leatherNormal, repeated, smudgeRoughness, weaveNormal, wordmarkAlpha } from "./textures";
 
 /**
  * Procedural, physically based headphones. Real-world proportions (1 unit =
@@ -30,7 +29,7 @@ export default function HeadphonesScene({ model, ringColor, reduced }: SceneProp
   const wired = model.kind === "wired";
   return (
     <Canvas
-      shadows
+      shadows="percentage"
       dpr={[1, 2]}
       camera={{ position: [0, 0.15, 8], fov: 24 }}
       gl={{ antialias: true, alpha: true, powerPreference: "high-performance", toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.08 }}
@@ -38,9 +37,8 @@ export default function HeadphonesScene({ model, ringColor, reduced }: SceneProp
     >
       <Studio />
       <KeyLight />
-      <directionalLight position={[-3.5, 1.2, -2.5]} intensity={1.4} color="#ffe2cf" />
-      <directionalLight position={[3, -1.5, -3]} intensity={0.5} color="#cfe0ff" />
-      <ambientLight intensity={0.06} />
+      <directionalLight position={[-4, 1.2, -3]} intensity={0.9} color="#ffe2cf" />
+      <ambientLight intensity={0.03} />
       <Fit box={buds ? [1.05, 1.05] : wired ? [0.9, 1.15] : [3.0, 2.8]} />
       <Rig key={model.id} reduced={reduced}>
         {buds ? (
@@ -63,9 +61,17 @@ function Studio() {
   const { gl, scene } = useThree();
   useEffect(() => {
     const pmrem = new THREE.PMREMGenerator(gl);
-    const env = pmrem.fromScene(new RoomEnvironment(), 0.035).texture;
+    const room = photoStudio();
+    const env = pmrem.fromScene(room, 0.02).texture;
+    room.traverse((o) => {
+      const m = o as THREE.Mesh;
+      if (m.isMesh) {
+        m.geometry.dispose();
+        (m.material as THREE.Material).dispose();
+      }
+    });
     scene.environment = env;
-    scene.environmentIntensity = 0.85;
+    scene.environmentIntensity = 1;
     return () => {
       scene.environment = null;
       env.dispose();
@@ -73,6 +79,32 @@ function Studio() {
     };
   }, [gl, scene]);
   return null;
+}
+
+/**
+ * A product-photography set, rendered once into the reflections: a big overhead-left key softbox,
+ * a soft fill panel, two tall rim strip-lights behind, a dim ceiling and a dark floor bounce.
+ * The strips are what draw the long, clean highlights you see on real headphone shots.
+ */
+function photoStudio() {
+  const room = new THREE.Scene();
+  room.background = new THREE.Color(0x0e0e10);
+  const panel = (w: number, h: number, pos: [number, number, number], intensity: number, tint = 0xffffff) => {
+    const m = new THREE.Mesh(
+      new THREE.PlaneGeometry(w, h),
+      new THREE.MeshBasicMaterial({ color: new THREE.Color(tint).multiplyScalar(intensity), side: THREE.DoubleSide }),
+    );
+    m.position.set(...pos);
+    m.lookAt(0, 0, 0);
+    room.add(m);
+  };
+  panel(5, 3.5, [-3.5, 4.5, 4], 7); // key softbox
+  panel(7, 2.5, [5.5, 1, 3.5], 1.6, 0xfff4ea); // fill
+  panel(0.7, 7, [-5, 1, -3.5], 9, 0xfff1e4); // warm rim strip
+  panel(0.7, 7, [5, 1.5, -4.5], 7, 0xe8f0ff); // cool rim strip
+  panel(10, 10, [0, 8, 0], 0.9); // ceiling
+  panel(16, 16, [0, -4, 0], 0.08); // floor bounce
+  return room;
 }
 
 function KeyLight() {
@@ -91,8 +123,8 @@ function KeyLight() {
     <directionalLight
       ref={ref}
       castShadow
-      position={[2.6, 4.2, 3.4]}
-      intensity={2.4}
+      position={[-3, 4.5, 3.8]}
+      intensity={1.6}
       shadow-mapSize={[2048, 2048]}
       shadow-bias={-0.0003}
       shadow-normalBias={0.015}
@@ -229,20 +261,25 @@ function finish(color: string, f: Finish) {
       m.normalScale.setScalar(0.35);
       break;
     case "satin":
-      Object.assign(m, { roughness: 0.38, clearcoat: 0.35, clearcoatRoughness: 0.35 });
+      Object.assign(m, { roughness: 0.52, clearcoat: 0.35, clearcoatRoughness: 0.35 });
       m.normalMap = repeated(grainNormal(), 9);
       m.normalScale.setScalar(0.18);
+      m.roughnessMap = repeated(smudgeRoughness(), 2);
       break;
-    case "gloss": // piano-black / gloss ABS
-      Object.assign(m, { roughness: 0.22, clearcoat: 1, clearcoatRoughness: 0.04 });
+    case "gloss": // piano-black / gloss ABS, with the faint haze of handling
+      Object.assign(m, { roughness: 0.32, clearcoat: 1, clearcoatRoughness: 0.08 });
+      m.roughnessMap = repeated(smudgeRoughness(), 2);
+      m.clearcoatRoughnessMap = m.roughnessMap;
       break;
     case "anodized": // bead-blasted aluminium
-      Object.assign(m, { metalness: 1, roughness: 0.34 });
+      Object.assign(m, { metalness: 1, roughness: 0.42 });
       m.normalMap = repeated(grainNormal(), 14);
       m.normalScale.setScalar(0.12);
+      m.roughnessMap = repeated(smudgeRoughness(), 1.5);
       break;
     case "chrome":
-      Object.assign(m, { metalness: 1, roughness: 0.07 });
+      Object.assign(m, { metalness: 1, roughness: 0.14 });
+      m.roughnessMap = repeated(smudgeRoughness(), 2);
       break;
     case "brushed":
       Object.assign(m, { metalness: 1, roughness: 0.32, anisotropy: 0.75 });
@@ -575,8 +612,26 @@ function Cup({ side, loop, look, mats, ringColor }: CupProps) {
 
     const cloth = new THREE.ShapeGeometry(outlineShape(loop, 0.66 - look.cushion.width / R / 2));
 
-    // Controls on the right cup's lower-back edge.
+    // The cushion's sewn seam, running round its outer wall.
+    const seam = sweep(
+      loop,
+      () =>
+        Array.from({ length: 10 }, (_, j): Ring => {
+          const a = (j / 9) * Math.PI * 2;
+          return [1, 0.0125 + 0.0026 * Math.cos(a), cT * 0.52 + 0.0026 * Math.sin(a)];
+        }),
+      200,
+    );
+
     const p = new THREE.Vector2(), nr = new THREE.Vector2();
+    // Two noise-cancelling mic ports on the outer plate, just inside the accent ring.
+    const mics = [0.06, 0.44].map((u) => {
+      loop.at(u, p, nr);
+      const k = kc - g * 4;
+      return new THREE.Vector3(p.x * k, p.y * k, top + 0.0088);
+    });
+
+    // Controls on the right cup's lower-back edge.
     const z = cT + D * 0.42;
     const at = (u: number, out: number) => {
       loop.at(u, p, nr);
@@ -591,6 +646,9 @@ function Cup({ side, loop, look, mats, ringColor }: CupProps) {
       plate,
       ring,
       cloth,
+      seam,
+      mics,
+      mic: new THREE.CircleGeometry(0.0055, 20),
       controls: [0.6, 0.635, 0.67].map((u) => at(u, 0.002)),
       led: at(0.7, 0.001),
       port: at(0.75, -0.002),
@@ -611,11 +669,15 @@ function Cup({ side, loop, look, mats, ringColor }: CupProps) {
   return (
     <group>
       <mesh geometry={geo.cushion} material={mats.cushion} />
+      <mesh geometry={geo.seam} material={mats.stitch} />
       <mesh geometry={geo.cloth} material={mats.cloth} position-z={0.05} />
       <mesh geometry={geo.shell} material={mats.shell} />
       <group ref={plate}>
         <mesh geometry={geo.plate} material={mats.face} />
         {mats.ring && <mesh geometry={geo.ring} material={mats.ring} />}
+        {geo.mics.map((pos, i) => (
+          <mesh key={i} geometry={geo.mic} position={pos} material={mats.dark} />
+        ))}
         {mats.print && <mesh geometry={geo.print} position-z={top + 0.0082} scale={[wm, wm, 1]} material={mats.print} />}
       </group>
       {side === 1 && (

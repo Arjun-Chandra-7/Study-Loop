@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { MusicApiError, musicApi } from "@/lib/music/client";
+import { arrangePlaylist, type ArrangedSong } from "@/lib/music/vibe/arrange";
 import { songLoop, vibeEngine } from "@/lib/music/vibe/engine";
 import type { BeatPlaylist, SongBeat } from "@/lib/music/vibe/songs";
 import { useStudyLoop } from "@/lib/useStudyLoop";
@@ -15,11 +16,12 @@ export function usePlaylistPlayback(p: BeatPlaylist) {
   return { ours, playing: ours && player.playing, now: ours ? (player.loop?.index ?? 0) : null };
 }
 
-/** Start (or pause) the playlist, from song `i`. */
+/** Start (or pause) the playlist, from song `i` of its arranged (set) order. */
 export function playPlaylist(p: BeatPlaylist, i = 0, physio = "stable" as Parameters<typeof vibeEngine.play>[1]) {
   const snap = vibeEngine.getSnapshot();
   if (snap.loop?.playlistId === p.id && (snap.loop.index ?? 0) === i && snap.loop.queue) return void vibeEngine.toggle();
-  void vibeEngine.play(songLoop(p.songs, i, { name: p.name, id: p.id }), physio);
+  const set = arrangePlaylist(p);
+  void vibeEngine.play(songLoop(set.songs, i, { name: p.name, id: p.id }), physio);
 }
 
 function Cover({ url, size = 56 }: { url: string | null | undefined; size?: number }) {
@@ -37,13 +39,17 @@ export function BeatPlaylistView({ playlist, onSaved }: { playlist: BeatPlaylist
   const { ours, playing, now } = usePlaylistPlayback(playlist);
   const [savedKeys, setSavedKeys] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const current = playlist.songs[now ?? 0];
+  // Listed and played in set order: keys, tempos and energy matched song to song.
+  const songs = arrangePlaylist(playlist).songs as ArrangedSong[];
+  const current = songs[now ?? 0];
 
   const save = async (song: SongBeat) => {
     try {
-      const loop = await musicApi.saveLoop({ name: `${song.title} beat`, playlistName: song.artist || null, profile: song.profile });
+      // Saved as recorded, not as nudged to fit its neighbour in this set.
+      const original = playlist.songs.find((x) => x.query === song.query) ?? song;
+      const loop = await musicApi.saveLoop({ name: `${song.title} beat`, playlistName: song.artist || null, profile: original.profile });
       setSavedKeys((k) => [...k, song.query]);
-      if (ours && playlist.songs[now ?? -1] === song) vibeEngine.markSaved(loop.id, loop.name);
+      if (ours && songs[now ?? -1] === song) vibeEngine.markSaved(loop.id, loop.name);
       onSaved?.();
     } catch (e) {
       setError(e instanceof MusicApiError ? e.message : "Couldn't save that one. Try again.");
@@ -60,7 +66,9 @@ export function BeatPlaylistView({ playlist, onSaved }: { playlist: BeatPlaylist
               Beat playlist · {playlist.songs.length} song{playlist.songs.length === 1 ? "" : "s"}
             </p>
             <p className="beats__name">{playlist.name}</p>
-            <p className="small muted beats__summary">{ours && current ? `Now: ${current.title} · ${current.profile.summary}` : "Same songs, same order, each one as its beat."}</p>
+            <p className="small muted beats__summary">
+              {ours && current ? `Now: ${current.title} · ${current.profile.summary}` : "Same songs, arranged to flow: keys, tempos and energy matched, each one handing over on the beat."}
+            </p>
           </div>
         </div>
         <div className="beats__actions">
@@ -93,7 +101,7 @@ export function BeatPlaylistView({ playlist, onSaved }: { playlist: BeatPlaylist
       )}
 
       <ol className="songs" aria-label={`Songs in ${playlist.name}`} data-lenis-prevent>
-        {playlist.songs.map((song, i) => {
+        {songs.map((song, i) => {
           const isNow = ours && now === i;
           const saved = savedKeys.includes(song.query);
           return (
@@ -114,7 +122,7 @@ export function BeatPlaylistView({ playlist, onSaved }: { playlist: BeatPlaylist
                 <span className="songs__text">
                   <span className="card__title">{song.title}</span>
                   <span className="small muted songs__facts">
-                    {[song.artist, `${song.profile.tempoBpm} BPM`, `${song.profile.key} ${song.profile.mode}`, FEEL[song.profile.drumFeel]].filter(Boolean).join(" · ")}
+                    {[song.artist, `${song.profile.tempoBpm} BPM`, `${song.profile.key} ${song.profile.mode}${song.keyShift ? " (nudged into key)" : ""}`, FEEL[song.profile.drumFeel]].filter(Boolean).join(" · ")}
                   </span>
                 </span>
               </button>
