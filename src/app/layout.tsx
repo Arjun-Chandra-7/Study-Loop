@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import { AuthProvider } from "@/lib/auth";
+import { InstallPrompt } from "@/components/pwa/InstallPrompt";
+import { ServiceWorkerManager } from "@/components/pwa/ServiceWorkerManager";
 import { prePaintScript } from "@/lib/palettes";
 import { LITE_SCRIPT } from "@/lib/device";
 import "./globals.css";
@@ -30,11 +32,16 @@ export const metadata: Metadata = {
     type: "website",
   },
   twitter: { card: "summary_large_image" },
+  // Installed-PWA behaviour on iOS: full-screen, dark status bar, home-screen name.
+  appleWebApp: { capable: true, title: "StudyLoop", statusBarStyle: "black-translucent" },
+  applicationName: "StudyLoop",
 };
 
 export const viewport: Viewport = {
   themeColor: "#0c0b08",
   colorScheme: "dark",
+  // Draw under the notch / rounded corners so the installed app fills the screen.
+  viewportFit: "cover",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
@@ -47,6 +54,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       </head>
       <body>
         <AuthProvider>{children}</AuthProvider>
+        <ServiceWorkerManager />
+        <InstallPrompt />
       </body>
     </html>
   );
