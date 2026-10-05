@@ -73,7 +73,7 @@ export class MockSensorProvider implements SensorProvider {
   async connect() {
     this.wantsConnection = true;
     if (this.reading.connection !== "disconnected") return;
-    this.patch({ connection: "connecting", deviceName: "StudyLoop SL-01" });
+    this.patch({ connection: "connecting", deviceName: "Band 1" });
     if (this.connectTimer) clearTimeout(this.connectTimer);
     this.connectTimer = setTimeout(() => {
       if (this.scenario === "disconnected") {

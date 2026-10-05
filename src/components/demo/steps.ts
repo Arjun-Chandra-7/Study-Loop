@@ -34,8 +34,8 @@ const live = () => ["baseline", "active", "paused"].includes(engine.getSnapshot(
 export const STEPS: TourStep[] = [
   {
     id: "hello",
-    title: "Hackathon tour",
-    line: "Hey, I’m **Arjun**, the software and research dev on StudyLoop. You’ve got a lot of teams to see, so this takes **about two minutes**. Hit Next, or use the arrow keys.",
+    title: "Quick tour",
+    line: "Hey, I’m **Arjun** from StudyLoop. This takes **about a minute** — hit Next, or use the arrow keys.",
     art: "full",
     mood: "extra",
     tab: "home",
@@ -47,37 +47,25 @@ export const STEPS: TourStep[] = [
     },
   },
   {
-    id: "why",
-    title: "The problem",
-    line: "Ever studied for an hour and realised you were **stressed the whole time**? You can’t feel it while it’s happening, and by the time you do, the hour’s gone.",
-    tab: "home",
-  },
-  {
     id: "what",
-    title: "StudyLoop, in three beats",
-    line: "So we built something that **feels it for you**. A wristband reads your body, the app learns **your calm**, and your music **eases off** when stress climbs.",
+    title: "What StudyLoop does",
+    line: "Ever studied for an hour and realised you were **stressed the whole time**? StudyLoop **feels it for you**: a band reads your body, and your music **eases off** when stress climbs.",
     beats: true,
     tab: "home",
   },
   {
-    id: "pair",
-    title: "Pair the band",
-    line: "Normally you’d pair your band from up here. I’ve connected a **simulated band**, so everything from now on is **live data**.",
-    target: [".top-capsule", ".notch--tr", ".mx-band"],
+    id: "band",
+    title: "Your band, live",
+    line: "I’ve connected a **simulated band**, so this is all **live data**. It reads **heart rate** and **skin conductance**, each against **your own baseline** — no scores, just how far from your normal.",
+    target: [".top-capsule", ".notch--tr", ".mx-band", ".notch--bl", ".area-c", ".area-d", ".mx-dials"],
     run: () => {
       if (engine.getSnapshot().reading.connection === "disconnected") void engine.connect();
     },
   },
   {
-    id: "signals",
-    title: "Live signals",
-    line: "**Heart rate** from the pulse sensor, **skin conductance** from two electrodes. Both are compared with **your own baseline**: no scores, just how far you are from your normal.",
-    target: [".notch--bl", ".area-c", ".area-d", ".mx-dials"],
-  },
-  {
     id: "start",
     title: "Start a session",
-    line: "Let’s study. A session opens with a few **still seconds** so StudyLoop learns your baseline. No band? It still works as a **plain timer**.",
+    line: "Let’s study. A session opens with a few **still seconds** to learn your baseline. No band? It’s still a **timer**.",
     target: [".main", ".mx-sheet"],
     tab: "session",
     run: () => {
@@ -85,16 +73,9 @@ export const STEPS: TourStep[] = [
     },
   },
   {
-    id: "controls",
-    title: "While you study",
-    line: "**Pause**, **mark** a moment to remember, or switch on **40 Hz beats**. Start in silence and StudyLoop offers to put music on.",
-    target: [".main-foot", ".mx-sheet .m-sheet__foot"],
-    tab: "session",
-  },
-  {
     id: "stress",
     title: "When stress climbs",
-    line: "Watch: I’m **stressing the band** on purpose. Heart and skin climb above baseline, the state turns **elevated**, and the moment is logged for later.",
+    line: "Watch — I’m **stressing the band**. Heart and skin climb above baseline, the state turns **elevated**, and the moment is **logged** for later.",
     target: [".main", ".notch--bl", ".mx-sheet"],
     tab: "session",
     mood: "extra",
@@ -103,7 +84,7 @@ export const STEPS: TourStep[] = [
   {
     id: "music",
     title: "Loops",
-    line: "My favourite part. Paste **any Spotify playlist**: StudyLoop finds every song, reads its **tempo, key, chords and groove**, and rebuilds the playlist as **beats you recognise in two bars**, riff and all, saved to your Library. This is Seven Nation Army. Slower and softer? **That’s the stress.**",
+    line: "Paste **any Spotify playlist** and StudyLoop rebuilds it as **beats you know in two bars** — tempo, key and groove, saved to your Library. This is Seven Nation Army, slower and softer: **that’s the stress.**",
     target: [".music"],
     tab: "music",
     run: () => {
@@ -113,36 +94,22 @@ export const STEPS: TourStep[] = [
   {
     id: "recover",
     title: "Back to the groove",
-    line: "Now the band calms down, and the beat **eases back** to the song’s real tempo. Every song gets its turn, then the **next one** comes in. No song audio is ever used.",
+    line: "As the band calms, the beat **eases back** to the song’s real tempo, then the **next one** comes in. No song audio is ever used.",
     target: [".music-player"],
     tab: "music",
     run: () => engine.demoScenario("recovery"),
   },
   {
     id: "insights",
-    title: "Insights",
-    line: "After a session: **how long you stayed steady**, every elevated moment, and your marks. Sessions even **survive a crash**: StudyLoop asks to continue.",
+    title: "Insights & more",
+    line: "Afterwards: **how long you stayed steady**, every elevated moment, your marks — and sessions **survive a crash**. There’s honest, **experimental** brainwave research in-app too; StudyLoop is a study tool, **not a medical device**.",
     target: [".insights"],
     tab: "insights",
   },
   {
-    id: "research",
-    title: "Honest science",
-    line: "Brainwave research lives here, clearly **labelled experimental**, with peer-reviewed papers for every band. StudyLoop is a study tool, **not a medical device**.",
-    target: [".research"],
-    tab: "research",
-  },
-  {
-    id: "profile",
-    title: "Make it yours",
-    line: "The band itself, **colour palettes**, **quiet mode** for deep focus, and every prompt can be switched off.",
-    target: [".profile"],
-    tab: "profile",
-  },
-  {
     id: "bye",
     title: "That’s StudyLoop",
-    line: "**A band that feels stress. Music that answers it.** That’s StudyLoop. Thanks so much for your time! Explore on your own, or replay the tour.",
+    line: "**A band that feels stress. Music that answers it.** Thanks for your time — explore on your own, or replay the tour.",
     art: "full",
     tab: "home",
     run: () => engine.demoScenario("normal"),

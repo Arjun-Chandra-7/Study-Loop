@@ -89,7 +89,7 @@ export function ProfileView() {
             Your band
           </p>
           <h2 className="h-section">
-            {r.deviceName ?? "StudyLoop SL-01"}
+            {r.deviceName ?? "Band 1"}
             {s.providerKind === "mock" && r.connection !== "disconnected" && <span className="chip chip--outline">Simulated</span>}
           </h2>
           <dl className="spec-list">
@@ -122,7 +122,7 @@ export function ProfileView() {
               type="button"
               className="btn btn--solid btn--sm"
               onClick={engine.toggleConnection}
-              title="Testing build: connects a simulated SL-01 with live heart rate and EDA"
+              title="Testing build: connects a simulated Band 1 with live heart rate and EDA"
             >
               <Icon name={r.connection === "disconnected" ? "band" : "unlink"} size={16} />
               {r.connection === "disconnected" ? "Pair your band" : "Disconnect"}

@@ -33,7 +33,7 @@ export function BandSpec({ live = false }: { live?: boolean }) {
 
       {/* header */}
       <text x="18" y="26" className="band-spec__kicker">TECH SPEC</text>
-      <text x="18" y="48" className="band-spec__model">SL-01</text>
+      <text x="18" y="48" className="band-spec__model">Band 1</text>
       <text x="382" y="26" textAnchor="end" className="band-spec__kicker">FRONT</text>
 
       {/* strap: woven, running off both edges */}

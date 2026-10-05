@@ -62,7 +62,7 @@ describe("band readings from the hardware's Firebase", () => {
     expect(r.hr).toBe(95);
     expect(r.battery).toBe(64);
     expect(r.eda).toBeGreaterThan(2); // gsr 0: simulated around the resting average
-    expect(r.deviceName).toBe("StudyLoop band");
+    expect(r.deviceName).toBe("Band 1");
 
     // The sensor drops out: heart rate is simulated, now centred on this band's own average (95).
     internal.receive({ heartRate: null, battery: 64 });
@@ -73,7 +73,7 @@ describe("band readings from the hardware's Firebase", () => {
 
     // Nothing for a while: the whole band is simulated, and says so.
     vi.advanceTimersByTime(20_000);
-    expect(band.getReading().deviceName).toBe("StudyLoop band (simulated)");
+    expect(band.getReading().deviceName).toBe("Band 1 (simulated)");
     band.dispose();
     expect(seen.length).toBeGreaterThan(3);
   });

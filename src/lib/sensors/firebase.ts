@@ -97,7 +97,7 @@ export class FirebaseSensorProvider implements SensorProvider {
 
   async connect() {
     if (this.reading.connection !== "disconnected") return;
-    this.patch({ connection: "connecting", deviceName: "StudyLoop band" });
+    this.patch({ connection: "connecting", deviceName: "Band 1" });
     // The simulation runs underneath and supplies every value the hardware doesn't.
     this.unsubSim = this.sim.subscribe((s) => s.connection === "connected" && this.merge(s));
     await this.sim.connect();
@@ -155,7 +155,7 @@ export class FirebaseSensorProvider implements SensorProvider {
       eda: value("eda", s.eda),
       battery: Math.round(Math.min(100, Math.max(1, value("battery", s.battery) ?? this.avg.battery.value))),
       quality: live ? (this.raw.hr !== null && this.raw.contact ? "good" : this.raw.online ? "fair" : s.quality) : s.quality,
-      deviceName: live ? "StudyLoop band" : "StudyLoop band (simulated)",
+      deviceName: live ? "Band 1" : "Band 1 (simulated)",
     });
   }
 

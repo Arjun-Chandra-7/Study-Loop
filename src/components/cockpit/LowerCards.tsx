@@ -176,7 +176,7 @@ export function ProfilePill() {
       <span className="profile-pill__text">
         <span className="profile-pill__name">{user?.displayName ?? user?.email ?? "Signed in"}</span>
         <span className="profile-pill__band">
-          {conn === "connected" ? `Band SL-01 · ${reading.battery ?? "—"}%` : conn === "connecting" ? "Pairing band…" : "Band not connected"}
+          {conn === "connected" ? `Band 1 · ${reading.battery ?? "—"}%` : conn === "connecting" ? "Pairing band…" : "Band not connected"}
         </span>
       </span>
       {/* Mirrors the physical LED on the band. */}

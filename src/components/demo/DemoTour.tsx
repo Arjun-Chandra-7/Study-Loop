@@ -81,6 +81,9 @@ export function DemoTour() {
   const [open, setOpen] = useState(true);
   const [i, setI] = useState(0);
   const [rect, setRect] = useState<Rect | null>(null);
+  // Which side the guide stands on. Locked per step: deciding it every frame made Arjun
+  // jump sides as the lit panel animated across the screen's midline.
+  const [side, setSide] = useState<"left" | "right">("left");
   const [typed, setTyped] = useState(0);
   const nextBtn = useRef<HTMLButtonElement>(null);
   const step = STEPS[i];
@@ -121,21 +124,34 @@ export function DemoTour() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- run once per opening, not per step
   }, [active]);
 
-  // Follow the target while views animate and the window resizes.
+  // Follow the target while views animate and the window resizes. The spotlight box tracks every
+  // frame; the guide's side is locked on the step's first real measurement so it never jumps.
   useEffect(() => {
     if (!active) return;
     let raf = 0;
     let prev: Rect | null | undefined;
+    let sideLocked = false;
     const track = () => {
       const r = step.target ? unionRect(step.target) : null;
       if (prev === undefined || !same(r, prev)) {
         prev = r;
         setRect(r);
       }
+      // Decide the side once, from the first real target (or immediately for a full-screen step),
+      // then keep it for the whole step — deciding per frame made Arjun flick across the screen.
+      if (!sideLocked && (r || !step.target)) {
+        sideLocked = true;
+        setSide(!r || r.x + r.w / 2 > window.innerWidth / 2 ? "left" : "right");
+      }
       raf = requestAnimationFrame(track);
     };
     track();
-    return () => cancelAnimationFrame(raf);
+    const onResize = () => (sideLocked = false); // re-decide once after a resize
+    window.addEventListener("resize", onResize);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener("resize", onResize);
+    };
   }, [active, step]);
 
   // Typewriter, like a game's dialogue box. Instant for reduced motion.
@@ -205,8 +221,8 @@ export function DemoTour() {
   const full = step.art === "full";
   // He talks while the line types, then settles into the step's mood.
   const pose: Pose = typing ? "talking" : (step.mood ?? "normal");
-  // The guide stands on the side away from what's lit.
-  const guideLeft = !rect || rect.x + rect.w / 2 > window.innerWidth / 2;
+  // The guide stands on the side away from what's lit (locked per step, see the effect above).
+  const guideLeft = side === "left";
   const progress = (i + 1) / STEPS.length;
 
   return (

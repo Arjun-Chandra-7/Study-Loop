@@ -63,7 +63,7 @@ function TopBar() {
         <span className={`link-dot link-dot--${r.connection}`} aria-hidden />
         {on ? (
           <>
-            SL-01 <span className="tnum">{r.battery ?? "—"}%</span>
+            Band 1 <span className="tnum">{r.battery ?? "—"}%</span>
           </>
         ) : r.connection === "connecting" ? (
           "Pairing…"
