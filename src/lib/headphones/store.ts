@@ -2,7 +2,7 @@
 
 import { useSyncExternalStore } from "react";
 import { gammaBeats } from "../music/gamma";
-import { cleanLabel, findModel, identify, type HeadphoneModel } from "./catalog";
+import { cleanLabel, displayName, findModel, identify, type HeadphoneModel } from "./catalog";
 
 /**
  * Which headphones are on, and is anything playing through them.
@@ -137,7 +137,9 @@ class Headphones {
         }
       }
     }
-    this.real = hit ? { status: "connected", ...hit } : { status: "none", label: null, model: null };
+    this.real = hit
+      ? { status: "connected", label: displayName(hit.label, hit.model), model: hit.model }
+      : { status: "none", label: null, model: null };
     this.emit();
   };
 

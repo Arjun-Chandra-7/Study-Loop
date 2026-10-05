@@ -7,7 +7,7 @@
  * scene knows how to render.
  */
 
-export type HeadphoneKind = "overear" | "onear" | "earbuds";
+export type HeadphoneKind = "overear" | "onear" | "earbuds" | "wired";
 export type Finish = "matte" | "satin" | "gloss" | "anodized" | "chrome" | "brushed";
 
 export interface HeadphoneLook {
@@ -21,8 +21,10 @@ export interface HeadphoneLook {
   slider: "metal" | "telescopic";
   /** Printed on the face plate and the band, the way the real one is. */
   wordmark?: { text: string; color: string };
-  /** Earbuds only. */
+  /** Earbuds and wired earphones. */
   buds?: { stem: boolean; tip: boolean; case: string };
+  /** Wired earphones: what the cable ends in. */
+  plug?: "usb-c" | "jack";
 }
 
 export interface HeadphoneModel {
@@ -257,6 +259,24 @@ export const GENERIC: Record<HeadphoneKind, HeadphoneModel> = {
     match: /$^/,
     look: earbuds("#ececea", { stem: true, tip: true, case: "#ececea" }),
   },
+  wired: {
+    id: "generic-wired-usbc",
+    brand: "",
+    name: "USB-C earphones",
+    kind: "wired",
+    match: /$^/,
+    look: { ...earbuds("#f1f1ef", { stem: true, tip: true, case: "#f1f1ef" }), plug: "usb-c" },
+  },
+};
+
+/** 3.5 mm earphones, for a headphone-jack output. */
+export const WIRED_JACK: HeadphoneModel = {
+  id: "generic-wired-jack",
+  brand: "",
+  name: "Wired earphones",
+  kind: "wired",
+  match: /$^/,
+  look: { ...earbuds("#1c1c1e", { stem: true, tip: true, case: "#1c1c1e" }), plug: "jack" },
 };
 
 /** Labels that are definitely not something you wear. */
@@ -273,15 +293,31 @@ export function cleanLabel(label: string) {
     .trim();
 }
 
+/**
+ * Wired sets rarely have a name of their own: USB-C earphones and dongles show
+ * up as "USB-Audio" / "USB Audio DAC"; jack headphones as the sound card's
+ * "Headphones" port (Windows "Headphones (Realtek…)", macOS "External Headphones").
+ */
+const USB_WIRED = /usb[- ]?(audio|c\b|dac|headphone|headset|earphone)|type[- ]?c|\bdac\b|earphone|in-?ear|wired/i;
+const JACK = /^(external )?head(phones?|set)$|head(phones?|set) \((realtek|conexant|cirrus|high definition|hd audio|built-?in|internal)/i;
+
 export function identify(label: string): HeadphoneModel | null {
   const clean = cleanLabel(label);
   if (!clean || NOT_WORN.test(clean)) return null;
   const known = CATALOG.find((m) => m.match.test(clean));
   if (known) return known;
+  if (JACK.test(clean)) return WIRED_JACK;
+  if (USB_WIRED.test(label)) return GENERIC.wired;
   if (!WORN.test(label)) return null;
   return GENERIC[BUDS.test(clean) ? "earbuds" : "overear"];
 }
 
+/** OS labels like "USB-Audio Analog" mean nothing to a person; show the model's own name instead. */
+export function displayName(label: string, model: HeadphoneModel) {
+  if (model.kind === "wired" && (/usb[- ]?audio|analog|realtek|built-?in|high definition|^(external )?head(phones?|set)\b/i.test(label) || !label)) return model.name;
+  return label;
+}
+
 export function findModel(id: string) {
-  return CATALOG.find((m) => m.id === id) ?? Object.values(GENERIC).find((m) => m.id === id) ?? null;
+  return [...CATALOG, ...Object.values(GENERIC), WIRED_JACK].find((m) => m.id === id) ?? null;
 }

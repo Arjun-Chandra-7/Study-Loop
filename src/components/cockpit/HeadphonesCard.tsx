@@ -38,11 +38,21 @@ export function HeadphonesCard() {
       data-playing={(connected && hp.playing) || undefined}
       aria-label="Headphones"
     >
-      <header className="card__head">
+      <header className="card__head hp-card__head">
         <p className="card__title">Headphones</p>
-        <StatusChip status={hp.status} playing={connected && hp.playing} preview={hp.preview} />
+        <span className="hp-card__status">
+          <StatusChip status={hp.status} playing={connected && hp.playing} preview={hp.preview} />
+          {hp.preview && (
+            <button type="button" className="hp-card__x" onClick={() => headphones.preview(null)} aria-label="Exit preview" title="Exit preview">
+              <svg viewBox="0 0 12 12" width="10" height="10" aria-hidden>
+                <path d="M2 2l8 8M10 2l-8 8" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+              </svg>
+            </button>
+          )}
+        </span>
       </header>
 
+      {/* The stage owns all the room: model, hello, empty state and the name bar overlay it. */}
       <div className="hp-card__stage">
         {connected && !hello && (
           <motion.div
@@ -58,24 +68,16 @@ export function HeadphonesCard() {
         {!connected && <Empty status={hp.status} />}
         {connected && hp.playing && !hello && !reduced && <Notes />}
         <LevelGlow on={connected && hp.music !== "off"} />
-      </div>
-
-      {connected ? (
-        <footer className="hp-card__foot">
-          <div className="hp-card__name">
-            {hp.model!.brand && <span className="hp-card__brand">{hp.model!.brand}</span>}
-            <span className="hp-card__model">{withoutBrand(hp.label ?? "", hp.model!.brand)}</span>
+        {connected && !hello && (
+          <div className="hp-card__bar">
+            <div className="hp-card__name">
+              {hp.model!.brand && <span className="hp-card__brand">{hp.model!.brand}</span>}
+              <span className="hp-card__model">{withoutBrand(hp.label ?? "", hp.model!.brand)}</span>
+            </div>
+            <MusicButton preview={hp.preview} music={hp.music} />
           </div>
-          <MusicButton preview={hp.preview} music={hp.music} />
-        </footer>
-      ) : (
-        <PreviewPicker />
-      )}
-      {hp.preview && (
-        <button type="button" className="hp-card__exit" onClick={() => headphones.preview(null)}>
-          Exit preview
-        </button>
-      )}
+        )}
+      </div>
     </section>
   );
 }
@@ -167,10 +169,10 @@ function Hello({ label }: { label: string }) {
 
 function Empty({ status }: { status: string }) {
   const copy: Record<string, { title: string; body: string }> = {
-    locked: { title: "See what you're wearing", body: "Reads your audio device's name only — nothing is recorded." },
-    denied: { title: "Audio access is blocked", body: "Allow microphone access in site settings so the device name is readable." },
+    locked: { title: "See what you're wearing", body: "Reads your audio device's name only. Nothing is recorded." },
+    denied: { title: "Audio access is blocked", body: "Allow microphone access in site settings to read device names." },
     searching: { title: "Looking for headphones…", body: "" },
-    none: { title: "No headphones connected", body: "Pair over Bluetooth — they'll appear here on their own." },
+    none: { title: "No headphones found", body: "Plug in or pair a set. It appears here on its own." },
     unsupported: { title: "Can't see audio devices", body: "This browser doesn't expose them. Try Chrome or Edge." },
   };
   const c = copy[status] ?? copy.searching;
@@ -183,11 +185,14 @@ function Empty({ status }: { status: string }) {
       </div>
       <p className="hp-empty__title">{c.title}</p>
       {c.body && <p className="hp-empty__body">{c.body}</p>}
-      {status === "locked" && (
-        <button type="button" className="btn btn--primary hp-empty__cta" onClick={headphones.requestAccess}>
-          Detect headphones
-        </button>
-      )}
+      <div className="hp-empty__actions">
+        {status === "locked" && (
+          <button type="button" className="btn btn--primary hp-empty__cta" onClick={headphones.requestAccess}>
+            Detect
+          </button>
+        )}
+        <PreviewPicker />
+      </div>
     </div>
   );
 }
@@ -195,9 +200,9 @@ function Empty({ status }: { status: string }) {
 function PreviewPicker() {
   return (
     <label className="hp-card__picker">
-      <span>Preview a model</span>
+      <span className="sr-only">Preview a model</span>
       <select value="" onChange={(e) => headphones.preview(e.target.value || null)}>
-        <option value="">Choose…</option>
+        <option value="">Preview a model</option>
         {CATALOG.map((m) => (
           <option key={m.id} value={m.id}>
             {m.brand} {m.name}
@@ -215,7 +220,7 @@ function MusicButton({ preview, music }: { preview: boolean; music: string }) {
     return (
       <span className="hp-music" data-on title="StudyLoop's 40 Hz beats are playing">
         <NoteGlyph />
-        Study beats
+        40 Hz
       </span>
     );
   const click = async () => {
@@ -237,7 +242,7 @@ function MusicButton({ preview, music }: { preview: boolean; music: string }) {
       title={preview ? "Play a demo beat" : "Share a tab or system audio so the card can move to your music"}
     >
       <NoteGlyph />
-      {on ? "Stop" : err ? "No audio shared" : preview ? "Demo beat" : "Sync music"}
+      {on ? "Stop" : err ? "No audio" : preview ? "Demo" : "Sync"}
     </button>
   );
 }

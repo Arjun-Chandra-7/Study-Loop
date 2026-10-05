@@ -27,6 +27,7 @@ interface SceneProps {
 
 export default function HeadphonesScene({ model, ringColor, reduced }: SceneProps) {
   const buds = model.kind === "earbuds";
+  const wired = model.kind === "wired";
   return (
     <Canvas
       shadows
@@ -40,11 +41,17 @@ export default function HeadphonesScene({ model, ringColor, reduced }: SceneProp
       <directionalLight position={[-3.5, 1.2, -2.5]} intensity={1.4} color="#ffe2cf" />
       <directionalLight position={[3, -1.5, -3]} intensity={0.5} color="#cfe0ff" />
       <ambientLight intensity={0.06} />
-      <Fit buds={buds} />
+      <Fit box={buds ? [1.05, 1.05] : wired ? [0.9, 1.15] : [3.0, 3.25]} />
       <Rig key={model.id} reduced={reduced}>
-        {buds ? <Earbuds look={model.look} ringColor={ringColor} /> : <Headphones model={model} ringColor={ringColor} />}
+        {buds ? (
+          <Earbuds look={model.look} ringColor={ringColor} />
+        ) : wired ? (
+          <Wired look={model.look} ringColor={ringColor} />
+        ) : (
+          <Headphones model={model} ringColor={ringColor} />
+        )}
       </Rig>
-      <Floor y={buds ? -0.36 : -1.22} />
+      <Floor y={buds ? -0.36 : wired ? -0.6 : -1.22} />
     </Canvas>
   );
 }
@@ -95,18 +102,17 @@ function KeyLight() {
 }
 
 /** Pull the camera back until the front view fits whatever box the card gives us. */
-function Fit({ buds }: { buds: boolean }) {
+function Fit({ box: [w, h] }: { box: [number, number] }) {
   const { camera, size } = useThree();
   useEffect(() => {
     const cam = camera as THREE.PerspectiveCamera;
-    const [w, h] = buds ? [1.05, 1.05] : [3.0, 3.25];
     const t = Math.tan(THREE.MathUtils.degToRad(cam.fov / 2));
     const aspect = size.width / Math.max(1, size.height);
     cam.position.z = Math.max(h / 2 / t, w / 2 / (t * aspect));
     cam.position.y = cam.position.z * 0.045;
     cam.lookAt(0, 0, 0);
     cam.updateProjectionMatrix();
-  }, [camera, size, buds]);
+  }, [camera, size, w, h]);
   return null;
 }
 
@@ -719,6 +725,103 @@ function Earbuds({ look, ringColor }: { look: HeadphoneLook; ringColor: string }
             </group>
           </group>
         ))}
+      </group>
+    </group>
+  );
+}
+
+/* ── Wired earphones ───────────────────────────────────────── */
+
+/** In-ear buds on a Y-cable with an inline remote, ending in a USB-C or 3.5 mm plug. */
+function Wired({ look, ringColor }: { look: HeadphoneLook; ringColor: string }) {
+  const sway = useRef<THREE.Group>(null);
+  const jack = look.plug === "jack";
+
+  const parts = useDisposable(() => {
+    const plastic = finish(look.shell.color, "gloss");
+    plastic.normalMap = repeated(grainNormal(), 30);
+    plastic.normalScale.setScalar(0.04);
+    const v = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z);
+    const left = new THREE.CatmullRomCurve3([v(-0.18, 0.19, 0), v(-0.16, 0.06, 0.03), v(-0.08, -0.05, 0.045), v(0, -0.11, 0.03)]);
+    const right = new THREE.CatmullRomCurve3([v(0.18, 0.19, 0), v(0.165, 0.05, 0.035), v(0.075, -0.055, 0.04), v(0, -0.11, 0.03)]);
+    const main = new THREE.CatmullRomCurve3([v(0, -0.14, 0.03), v(0.02, -0.27, 0.06), v(0.11, -0.4, 0.05), v(0.15, -0.445, 0.01), v(0.15, -0.46, 0)]);
+    const cable = (c: THREE.Curve<THREE.Vector3>) => new THREE.TubeGeometry(c, 160, 0.0065, 10);
+    // Inline remote sits on the right lead, aligned with it.
+    const at = right.getPointAt(0.42);
+    const tan = right.getTangentAt(0.42);
+    const remoteQ = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), tan);
+    const bulb: THREE.Vector2[] = [];
+    for (let i = 0; i <= 24; i++) {
+      const a = -Math.PI / 2 + (i / 24) * Math.PI;
+      bulb.push(new THREE.Vector2(Math.cos(a) * 0.08 * (1 - 0.15 * Math.max(0, Math.sin(a))), Math.sin(a) * 0.085));
+    }
+    return {
+      plastic,
+      cord: finish(look.shell.color, "satin"),
+      steel: finish("#cfd0d3", "brushed"),
+      chrome: finish("#e2e3e5", "chrome"),
+      ringMat: new THREE.MeshStandardMaterial({ color: "#1a1a1c", roughness: 0.5 }),
+      tipMat: new THREE.MeshPhysicalMaterial({ color: "#d9dadc", roughness: 0.55, sheen: 0.6, sheenColor: new THREE.Color("#ffffff"), transmission: 0.15, thickness: 0.02 }),
+      grille: new THREE.MeshStandardMaterial({ color: "#151517", roughness: 0.7, metalness: 0.3 }),
+      left: cable(left),
+      right: cable(right),
+      main: cable(main),
+      remote: new THREE.CapsuleGeometry(0.016, 0.07, 8, 24),
+      remoteAt: at,
+      remoteQ,
+      splitter: new THREE.CylinderGeometry(0.012, 0.014, 0.05, 24),
+      head: new THREE.LatheGeometry(bulb, 48),
+      housing: new THREE.CapsuleGeometry(0.026, 0.1, 10, 28),
+      relief: new THREE.CylinderGeometry(0.008, 0.014, 0.05, 20),
+      tip: new THREE.SphereGeometry(0.048, 32, 24, 0, Math.PI * 2, 0, Math.PI / 2),
+      mesh: new THREE.CircleGeometry(0.024, 32),
+      body: jack ? new THREE.CylinderGeometry(0.021, 0.021, 0.1, 32) : roundedBox(0.058, 0.12, 0.028, 0.012),
+      plugTip: jack ? new THREE.CylinderGeometry(0.0175, 0.0175, 0.07, 32) : roundedBox(0.042, 0.04, 0.014, 0.006),
+      band: new THREE.CylinderGeometry(0.0178, 0.0178, 0.004, 32),
+    };
+  }, [look]);
+
+  useFrame(({ clock }) => {
+    const g = sway.current;
+    if (!g) return;
+    const t = clock.elapsedTime;
+    // Hangs from the buds and swings a little; bounces on the beat.
+    g.rotation.z = Math.sin(t * 1.1) * 0.025;
+    g.position.y = 0.04 + (meter.playing ? meter.beat * 0.02 : 0);
+  });
+
+  const plugY = jack ? -0.51 : -0.52;
+  return (
+    <group ref={sway} position-y={0.04}>
+      {[-1, 1].map((side) => (
+        <group key={side} position={[side * 0.17, 0.4, 0]} rotation={[0.08, side * -0.35, 0]}>
+          <mesh geometry={parts.head} material={parts.plastic} rotation-z={(side * Math.PI) / 2} scale={[1, 1, 0.92]} />
+          <mesh geometry={parts.mesh} position={[side * -0.066, 0.004, 0.018]} rotation-y={(side * -Math.PI) / 2} material={parts.grille} />
+          <mesh geometry={parts.tip} position={[side * -0.08, 0, 0.012]} rotation-z={(side * Math.PI) / 2} material={parts.tipMat} />
+          <mesh geometry={parts.housing} position={[side * 0.01, -0.1, 0]} material={parts.plastic} />
+          <mesh geometry={parts.relief} position={[side * 0.01, -0.185, 0]} material={parts.cord} />
+          <group rotation-y={(side * Math.PI) / 2}>
+            <SoundRings z={0.06} radius={0.075} color={ringColor} />
+          </group>
+        </group>
+      ))}
+      <mesh geometry={parts.left} material={parts.cord} />
+      <mesh geometry={parts.right} material={parts.cord} />
+      <mesh geometry={parts.main} material={parts.cord} />
+      <mesh geometry={parts.remote} position={parts.remoteAt} quaternion={parts.remoteQ} material={parts.plastic} />
+      <mesh geometry={parts.splitter} position={[0, -0.125, 0.03]} material={parts.plastic} />
+      <group position={[0.15, plugY, 0]}>
+        <mesh geometry={parts.body} material={parts.plastic} />
+        {jack ? (
+          <>
+            <mesh geometry={parts.plugTip} position-y={-0.085} material={parts.chrome} />
+            {[-0.07, -0.088, -0.104].map((y) => (
+              <mesh key={y} geometry={parts.band} position-y={y} material={parts.ringMat} />
+            ))}
+          </>
+        ) : (
+          <mesh geometry={parts.plugTip} position-y={-0.075} material={parts.steel} />
+        )}
       </group>
     </group>
   );

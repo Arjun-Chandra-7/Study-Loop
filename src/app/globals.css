@@ -1594,13 +1594,18 @@ html[data-quiet] .foot__scroll {
 }
 
 /* ── Research card (right vertical) ── */
-/* ── Headphones card (right column) ── */
+/* ── Headphones card (right column) ──
+   The slot is short (two grid rows), so the stage takes every spare pixel and
+   the name + music control float over its bottom edge. Inner states scale
+   with the stage via container queries. */
 .hp-card {
   --ok: #30d158;
   --ok-rgb: 48 209 88;
   display: flex;
   flex-direction: column;
-  gap: var(--s-3);
+  gap: var(--s-2);
+  min-height: 0;
+  padding: var(--s-3);
   overflow: hidden;
   background:
     radial-gradient(90% 55% at 50% 40%, rgba(236, 230, 217, 0.035), transparent 70%),
@@ -1628,21 +1633,91 @@ html[data-quiet] .foot__scroll {
     var(--highlight),
     0 0 40px -18px rgb(var(--measured-rgb) / 0.5);
 }
+.hp-card__head {
+  flex-shrink: 0;
+  min-width: 0;
+  gap: var(--s-2);
+}
+.hp-card__head .card__title {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.hp-card__status {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: var(--s-1);
+}
+.hp-card__x {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  color: var(--text-3);
+  box-shadow: inset 0 0 0 1px var(--line-2);
+  transition:
+    color var(--dur-2),
+    box-shadow var(--dur-2);
+}
+.hp-card__x:hover {
+  color: var(--text-1);
+  box-shadow: inset 0 0 0 1px var(--line-3);
+}
 .hp-card__stage {
+  container-type: size;
   position: relative;
   flex: 1;
-  min-height: 140px;
+  min-height: 96px;
   border-radius: var(--r-tile);
-  background: radial-gradient(70% 60% at 50% 42%, var(--surface-3), var(--surface-2) 70%);
+  background: radial-gradient(70% 70% at 50% 40%, var(--surface-3), var(--surface-2) 72%);
   box-shadow: inset 0 0 0 1px var(--line-1);
   overflow: hidden;
 }
 .hp-card__canvas {
   position: absolute;
-  inset: 0;
+  inset: 0 0 18px;
 }
 .hp-card__canvas canvas {
   display: block;
+}
+
+/* Name and music control, floating over the bottom of the stage. */
+.hp-card__bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 2;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--s-2);
+  padding: var(--s-4) var(--s-2) var(--s-2) var(--s-3);
+  background: linear-gradient(180deg, transparent, rgb(21 20 17 / 0.82) 60%);
+  pointer-events: none;
+}
+.hp-card__bar > * {
+  pointer-events: auto;
+}
+.hp-card__name {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.2;
+}
+.hp-card__brand {
+  font-size: var(--fs-label);
+  letter-spacing: 0.04em;
+  color: var(--text-3);
+}
+.hp-card__model {
+  overflow: hidden;
+  font-size: var(--fs-small);
+  font-weight: 500;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 /* Status chip */
@@ -1698,17 +1773,21 @@ html[data-quiet] .foot__scroll {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: var(--s-1);
+  gap: 2px;
+  padding: var(--s-2);
   text-align: center;
-  padding: var(--s-3);
 }
 .hp-hello__mark {
   position: relative;
   display: grid;
   place-items: center;
-  width: 64px;
-  height: 64px;
-  margin-bottom: var(--s-3);
+  width: clamp(36px, 30cqh, 64px);
+  aspect-ratio: 1;
+  margin-bottom: clamp(4px, 5cqh, 12px);
+}
+.hp-hello__mark svg {
+  width: 55%;
+  height: 55%;
 }
 .hp-hello__disc,
 .hp-hello__halo {
@@ -1730,13 +1809,17 @@ html[data-quiet] .foot__scroll {
 }
 .hp-hello__title {
   margin: 0;
-  font-size: var(--fs-title);
+  font-size: clamp(14px, 11cqh, 20px);
   font-weight: 600;
   letter-spacing: -0.01em;
 }
 .hp-hello__label {
+  max-width: 100%;
   margin: 0;
-  font-size: var(--fs-small);
+  overflow: hidden;
+  font-size: var(--fs-label);
+  white-space: nowrap;
+  text-overflow: ellipsis;
   color: var(--text-2);
 }
 
@@ -1748,22 +1831,26 @@ html[data-quiet] .foot__scroll {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: var(--s-1);
-  padding: var(--s-4);
+  gap: 2px;
+  padding: var(--s-2) var(--s-3);
   text-align: center;
 }
 .hp-empty__glyph {
   position: relative;
   display: grid;
   place-items: center;
-  width: 72px;
-  height: 72px;
-  margin-bottom: var(--s-2);
+  width: clamp(32px, 26cqh, 64px);
+  aspect-ratio: 1;
+  margin-bottom: var(--s-1);
   color: var(--text-3);
+}
+.hp-empty__glyph svg {
+  width: 62%;
+  height: 62%;
 }
 .hp-empty__pulse {
   position: absolute;
-  inset: 8px;
+  inset: 4px;
   border-radius: 50%;
   box-shadow: 0 0 0 1px var(--line-3);
   opacity: 0;
@@ -1791,16 +1878,53 @@ html[data-quiet] .foot__scroll {
 }
 .hp-empty__body {
   margin: 0;
-  max-width: 26ch;
+  max-width: 28ch;
   font-size: var(--fs-label);
-  line-height: 1.45;
+  line-height: 1.4;
   color: var(--text-3);
 }
+.hp-empty__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s-2);
+  margin-top: var(--s-2);
+}
 .hp-empty__cta {
-  --h: 32px;
-  margin-top: var(--s-3);
-  padding: 0 var(--s-4);
+  --h: 28px;
+  padding: 0 var(--s-3);
   font-size: var(--fs-label);
+}
+.hp-card__picker select {
+  height: 28px;
+  max-width: 100%;
+  padding: 0 var(--s-2);
+  border: 0;
+  border-radius: var(--r-chip);
+  font: inherit;
+  font-size: var(--fs-label);
+  color: var(--text-2);
+  background: var(--surface-1);
+  box-shadow: inset 0 0 0 1px var(--line-2);
+  cursor: pointer;
+}
+.hp-card__picker select:hover {
+  color: var(--text-1);
+}
+/* Short stage: drop the explainer, then the glyph, before anything clips. */
+@container (max-height: 170px) {
+  .hp-empty__body {
+    display: none;
+  }
+}
+@container (max-height: 120px) {
+  .hp-empty__glyph {
+    display: none;
+  }
+  .hp-hello__label {
+    display: none;
+  }
 }
 
 /* Music: notes and a floor glow that breathe with the track */
@@ -1811,8 +1935,8 @@ html[data-quiet] .foot__scroll {
 }
 .hp-note {
   position: absolute;
-  top: 58%;
-  font-size: 18px;
+  top: 55%;
+  font-size: 16px;
   line-height: 1;
   color: var(--m-300);
   text-shadow: 0 0 12px rgb(var(--measured-rgb) / 0.6);
@@ -1833,46 +1957,21 @@ html[data-quiet] .foot__scroll {
 .hp-glow[data-on] {
   opacity: calc(0.25 + var(--lvl));
 }
-
-/* Footer */
-.hp-card__foot {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--s-2);
-  min-height: 36px;
-}
-.hp-card__name {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-.hp-card__brand {
-  font-size: var(--fs-label);
-  letter-spacing: 0.08em;
-  text-transform: none;
-  color: var(--text-3);
-}
-.hp-card__model {
-  overflow: hidden;
-  font-size: var(--fs-small);
-  font-weight: 500;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
 .hp-music {
   display: inline-flex;
   flex-shrink: 0;
   align-items: center;
-  gap: 6px;
-  height: 32px;
-  padding: 0 var(--s-3);
+  gap: 5px;
+  height: 26px;
+  padding: 0 var(--s-2);
   border-radius: var(--r-pill);
   font-size: var(--fs-label);
   font-weight: 500;
   letter-spacing: 0.04em;
   color: var(--text-2);
+  background: rgb(21 20 17 / 0.6);
   box-shadow: inset 0 0 0 1px var(--line-2);
+  backdrop-filter: blur(6px);
   transition:
     color var(--dur-2),
     background var(--dur-2),
@@ -1886,38 +1985,6 @@ html[data-quiet] .foot__scroll {
   color: var(--m-300);
   background: var(--measured-soft);
   box-shadow: inset 0 0 0 1px var(--measured-line);
-}
-.hp-card__picker {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--s-2);
-  min-height: 36px;
-  font-size: var(--fs-label);
-  color: var(--text-3);
-}
-.hp-card__picker select {
-  min-width: 0;
-  max-width: 60%;
-  height: 32px;
-  padding: 0 var(--s-2);
-  border: 0;
-  border-radius: var(--r-chip);
-  font: inherit;
-  color: var(--text-1);
-  background: var(--surface-2);
-  box-shadow: inset 0 0 0 1px var(--line-2);
-}
-.hp-card__exit {
-  position: absolute;
-  top: calc(var(--s-4) + 30px);
-  right: calc(var(--s-4) + 8px);
-  z-index: 1;
-  font-size: var(--fs-label);
-  color: var(--text-3);
-}
-.hp-card__exit:hover {
-  color: var(--text-1);
 }
 
 /* ── Profile pill ── */
