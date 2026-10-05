@@ -22,7 +22,7 @@ export type ReadingListener = (reading: SensorReading) => void;
  * implement it, so hardware can replace simulation without UI changes.
  */
 export interface SensorProvider {
-  readonly kind: "mock" | "bluetooth";
+  readonly kind: "mock" | "bluetooth" | "firebase";
   connect(): Promise<void>;
   disconnect(): void;
   subscribe(listener: ReadingListener): () => void;

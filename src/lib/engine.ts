@@ -6,6 +6,7 @@ import {
   type PhysioState,
   type Sample,
 } from "./sensors/classify";
+import { FirebaseSensorProvider, hardwareConfigured } from "./sensors/firebase";
 import { MockSensorProvider } from "./sensors/mock";
 import type { MockScenario, SensorProvider, SensorReading } from "./sensors/types";
 import { EMPTY_READING } from "./sensors/types";
@@ -62,8 +63,8 @@ export interface SessionState {
 
 export interface Snapshot {
   reading: SensorReading;
-  /** "mock" = the simulated test band; "bluetooth" = a real paired band */
-  providerKind: "mock" | "bluetooth";
+  /** "mock" = the simulated test band; "bluetooth" = a real paired band; "firebase" = the band reporting through its Firebase */
+  providerKind: "mock" | "bluetooth" | "firebase";
   providerError: string | null;
   /** rolling 1 Hz history, last 10 minutes */
   history: Sample[];
@@ -227,9 +228,12 @@ export class StudyLoopEngine {
   toggleResearch = () => this.set({ research: !this.snap.research });
   setResearch = (research: boolean) => this.set({ research });
 
-  /** Connect band: for testing this simulates a connected band (no hardware needed). */
+  /**
+   * Connect band: the hardware's Firebase when it's set up (missing values simulated around their
+   * average), otherwise a simulated band (no hardware needed).
+   */
   connect = async () => {
-    this.useProvider("mock");
+    this.useProvider(hardwareConfigured ? "firebase" : "mock");
     this.set({ providerError: null });
     try {
       await this.provider.connect();
@@ -397,11 +401,11 @@ export class StudyLoopEngine {
 
   // ── internals ──────────────────────────────────────────────
 
-  private useProvider(kind: "mock" | "bluetooth") {
+  private useProvider(kind: Snapshot["providerKind"]) {
     if (kind === this.snap.providerKind) return;
     this.provider.disconnect();
     if (this.provider !== this.sim) this.provider.dispose();
-    this.provider = kind === "mock" ? this.sim : new BluetoothSensorProvider();
+    this.provider = kind === "mock" ? this.sim : kind === "firebase" ? new FirebaseSensorProvider() : new BluetoothSensorProvider();
     this.attach(this.provider);
     this.set({ providerKind: kind, reading: this.provider.getReading() });
   }
