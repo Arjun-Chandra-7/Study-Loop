@@ -3,16 +3,18 @@
    three.js objects are mutated in place every frame (the R3F model), outside React's render. */
 
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
-import type { CupShape, HeadphoneModel } from "@/lib/headphones/catalog";
+import type { Finish, HeadphoneLook, HeadphoneModel } from "@/lib/headphones/catalog";
 import { meter } from "@/lib/headphones/store";
+import { basis, Loop, offsetPath, outlineShape, roundedBox, samplePath, superSection, sweep, sweepPath, type Ring } from "./geometry";
+import { brushedRoughness, grainNormal, leatherNormal, repeated, weaveNormal, wordmarkAlpha } from "./textures";
 
 /**
- * Procedural headphones. Every model is built from the same few parts —
- * extruded cup outlines, a swept headband, yokes and sliders — with the
- * catalog entry choosing silhouette, proportions and finish.
+ * Procedural, physically based headphones. Real-world proportions (1 unit =
+ * 100 mm), swept surfaces for cushions, cups and band, and canvas-generated
+ * leather, soft-touch, brushed-metal and knit surfaces under a studio light rig.
  *
  * Loaded client-only (next/dynamic) so three never touches the server bundle.
  */
@@ -24,36 +26,39 @@ interface SceneProps {
 }
 
 export default function HeadphonesScene({ model, ringColor, reduced }: SceneProps) {
+  const buds = model.kind === "earbuds";
   return (
     <Canvas
+      shadows
       dpr={[1, 2]}
-      camera={{ position: [0, 0.2, 6], fov: 30 }}
-      gl={{ antialias: true, alpha: true, powerPreference: "low-power" }}
+      camera={{ position: [0, 0.15, 8], fov: 24 }}
+      gl={{ antialias: true, alpha: true, powerPreference: "high-performance", toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.08 }}
       style={{ touchAction: "pan-y" }}
     >
       <Studio />
-      <ambientLight intensity={0.25} />
-      <directionalLight position={[3, 5, 4]} intensity={1.8} />
-      <directionalLight position={[-4, 1.5, -3]} intensity={1.1} color={ringColor} />
-      <Fit kind={model.kind} />
+      <KeyLight />
+      <directionalLight position={[-3.5, 1.2, -2.5]} intensity={1.4} color="#ffe2cf" />
+      <directionalLight position={[3, -1.5, -3]} intensity={0.5} color="#cfe0ff" />
+      <ambientLight intensity={0.06} />
+      <Fit buds={buds} />
       <Rig key={model.id} reduced={reduced}>
-        {model.kind === "earbuds" ? <Earbuds model={model} ringColor={ringColor} /> : <Headband model={model} ringColor={ringColor} />}
+        {buds ? <Earbuds look={model.look} ringColor={ringColor} /> : <Headphones model={model} ringColor={ringColor} />}
       </Rig>
-      <FloorShadow y={model.kind === "earbuds" ? -0.95 : -1.2} />
+      <Floor y={buds ? -0.36 : -1.22} />
     </Canvas>
   );
 }
 
 /* ── Stage ─────────────────────────────────────────────────── */
 
-/** Soft studio reflections without fetching an HDR. */
+/** Studio reflections from a procedural room, no HDR download. */
 function Studio() {
   const { gl, scene } = useThree();
   useEffect(() => {
     const pmrem = new THREE.PMREMGenerator(gl);
-    const env = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+    const env = pmrem.fromScene(new RoomEnvironment(), 0.035).texture;
     scene.environment = env;
-    scene.environmentIntensity = 0.7;
+    scene.environmentIntensity = 0.85;
     return () => {
       scene.environment = null;
       env.dispose();
@@ -63,38 +68,73 @@ function Studio() {
   return null;
 }
 
+function KeyLight() {
+  const ref = useRef<THREE.DirectionalLight>(null);
+  useLayoutEffect(() => {
+    const l = ref.current;
+    if (!l) return;
+    const c = l.shadow.camera;
+    c.left = c.bottom = -2;
+    c.right = c.top = 2;
+    c.near = 0.5;
+    c.far = 14;
+    c.updateProjectionMatrix();
+  }, []);
+  return (
+    <directionalLight
+      ref={ref}
+      castShadow
+      position={[2.6, 4.2, 3.4]}
+      intensity={2.4}
+      shadow-mapSize={[2048, 2048]}
+      shadow-bias={-0.0003}
+      shadow-normalBias={0.015}
+      shadow-radius={5}
+    />
+  );
+}
+
 /** Pull the camera back until the front view fits whatever box the card gives us. */
-function Fit({ kind }: { kind: HeadphoneModel["kind"] }) {
+function Fit({ buds }: { buds: boolean }) {
   const { camera, size } = useThree();
   useEffect(() => {
     const cam = camera as THREE.PerspectiveCamera;
-    const [w, h] = kind === "earbuds" ? [2.2, 2.7] : [3.9, 3.2];
+    const [w, h] = buds ? [1.05, 1.05] : [3.0, 3.25];
     const t = Math.tan(THREE.MathUtils.degToRad(cam.fov / 2));
     const aspect = size.width / Math.max(1, size.height);
     cam.position.z = Math.max(h / 2 / t, w / 2 / (t * aspect));
+    cam.position.y = cam.position.z * 0.045;
     cam.lookAt(0, 0, 0);
     cam.updateProjectionMatrix();
-  }, [camera, size, kind]);
+  }, [camera, size, buds]);
   return null;
 }
 
-function FloorShadow({ y }: { y: number }) {
-  const tex = useDisposable(() => {
+/** Shadow catcher plus a soft contact blob for ambient occlusion under the product. */
+function Floor({ y }: { y: number }) {
+  const blob = useDisposable(() => {
     const c = document.createElement("canvas");
     c.width = c.height = 128;
     const g = c.getContext("2d")!;
     const grad = g.createRadialGradient(64, 64, 0, 64, 64, 64);
-    grad.addColorStop(0, "rgba(0,0,0,0.55)");
+    grad.addColorStop(0, "rgba(0,0,0,0.6)");
+    grad.addColorStop(0.5, "rgba(0,0,0,0.25)");
     grad.addColorStop(1, "rgba(0,0,0,0)");
     g.fillStyle = grad;
     g.fillRect(0, 0, 128, 128);
     return new THREE.CanvasTexture(c);
   }, []);
   return (
-    <mesh rotation-x={-Math.PI / 2} position-y={y} scale={[3, 1.4, 1]}>
-      <planeGeometry />
-      <meshBasicMaterial map={tex} transparent depthWrite={false} />
-    </mesh>
+    <group position-y={y} rotation-x={-Math.PI / 2}>
+      <mesh receiveShadow>
+        <planeGeometry args={[8, 8]} />
+        <shadowMaterial opacity={0.42} transparent depthWrite={false} />
+      </mesh>
+      <mesh position-z={0.001} scale={[2.6, 1.3, 1]}>
+        <planeGeometry />
+        <meshBasicMaterial map={blob} transparent depthWrite={false} />
+      </mesh>
+    </group>
   );
 }
 
@@ -105,7 +145,13 @@ function FloorShadow({ y }: { y: number }) {
 function Rig({ children, reduced }: { children: React.ReactNode; reduced: boolean }) {
   const g = useRef<THREE.Group>(null);
   const { gl } = useThree();
-  const st = useRef({ born: -1, yaw: -0.5, vel: 0, drag: false, lastX: 0 });
+  const st = useRef({ born: -1, yaw: -0.55, vel: 0, drag: false, lastX: 0 });
+
+  useLayoutEffect(() => {
+    g.current?.traverse((o) => {
+      if ((o as THREE.Mesh).isMesh && !o.userData.noShadow) o.castShadow = o.receiveShadow = true;
+    });
+  }, []);
 
   useEffect(() => {
     const el = gl.domElement;
@@ -150,182 +196,526 @@ function Rig({ children, reduced }: { children: React.ReactNode; reduced: boolea
 
     if (!s.drag) {
       // Coast after a flick, then settle back into a slow turntable.
-      s.vel += ((reduced ? 0 : 0.35) - s.vel) * Math.min(1, dt * 1.5);
+      s.vel += ((reduced ? 0 : 0.28) - s.vel) * Math.min(1, dt * 1.5);
       s.yaw += s.vel * dt;
     }
     const intro = (1 - t) ** 3;
     o.rotation.y = s.yaw - intro * 2.4;
-    o.scale.setScalar(backOut(t) * (1 + meter.level * 0.025));
+    o.scale.setScalar(backOut(t) * (1 + meter.level * 0.02));
 
     const groove = meter.playing && !reduced;
-    o.position.y = groove ? meter.beat * 0.05 : 0;
-    o.rotation.z = groove ? Math.sin(now * 2.2) * 0.045 : 0;
-    o.rotation.x = 0.12 + (groove ? meter.beat * 0.03 : 0);
+    o.position.y = groove ? meter.beat * 0.035 : 0;
+    o.rotation.z = groove ? Math.sin(now * 2.2) * 0.035 : 0;
+    o.rotation.x = 0.1 + (groove ? meter.beat * 0.025 : 0);
   });
 
   return <group ref={g}>{children}</group>;
 }
 
+/* ── Materials ─────────────────────────────────────────────── */
+
+function finish(color: string, f: Finish) {
+  const m = new THREE.MeshPhysicalMaterial({ color });
+  switch (f) {
+    case "matte": // soft-touch polycarbonate
+      Object.assign(m, { roughness: 0.58, clearcoat: 0.08, clearcoatRoughness: 0.6 });
+      m.normalMap = repeated(grainNormal(), 9);
+      m.normalScale.setScalar(0.35);
+      break;
+    case "satin":
+      Object.assign(m, { roughness: 0.38, clearcoat: 0.35, clearcoatRoughness: 0.35 });
+      m.normalMap = repeated(grainNormal(), 9);
+      m.normalScale.setScalar(0.18);
+      break;
+    case "gloss": // piano-black / gloss ABS
+      Object.assign(m, { roughness: 0.22, clearcoat: 1, clearcoatRoughness: 0.04 });
+      break;
+    case "anodized": // bead-blasted aluminium
+      Object.assign(m, { metalness: 1, roughness: 0.34 });
+      m.normalMap = repeated(grainNormal(), 14);
+      m.normalScale.setScalar(0.12);
+      break;
+    case "chrome":
+      Object.assign(m, { metalness: 1, roughness: 0.07 });
+      break;
+    case "brushed":
+      Object.assign(m, { metalness: 1, roughness: 0.32, anisotropy: 0.75 });
+      m.roughnessMap = repeated(brushedRoughness(), 1, 6);
+      break;
+  }
+  return m;
+}
+
+function cushionMat(look: HeadphoneLook["cushion"]) {
+  if (look.fabric === "knit") {
+    const m = new THREE.MeshPhysicalMaterial({
+      color: look.color,
+      roughness: 0.92,
+      sheen: 1,
+      sheenRoughness: 0.55,
+      sheenColor: new THREE.Color("#ffffff"),
+    });
+    m.normalMap = repeated(weaveNormal(), 3.2);
+    m.normalScale.setScalar(0.7);
+    return m;
+  }
+  // Protein leatherette: pebbled, a little sheen where it stretches.
+  const m = new THREE.MeshPhysicalMaterial({
+    color: look.color,
+    roughness: 0.5,
+    clearcoat: 0.22,
+    clearcoatRoughness: 0.45,
+    sheen: 0.35,
+    sheenRoughness: 0.5,
+    sheenColor: new THREE.Color("#6a6a70"),
+  });
+  m.normalMap = repeated(leatherNormal(), 2.4);
+  m.normalScale.setScalar(0.55);
+  return m;
+}
+
+type Mats = ReturnType<typeof useLookMaterials>;
+
+function useLookMaterials(look: HeadphoneLook) {
+  return useDisposable(() => {
+    const cloth = new THREE.MeshStandardMaterial({ color: "#0b0b0c", roughness: 1 });
+    cloth.normalMap = repeated(weaveNormal(), 9);
+    cloth.normalScale.setScalar(0.8);
+    return {
+      shell: finish(look.shell.color, look.shell.finish),
+      face: finish(look.face.color, look.face.finish),
+      ring: look.ring ? finish(look.ring.color, look.ring.finish) : null,
+      cushion: cushionMat(look.cushion),
+      band: finish(look.band.color, look.band.style === "canopy" ? "chrome" : look.shell.finish),
+      pad: look.band.style === "canopy" ? cushionMat({ ...look.cushion, color: look.band.color }) : cushionMat(look.cushion),
+      steel: finish("#cfd0d3", "brushed"),
+      polished: finish("#d9dadd", "chrome"),
+      cloth,
+      dark: new THREE.MeshStandardMaterial({ color: "#050505", roughness: 0.6 }),
+      stitch: new THREE.MeshStandardMaterial({ color: "#2b2b2e", roughness: 0.9 }),
+      tick: new THREE.MeshStandardMaterial({ color: "#3a3b3e", roughness: 0.5, metalness: 0.6 }),
+      led: new THREE.MeshStandardMaterial({ color: "#ffffff", emissive: "#5dd5ff", emissiveIntensity: 2.2 }),
+      print: look.wordmark
+        ? new THREE.MeshPhysicalMaterial({
+            color: look.wordmark.color,
+            alphaMap: wordmarkAlpha(look.wordmark.text),
+            transparent: true,
+            roughness: 0.3,
+            clearcoat: 0.6,
+            depthWrite: false,
+            polygonOffset: true,
+            polygonOffsetFactor: -4,
+          })
+        : null,
+    };
+  }, [look]);
+}
+
 /* ── Over-ear / on-ear ─────────────────────────────────────── */
 
-function Headband({ model, ringColor }: { model: HeadphoneModel; ringColor: string }) {
+function Headphones({ model, ringColor }: { model: HeadphoneModel; ringColor: string }) {
   const L = model.look;
   const onEar = model.kind === "onear";
-  const R = L.cupSize;
-  const head = onEar ? 0.62 : 0.7;
-  const cushionT = onEar ? 0.2 : 0.26;
-  const bevel = 0.07;
-  // Where the yoke / slider meets the cup, measured outward from the inner face.
-  const mid = cushionT + bevel + L.cupDepth * 0.45;
-  const sx = head + mid;
-  const yokeTop = R + 0.1;
-  const bandBase = yokeTop + (L.sliders ? 0.32 : 0.04);
-  const H = onEar ? 1.0 : 1.1;
-  const lift = -(bandBase + H - R) / 2 + 0.05;
+  const mats = useLookMaterials(L);
+  const loop = useMemo(() => new Loop(L.cup), [L]);
 
-  const mats = useMaterials(model);
-  const band = useDisposable(() => new THREE.TubeGeometry(new Arc(sx, bandBase, H, 0, 1), 120, L.band, 18), [sx, bandBase, H, L.band]);
-  const pad = useDisposable(
-    () => new THREE.TubeGeometry(new Arc(sx - 0.04, bandBase - 0.02, H - L.band * 1.6, 0.16, 0.84), 90, L.canopy ? 0.05 : L.band * 0.95, 14),
-    [sx, bandBase, H, L.band, L.canopy],
-  );
+  const head = onEar ? 0.6 : 0.68; // half the gap between the cushions
+  const zMid = L.cushion.thick + L.cup.depth * 0.5;
+  const gap = 0.045;
+  const sx = head + zMid;
+  const telescopic = L.slider === "telescopic";
+  const yokeTop = L.cup.ry + (telescopic ? 0.02 : gap + 0.035);
+  const bandBase = yokeTop + (onEar ? 0.2 : 0.26);
+  const H = L.band.height;
+  const lift = -(bandBase + H - L.cup.ry) / 2;
 
   return (
     <group position-y={lift}>
-      <mesh geometry={band} material={mats.shell} scale={[1, 1, L.canopy ? 1 : 2.3]} />
-      <mesh geometry={pad} material={L.canopy ? mats.knit : mats.cushion} scale={[1, 1, L.canopy ? 5.5 : 2.9]} />
+      <Headband sx={sx} base={bandBase} H={H} look={L} mats={mats} />
       {[-1, 1].map((side) => (
         <group key={side}>
-          {L.sliders && (
-            <mesh position={[side * sx, (bandBase + (L.cup === "rect" ? R : yokeTop)) / 2, 0]} material={mats.metal}>
-              <cylinderGeometry args={[0.028, 0.028, bandBase - (L.cup === "rect" ? R : yokeTop) + 0.04, 16]} />
-            </mesh>
-          )}
-          <Cup side={side} x={head} model={model} cushionT={cushionT} bevel={bevel} mid={mid} ringColor={ringColor} mats={mats} />
+          <Slider side={side} x={sx} from={yokeTop} to={bandBase + 0.06} look={L} mats={mats} />
+          <group position-x={side * head} rotation-y={(side * Math.PI) / 2}>
+            <Cup side={side} loop={loop} look={L} mats={mats} ringColor={ringColor} />
+            {!telescopic && <Yoke loop={loop} z={zMid} gap={gap} mats={mats} />}
+          </group>
         </group>
       ))}
     </group>
   );
 }
 
+/** Squared-off arch from (-w, base) over the top to (w, base). */
+class Arch extends THREE.Curve<THREE.Vector3> {
+  constructor(
+    private w: number,
+    private base: number,
+    private h: number,
+  ) {
+    super();
+  }
+  getPoint(u: number, out = new THREE.Vector3()) {
+    const th = Math.PI * (1 - u);
+    const c = Math.cos(th);
+    return out.set(this.w * Math.sign(c) * Math.abs(c) ** 0.72, this.base + this.h * Math.max(0, Math.sin(th)) ** 0.85, 0);
+  }
+}
+
+function Headband({ sx, base, H, look, mats }: { sx: number; base: number; H: number; look: HeadphoneLook; mats: Mats }) {
+  const canopy = look.band.style === "canopy";
+  const W = look.band.width;
+  const parts = useDisposable(() => {
+    const path = samplePath(new Arch(sx, base + 0.04, H - 0.04), 220);
+    const thick = canopy ? 0.008 : 0.026;
+    const band = sweepPath(path, superSection(thick, canopy ? 0.045 : W / 2, canopy ? 6 : 7, 40), 1);
+    // Under the band: a stitched leather pad, or AirPods Max's knit canopy.
+    const span = path.slice(Math.round(path.length * 0.13), Math.round(path.length * 0.87));
+    const padT = canopy ? 0.01 : 0.038;
+    const padPath = offsetPath(span, -(canopy ? 0.11 : thick + padT * 0.85));
+    const pad = sweepPath(padPath, superSection(padT, canopy ? W / 2 : W * 0.43, canopy ? 8 : 2.6, 48), 1);
+    // Running stitch along both edges of the pad.
+    const stitches: THREE.Matrix4[] = [];
+    if (!canopy) {
+      const line = offsetPath(padPath, -padT * 0.45);
+      let acc = 0;
+      for (let i = 1; i < line.length; i++) {
+        acc += line[i].distanceTo(line[i - 1]);
+        if (acc < 0.026) continue;
+        acc = 0;
+        const t = new THREE.Vector3().subVectors(line[i], line[i - 1]).normalize();
+        const q = basis(t, new THREE.Vector3(-t.y, t.x, 0), new THREE.Vector3(0, 0, 1));
+        for (const z of [-1, 1])
+          stitches.push(new THREE.Matrix4().compose(new THREE.Vector3(line[i].x, line[i].y, z * (W * 0.43 - 0.022)), q, new THREE.Vector3(1, 1, 1)));
+      }
+    }
+    return {
+      band,
+      pad,
+      stitches,
+      stitchGeo: new THREE.BoxGeometry(0.016, 0.006, 0.004),
+      housing: canopy ? new THREE.CylinderGeometry(0.03, 0.03, 0.09, 32) : roundedBox(0.075, 0.15, W * 0.92, 0.03),
+      top: base + H,
+      thick,
+    };
+  }, [sx, base, H, look]);
+
+  const inst = useRef<THREE.InstancedMesh>(null);
+  useLayoutEffect(() => {
+    const m = inst.current;
+    if (!m) return;
+    parts.stitches.forEach((mx, i) => m.setMatrixAt(i, mx));
+    m.instanceMatrix.needsUpdate = true;
+  }, [parts]);
+
+  return (
+    <group>
+      <mesh geometry={parts.band} material={mats.band} />
+      <mesh geometry={parts.pad} material={mats.pad} />
+      {parts.stitches.length > 0 && <instancedMesh ref={inst} args={[parts.stitchGeo, mats.stitch, parts.stitches.length]} />}
+      {mats.print && !canopy && (
+        <mesh position={[0, parts.top + parts.thick + 0.0015, 0]} rotation-x={-Math.PI / 2} material={mats.print}>
+          <planeGeometry args={[W * 0.9, W * 0.225]} />
+        </mesh>
+      )}
+      {/* Hinge housings where the sliders disappear into the band. */}
+      {[-1, 1].map((s) => (
+        <mesh key={s} geometry={parts.housing} position={[s * sx, base + (canopy ? 0.04 : 0.03), 0]} material={canopy ? mats.polished : mats.band} />
+      ))}
+    </group>
+  );
+}
+
+function Slider({ side, x, from, to, look, mats }: { side: number; x: number; from: number; to: number; look: HeadphoneLook; mats: Mats }) {
+  const len = to - from;
+  const telescopic = look.slider === "telescopic";
+  const count = telescopic ? 0 : Math.floor((len - 0.08) / 0.03);
+  const geo = useDisposable(
+    () => ({
+      arm: telescopic ? new THREE.CylinderGeometry(0.016, 0.016, len, 32) : roundedBox(0.016, len, 0.085, 0.006),
+      tick: new THREE.BoxGeometry(0.002, 0.003, 0.05),
+    }),
+    [len, telescopic],
+  );
+  const ticks = useRef<THREE.InstancedMesh>(null);
+  useLayoutEffect(() => {
+    const m = ticks.current;
+    if (!m) return;
+    for (let i = 0; i < count; i++) m.setMatrixAt(i, new THREE.Matrix4().makeTranslation(side * 0.0095, from + 0.04 + i * 0.03, 0));
+    m.instanceMatrix.needsUpdate = true;
+  }, [count, from, side]);
+  return (
+    <group position-x={side * x}>
+      <mesh geometry={geo.arm} position-y={from + len / 2} material={telescopic ? mats.polished : mats.steel} />
+      {count > 0 && <instancedMesh ref={ticks} args={[geo.tick, mats.tick, count]} />}
+      {telescopic && (
+        <mesh position-y={from} material={mats.shell}>
+          <sphereGeometry args={[0.032, 32, 24]} />
+        </mesh>
+      )}
+    </group>
+  );
+}
+
+/** Fork that holds the cup at two pivots, front and back. Built in cup space. */
+function Yoke({ loop, z, gap, mats }: { loop: Loop; z: number; gap: number; mats: Mats }) {
+  const parts = useDisposable(() => {
+    const pts: THREE.Vector3[] = [];
+    const p = new THREE.Vector2(), n = new THREE.Vector2();
+    for (let i = 0; i <= 120; i++) {
+      loop.at(-0.015 + (i / 120) * 0.53, p, n);
+      pts.push(new THREE.Vector3(p.x + n.x * gap, p.y + n.y * gap, z));
+    }
+    const arm = sweepPath(pts, superSection(0.013, 0.026, 4, 28), 1);
+    const pins = [0, 0.5].map((u) => {
+      loop.at(u, p, n);
+      return { pos: new THREE.Vector3(p.x + (n.x * gap) / 2, p.y + (n.y * gap) / 2, z), rot: Math.atan2(n.y, n.x) };
+    });
+    loop.at(0.25, p, n);
+    return {
+      arm,
+      pins,
+      pin: new THREE.CylinderGeometry(0.012, 0.012, gap + 0.006, 24),
+      collar: roundedBox(0.11, 0.05, 0.05, 0.018),
+      top: p.y + gap + 0.012,
+    };
+  }, [loop, z, gap]);
+  return (
+    <group>
+      <mesh geometry={parts.arm} material={mats.shell} />
+      {parts.pins.map((pin, i) => (
+        <mesh key={i} geometry={parts.pin} position={pin.pos} rotation-z={pin.rot - Math.PI / 2} material={mats.shell} />
+      ))}
+      {/* Collar where the slider meets the fork. */}
+      <mesh geometry={parts.collar} position={[0, parts.top + 0.012, z]} material={mats.shell} />
+    </group>
+  );
+}
+
 interface CupProps {
   side: number;
-  x: number;
-  model: HeadphoneModel;
-  cushionT: number;
-  bevel: number;
-  mid: number;
+  loop: Loop;
+  look: HeadphoneLook;
+  mats: Mats;
   ringColor: string;
-  mats: Materials;
 }
 
 /** Built in local space: z = 0 is the face against the head, +z points away from it. */
-function Cup({ side, x, model, cushionT, bevel, mid, ringColor, mats }: CupProps) {
-  const L = model.look;
-  const R = L.cupSize;
-  const cup = L.cup;
-  const outer = cushionT + bevel * 2 + L.cupDepth;
+function Cup({ side, loop, look, mats, ringColor }: CupProps) {
   const plate = useRef<THREE.Group>(null);
+  const cT = look.cushion.thick;
+  const D = look.cup.depth;
+  const R = (look.cup.rx + look.cup.ry) / 2;
+  const top = cT + D;
 
-  const geo = useDisposable(
-    () => ({
-      shell: extrude(shape(cup, R), L.cupDepth, bevel, 0.05),
-      cushion: extrude(shape(cup, R * 0.98, [R * (model.kind === "onear" ? 0.42 : 0.56)]), cushionT * 0.4, cushionT * 0.3, 0.07, 10),
-      fabric: extrude(shape(cup, R * 0.62), 0.01, 0, 0),
-      ring: extrude(shape(cup, R * 0.9, [R * 0.82]), 0.02, 0.008, 0.006),
-      plate: extrude(shape(cup, R * 0.8), 0.015, 0.012, 0.012),
-      emblem: extrude(shape("round", R * 0.13), 0.01, 0.01, 0.01),
-    }),
-    [cup, R, L.cupDepth, cushionT, bevel, model.kind],
-  );
-  const yoke = useDisposable(() => new THREE.TorusGeometry(R + 0.06, 0.035, 14, 64, Math.PI), [R]);
+  const geo = useDisposable(() => {
+    // Cushion: a pillowy tube with leather pleats gathering on the inner edge.
+    const w = look.cushion.width;
+    const cushion = sweep(
+      loop,
+      (u) =>
+        Array.from({ length: 40 }, (_, j): Ring => {
+          const a = (j / 39) * Math.PI * 2;
+          const c = Math.cos(a), s = Math.sin(a);
+          const pe = 2 / 2.8;
+          let n = (w / 2) * Math.sign(c) * Math.abs(c) ** pe - w / 2 + 0.012;
+          const z = (cT / 2) * Math.sign(s) * Math.abs(s) ** pe + cT / 2;
+          const inner = Math.max(0, -c) * Math.max(0, 1 - Math.abs(s) * 1.2);
+          n += 0.0045 * Math.sin(u * Math.PI * 2 * 46) * inner;
+          return [1, n, z - (s < 0 ? 0.004 * Math.max(0, -c) : 0)];
+        }),
+      240,
+    );
+
+    // Shell: tapered side, filleted edge, then a groove and the face plate.
+    const re = 0.045;
+    const wall: Ring[] = [];
+    for (let i = 0; i <= 12; i++) {
+      const s = i / 12;
+      wall.push([1 + 0.03 * Math.sin(Math.PI * s * 0.85) - 0.02 * s, 0, cT + s * (D - re)]);
+    }
+    const k1 = wall[wall.length - 1][0];
+    const kc = k1 - re / R;
+    for (let i = 1; i <= 10; i++) {
+      const a = (i / 10) * (Math.PI / 2);
+      wall.push([kc + (re / R) * Math.cos(a), 0, cT + D - re + re * Math.sin(a)]);
+    }
+    const shell = sweep(loop, () => wall, 180);
+
+    const g = 0.012 / R;
+    const face: Ring[] = [
+      [kc, 0, top],
+      [kc - g * 0.5, 0, top - 0.006],
+      [kc - g * 1.6, 0, top - 0.008],
+      [kc - g * 2.2, 0, top - 0.002],
+      [kc - g * 2.4, 0, top + 0.002],
+    ];
+    const k0 = kc - g * 2.6;
+    for (let i = 0; i <= 8; i++) {
+      const t = i / 8;
+      face.push([k0 * (1 - t), 0, top + 0.003 + 0.004 * (1 - (1 - t) ** 2)]);
+    }
+    const plate = sweep(loop, () => face, 180);
+
+    const ringK = kc - g * 1.1;
+    const ring = sweep(
+      loop,
+      () =>
+        Array.from({ length: 16 }, (_, j): Ring => {
+          const a = (j / 15) * Math.PI * 2;
+          return [ringK, 0.0075 * Math.cos(a), top - 0.003 + 0.0075 * Math.sin(a)];
+        }),
+      180,
+    );
+
+    const cloth = new THREE.ShapeGeometry(outlineShape(loop, 0.66 - look.cushion.width / R / 2));
+
+    // Controls on the right cup's lower-back edge.
+    const p = new THREE.Vector2(), nr = new THREE.Vector2();
+    const z = cT + D * 0.42;
+    const at = (u: number, out: number) => {
+      loop.at(u, p, nr);
+      const pos = new THREE.Vector3(p.x * 1.025 + nr.x * out, p.y * 1.025 + nr.y * out, z);
+      const nn = new THREE.Vector3(nr.x, nr.y, 0);
+      const tt = new THREE.Vector3(-nr.y, nr.x, 0);
+      return { pos, q: basis(nn, tt, new THREE.Vector3(0, 0, 1)) };
+    };
+    return {
+      cushion,
+      shell,
+      plate,
+      ring,
+      cloth,
+      controls: [0.6, 0.635, 0.67].map((u) => at(u, 0.002)),
+      led: at(0.7, 0.001),
+      port: at(0.75, -0.002),
+      button: roundedBox(0.012, 0.042, 0.026, 0.006),
+      slot: roundedBox(0.01, 0.034, 0.012, 0.005),
+      dot: new THREE.SphereGeometry(0.005, 12, 12),
+      print: new THREE.PlaneGeometry(1, 0.25),
+    };
+  }, [loop, look]);
 
   useFrame(() => {
-    // The outer plate "pumps" like a driver on every kick.
-    if (plate.current) plate.current.position.z = outer - 0.005 + (meter.playing ? meter.beat * 0.03 : 0);
+    // The face plate "pumps" like a driver on every kick.
+    if (plate.current) plate.current.position.z = meter.playing ? meter.beat * 0.012 : 0;
   });
 
+  const wm = Math.min(look.cup.rx, look.cup.ry) * 1.15;
+
   return (
-    <group position-x={side * x} rotation-y={(side * Math.PI) / 2}>
-      <mesh geometry={geo.cushion} material={mats.cushion} position-z={cushionT * 0.3} />
-      <mesh geometry={geo.fabric} material={mats.fabric} position-z={cushionT * 0.35} />
-      <mesh geometry={geo.shell} material={mats.shell} position-z={cushionT + bevel} />
-      {cup !== "rect" && (
-        <mesh geometry={yoke} material={mats.shell} position-z={mid} scale={[cup === "oval" ? 0.85 : 1, 1, 1]} />
-      )}
-      <group ref={plate} position-z={outer}>
-        <mesh geometry={geo.plate} material={mats.plate} />
-        <mesh geometry={geo.ring} material={mats.accent} position-z={-0.01} />
-        <mesh geometry={geo.emblem} material={mats.accent} position-z={0.02} />
+    <group>
+      <mesh geometry={geo.cushion} material={mats.cushion} />
+      <mesh geometry={geo.cloth} material={mats.cloth} position-z={0.05} />
+      <mesh geometry={geo.shell} material={mats.shell} />
+      <group ref={plate}>
+        <mesh geometry={geo.plate} material={mats.face} />
+        {mats.ring && <mesh geometry={geo.ring} material={mats.ring} />}
+        {mats.print && <mesh geometry={geo.print} position-z={top + 0.0082} scale={[wm, wm, 1]} material={mats.print} />}
       </group>
-      <SoundRings z={outer + 0.05} radius={R} color={ringColor} scaleX={cup === "round" ? 1 : 0.8} />
+      {side === 1 && (
+        <>
+          {geo.controls.map((c, i) => (
+            <mesh key={i} geometry={geo.button} position={c.pos} quaternion={c.q} material={mats.shell} />
+          ))}
+          <mesh geometry={geo.dot} position={geo.led.pos} material={mats.led} />
+          <mesh geometry={geo.slot} position={geo.port.pos} quaternion={geo.port.q} material={mats.dark} />
+        </>
+      )}
+      <SoundRings z={top + 0.03} radius={R * 0.95} color={ringColor} scaleX={look.cup.rx / look.cup.ry} />
     </group>
   );
 }
 
 /* ── Earbuds in an open case ───────────────────────────────── */
 
-function Earbuds({ model, ringColor }: { model: HeadphoneModel; ringColor: string }) {
-  const mats = useMaterials(model);
-  const stem = /airpods/i.test(model.name);
+function Earbuds({ look, ringColor }: { look: HeadphoneLook; ringColor: string }) {
+  const b = look.buds!;
   const lid = useRef<THREE.Group>(null);
   const buds = useRef<THREE.Group>(null);
   const born = useRef(-1);
 
-  const geo = useDisposable(() => {
-    const base = extrude(roundRect(new THREE.Shape(), 0.78, 0.4, 0.34), 0.48, 0.05, 0.05, 8);
-    const top = extrude(roundRect(new THREE.Shape(), 0.78, 0.17, 0.16), 0.48, 0.05, 0.05, 8);
-    base.center();
-    top.center();
-    return { base, top };
-  }, []);
+  const parts = useDisposable(() => {
+    const plastic = finish(look.shell.color, "gloss");
+    plastic.normalMap = repeated(grainNormal(), 30);
+    plastic.normalScale.setScalar(0.04);
+    const loop = new Loop({ rx: 0.3, ry: 0.11, n: 3.4 });
+    const fil = 0.07;
+    const lower: Ring[] = [[0, 0, 0]];
+    for (let i = 0; i <= 8; i++) {
+      const a = -Math.PI / 2 + (i / 8) * (Math.PI / 2);
+      lower.push([1 - fil / 0.2 + (fil / 0.2) * Math.cos(a), 0, fil + fil * Math.sin(a)]);
+    }
+    lower.push([1, 0, 0.3]);
+    const upper: Ring[] = [[1, 0, 0]];
+    for (let i = 0; i <= 8; i++) {
+      const a = (i / 8) * (Math.PI / 2);
+      upper.push([1 - fil / 0.2 + (fil / 0.2) * Math.cos(a), 0, 0.12 - fil + fil * Math.sin(a)]);
+    }
+    upper.push([0, 0, 0.12]);
+    // Bud head: a smooth bulb, the way AirPods are turned.
+    const bulb: THREE.Vector2[] = [];
+    for (let i = 0; i <= 24; i++) {
+      const a = -Math.PI / 2 + (i / 24) * Math.PI;
+      bulb.push(new THREE.Vector2(Math.cos(a) * 0.085 * (1 - 0.15 * Math.max(0, Math.sin(a))), Math.sin(a) * 0.09));
+    }
+    return {
+      plastic,
+      caseMat: finish(b.case, "gloss"),
+      tipMat: new THREE.MeshPhysicalMaterial({ color: "#d9dadc", roughness: 0.55, sheen: 0.6, sheenColor: new THREE.Color("#ffffff"), transmission: 0.15, thickness: 0.02 }),
+      grille: new THREE.MeshStandardMaterial({ color: "#151517", roughness: 0.7, metalness: 0.3 }),
+      cavity: new THREE.MeshPhysicalMaterial({ color: "#e9e9e7", roughness: 0.35, side: THREE.DoubleSide }),
+      led: new THREE.MeshStandardMaterial({ color: "#ffffff", emissive: "#38e07a", emissiveIntensity: 2.5 }),
+      lower: sweep(loop, () => lower, 160),
+      upper: sweep(loop, () => upper, 160),
+      inner: new THREE.ShapeGeometry(outlineShape(loop, 0.9)),
+      head: new THREE.LatheGeometry(bulb, 48),
+      mesh: new THREE.CircleGeometry(0.025, 32),
+      tip: new THREE.SphereGeometry(0.05, 32, 24, 0, Math.PI * 2, 0, Math.PI / 2),
+      stem: new THREE.CapsuleGeometry(0.024, 0.22, 12, 32),
+      mic: new THREE.CylinderGeometry(0.017, 0.017, 0.012, 24),
+      dot: new THREE.SphereGeometry(0.006, 12, 12),
+    };
+  }, [look]);
 
   useFrame(({ clock }) => {
     const now = clock.elapsedTime;
     if (born.current < 0) born.current = now;
-    const t = Math.min(1, (now - born.current - 0.35) / 0.8);
-    if (lid.current) lid.current.rotation.x = -1.95 * backOut(Math.max(0, t));
+    const t = Math.min(1, Math.max(0, (now - born.current - 0.3) / 0.8));
+    if (lid.current) lid.current.rotation.x = -1.95 * backOut(t);
     if (buds.current) {
-      const rise = backOut(Math.max(0, Math.min(1, (now - born.current - 0.7) / 0.9)));
-      buds.current.position.y = -0.5 + rise * 1.25 + Math.sin(now * 1.6) * 0.03 + (meter.playing ? meter.beat * 0.05 : 0);
+      const rise = backOut(Math.max(0, Math.min(1, (now - born.current - 0.6) / 0.9)));
+      buds.current.position.y = -0.02 + rise * 0.36 + Math.sin(now * 1.6) * 0.01 + (meter.playing ? meter.beat * 0.02 : 0);
     }
   });
 
   return (
-    <group position-y={-0.1}>
-      <group position-y={-0.48}>
-        <mesh geometry={geo.base} material={mats.shell} />
-        <mesh position={[0, 0.42, 0]} rotation-x={-Math.PI / 2} material={mats.fabric}>
-          <planeGeometry args={[1.3, 0.34]} />
-        </mesh>
-        <mesh position={[0, 0.05, 0.3]} material={mats.led}>
-          <sphereGeometry args={[0.025, 16, 16]} />
-        </mesh>
-        {/* Lid hinges on the back edge. */}
-        <group ref={lid} position={[0, 0.44, -0.27]}>
-          <mesh geometry={geo.top} material={mats.shell} position={[0, 0.0, 0.27]} />
+    <group position-y={-0.12}>
+      {/* Case, built lying in XY and stood up: local z is up. */}
+      <group position-y={-0.24} rotation-x={-Math.PI / 2}>
+        <mesh geometry={parts.lower} material={parts.caseMat} />
+        <mesh geometry={parts.inner} material={parts.cavity} position-z={0.298} />
+        <mesh geometry={parts.dot} position={[0, -0.113, 0.17]} material={parts.led} />
+        <group ref={lid} position={[0, 0.11, 0.3]}>
+          <mesh geometry={parts.upper} material={parts.caseMat} position={[0, -0.11, 0]} />
+          {/* The lid's inside, seen once it swings open. */}
+          <mesh geometry={parts.inner} material={parts.cavity} position={[0, -0.11, 0.002]} />
         </group>
       </group>
-      <group ref={buds} position-z={0.3}>
+      <group ref={buds}>
         {[-1, 1].map((side) => (
-          <group key={side} position-x={side * 0.36} rotation={[0.15, side * -0.5, side * -0.18]}>
-            <mesh material={mats.shell} scale={[1, 0.92, 1.12]}>
-              <sphereGeometry args={[0.17, 40, 32]} />
-            </mesh>
-            <mesh position={[side * -0.1, 0, 0.06]} rotation-y={side * -1.2} material={stem ? mats.metal : mats.cushion} scale={[1, 1, 0.5]}>
-              <cylinderGeometry args={[0.07, 0.07, 0.02, 24]} />
-            </mesh>
-            {stem ? (
-              <mesh position={[0.02 * side, -0.27, 0.04]} rotation-x={0.12} material={mats.shell}>
-                <capsuleGeometry args={[0.048, 0.34, 8, 20]} />
-              </mesh>
-            ) : (
-              <mesh position={[side * 0.06, -0.1, 0.1]} material={mats.accent} scale={[1, 0.6, 1]}>
-                <sphereGeometry args={[0.07, 24, 16]} />
-              </mesh>
+          <group key={side} position-x={side * 0.2} rotation={[0.1, side * -0.35, side * -0.1]}>
+            <mesh geometry={parts.head} material={parts.plastic} rotation-z={(side * Math.PI) / 2} scale={[1, 1, 0.92]} />
+            {/* Speaker mesh, facing the ear. */}
+            <mesh geometry={parts.mesh} position={[side * -0.07, 0.005, 0.02]} rotation-y={(side * -Math.PI) / 2} material={parts.grille} />
+            {b.tip && <mesh geometry={parts.tip} position={[side * -0.085, 0, 0.015]} rotation-z={(side * Math.PI) / 2} material={parts.tipMat} />}
+            {b.stem && (
+              <>
+                <mesh geometry={parts.stem} position={[side * 0.012, -0.15, 0.01]} rotation-x={0.08} material={parts.plastic} />
+                <mesh geometry={parts.mic} position={[side * 0.012, -0.285, 0.021]} rotation-x={0.08} material={parts.grille} />
+              </>
             )}
             <group rotation-y={(side * Math.PI) / 2}>
-              <SoundRings z={0.1} radius={0.16} color={ringColor} />
+              <SoundRings z={0.06} radius={0.08} color={ringColor} />
             </group>
           </group>
         ))}
@@ -343,7 +733,7 @@ function SoundRings({ z, radius, color, scaleX = 1 }: { z: number; radius: numbe
   const refs = useRef<(THREE.Mesh | null)[]>([]);
   const life = useRef(new Float32Array(RINGS).fill(1));
   const st = useRef({ next: 0, armed: true });
-  const geo = useDisposable(() => new THREE.TorusGeometry(1, 0.012, 8, 72), []);
+  const geo = useDisposable(() => new THREE.TorusGeometry(1, 0.008, 8, 96), []);
   const mats = useDisposable(
     () => Array.from({ length: RINGS }, () => new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0, depthWrite: false })),
     [color],
@@ -364,8 +754,8 @@ function SoundRings({ z, radius, color, scaleX = 1 }: { z: number; radius: numbe
       const l = (life.current[i] = Math.min(1, life.current[i] + dt / 1.1));
       const k = radius * (0.9 + l * 1.1);
       m.scale.set(k * scaleX, k, 1);
-      m.position.z = z + l * 0.35;
-      mats[i].opacity = (1 - l) ** 1.5 * 0.85;
+      m.position.z = z + l * 0.25;
+      mats[i].opacity = (1 - l) ** 1.5 * 0.8;
       m.visible = l < 1;
     }
   });
@@ -373,102 +763,13 @@ function SoundRings({ z, radius, color, scaleX = 1 }: { z: number; radius: numbe
   return (
     <>
       {mats.map((mat, i) => (
-        <mesh key={i} ref={(m) => void (refs.current[i] = m)} geometry={geo} material={mat} visible={false} />
+        <mesh key={i} ref={(m) => void (refs.current[i] = m)} geometry={geo} material={mat} visible={false} userData={{ noShadow: true }} />
       ))}
     </>
   );
 }
 
-/* ── Geometry & materials ──────────────────────────────────── */
-
-type Materials = ReturnType<typeof useMaterials>;
-
-function useMaterials(model: HeadphoneModel) {
-  const L = model.look;
-  return useDisposable(() => {
-    const shell = new THREE.MeshPhysicalMaterial({
-      color: L.shell,
-      metalness: L.metal,
-      roughness: 0.62 - L.gloss * 0.48,
-      clearcoat: L.gloss,
-      clearcoatRoughness: 0.18,
-    });
-    return {
-      shell,
-      plate: new THREE.MeshPhysicalMaterial({
-        color: L.shell,
-        metalness: Math.min(1, L.metal + 0.1),
-        roughness: 0.45 - L.gloss * 0.3,
-        clearcoat: 1,
-        clearcoatRoughness: 0.08,
-      }),
-      accent: new THREE.MeshPhysicalMaterial({ color: L.accent, metalness: 0.75, roughness: 0.28, clearcoat: 0.6 }),
-      metal: new THREE.MeshStandardMaterial({ color: "#c8c9cc", metalness: 1, roughness: 0.22 }),
-      cushion: new THREE.MeshPhysicalMaterial({ color: L.cushion, roughness: 0.92, sheen: 1, sheenRoughness: 0.6, sheenColor: new THREE.Color("#5a5a60") }),
-      knit: new THREE.MeshPhysicalMaterial({ color: L.accent, roughness: 1, sheen: 1, sheenColor: new THREE.Color("#ffffff"), sheenRoughness: 0.9 }),
-      fabric: new THREE.MeshStandardMaterial({ color: "#0b0b0c", roughness: 1 }),
-      led: new THREE.MeshBasicMaterial({ color: "#34d26a" }),
-    };
-  }, [L]);
-}
-
-/** Cup outline (in XY), optionally with holes, for extrusion. */
-function shape(cup: CupShape, r: number, holes: number[] = []) {
-  const s = trace(new THREE.Shape(), cup, r);
-  s.holes = holes.map((h) => trace(new THREE.Path(), cup, h));
-  return s;
-}
-
-function trace<T extends THREE.Path>(p: T, cup: CupShape, r: number): T {
-  if (cup === "round") p.absarc(0, 0, r, 0, Math.PI * 2, false);
-  else if (cup === "oval") p.absellipse(0, 0, r * 0.78, r, 0, Math.PI * 2, false, 0);
-  else roundRect(p, r * 0.8, r, r * 0.42);
-  return p;
-}
-
-/** Rounded rectangle centred on the origin, given half-width and half-height. */
-function roundRect<T extends THREE.Path>(p: T, hw: number, hh: number, rad: number): T {
-  const r = Math.min(rad, hw, hh);
-  p.moveTo(-hw + r, -hh);
-  p.lineTo(hw - r, -hh);
-  p.quadraticCurveTo(hw, -hh, hw, -hh + r);
-  p.lineTo(hw, hh - r);
-  p.quadraticCurveTo(hw, hh, hw - r, hh);
-  p.lineTo(-hw + r, hh);
-  p.quadraticCurveTo(-hw, hh, -hw, hh - r);
-  p.lineTo(-hw, -hh + r);
-  p.quadraticCurveTo(-hw, -hh, -hw + r, -hh);
-  return p;
-}
-
-function extrude(s: THREE.Shape, depth: number, bevelThickness: number, bevelSize: number, bevelSegments = 6) {
-  return new THREE.ExtrudeGeometry(s, {
-    depth,
-    bevelEnabled: bevelThickness > 0,
-    bevelThickness,
-    bevelSize,
-    bevelSegments,
-    curveSegments: 64,
-  });
-}
-
-/** Headband sweep: a squared-off arch from (-w, base) over the top to (w, base). */
-class Arc extends THREE.Curve<THREE.Vector3> {
-  constructor(
-    private w: number,
-    private base: number,
-    private h: number,
-    private from: number,
-    private to: number,
-  ) {
-    super();
-  }
-  getPoint(u: number, out = new THREE.Vector3()) {
-    const th = Math.PI * (1 - (this.from + (this.to - this.from) * u));
-    const c = Math.cos(th);
-    return out.set(this.w * Math.sign(c) * Math.abs(c) ** 0.75, this.base + this.h * Math.max(0, Math.sin(th)) ** 0.9, 0);
-  }
-}
+/* ── Utilities ─────────────────────────────────────────────── */
 
 function backOut(t: number) {
   const c = 1.4;
@@ -482,8 +783,9 @@ function useDisposable<T>(factory: () => T, deps: React.DependencyList): T {
   return value;
 }
 
+/** Geometries and materials are freed; shared textures and plain math objects are left alone. */
 function dispose(v: unknown) {
   if (!v || typeof v !== "object") return;
-  if ("dispose" in v && typeof v.dispose === "function") return v.dispose();
-  Object.values(v).forEach(dispose);
+  if (v instanceof THREE.BufferGeometry || v instanceof THREE.Material) return v.dispose();
+  if (Array.isArray(v) || Object.getPrototypeOf(v) === Object.prototype) Object.values(v).forEach(dispose);
 }

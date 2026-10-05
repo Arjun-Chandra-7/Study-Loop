@@ -2,12 +2,28 @@
  * Known headphone models, matched against the OS audio-device label.
  *
  * Each entry is a recipe for the procedural 3D model in HeadphonesScene —
- * not a mesh. Silhouette (kind + cup shape) and finish carry the identity;
- * proportions are tuned by eye against product photos.
+ * not a mesh. Dimensions are real-world, in decimetres (1 unit = 100 mm),
+ * taken from spec sheets and product photos; materials name a finish the
+ * scene knows how to render.
  */
 
 export type HeadphoneKind = "overear" | "onear" | "earbuds";
-export type CupShape = "round" | "oval" | "rect";
+export type Finish = "matte" | "satin" | "gloss" | "anodized" | "chrome" | "brushed";
+
+export interface HeadphoneLook {
+  /** Cup outline as a superellipse: half-width (front–back), half-height, exponent (2 = ellipse, 4+ = squircle). */
+  cup: { rx: number; ry: number; n: number; depth: number };
+  cushion: { thick: number; width: number; fabric: "leather" | "knit"; color: string };
+  shell: { color: string; finish: Finish };
+  face: { color: string; finish: Finish };
+  ring?: { color: string; finish: Finish };
+  band: { style: "padded" | "canopy"; color: string; width: number; height: number };
+  slider: "metal" | "telescopic";
+  /** Printed on the face plate and the band, the way the real one is. */
+  wordmark?: { text: string; color: string };
+  /** Earbuds only. */
+  buds?: { stem: boolean; tip: boolean; case: string };
+}
 
 export interface HeadphoneModel {
   id: string;
@@ -15,25 +31,10 @@ export interface HeadphoneModel {
   name: string;
   kind: HeadphoneKind;
   match: RegExp;
-  look: {
-    cup: CupShape;
-    /** Cup radius (round) or half-height (oval/rect), in scene units. */
-    cupSize: number;
-    cupDepth: number;
-    /** Headband tube radius. */
-    band: number;
-    shell: string;
-    accent: string;
-    cushion: string;
-    /** 0 = matte plastic, 1 = polished metal. */
-    metal: number;
-    gloss: number;
-    /** AirPods Max-style knit canopy under the band. */
-    canopy?: boolean;
-    /** Exposed metal slider arms between band and cup. */
-    sliders?: boolean;
-  };
+  look: HeadphoneLook;
 }
+
+const BLACK_LEATHER = { fabric: "leather", color: "#121213" } as const;
 
 export const CATALOG: HeadphoneModel[] = [
   {
@@ -42,7 +43,16 @@ export const CATALOG: HeadphoneModel[] = [
     name: "Rockerz 4xx",
     kind: "onear",
     match: /rockerz\s*4\d\d/i,
-    look: { cup: "round", cupSize: 0.62, cupDepth: 0.34, band: 0.075, shell: "#17181b", accent: "#d8343a", cushion: "#101012", metal: 0.15, gloss: 0.75, sliders: true },
+    look: {
+      cup: { rx: 0.35, ry: 0.37, n: 2.1, depth: 0.17 },
+      cushion: { thick: 0.15, width: 0.11, ...BLACK_LEATHER },
+      shell: { color: "#151517", finish: "matte" },
+      face: { color: "#0e0e10", finish: "gloss" },
+      ring: { color: "#b3182a", finish: "gloss" },
+      band: { style: "padded", color: "#161618", width: 0.27, height: 0.95 },
+      slider: "metal",
+      wordmark: { text: "boAt", color: "#e8e8ea" },
+    },
   },
   {
     id: "boat-rockerz-5xx",
@@ -50,15 +60,16 @@ export const CATALOG: HeadphoneModel[] = [
     name: "Rockerz 5xx",
     kind: "overear",
     match: /rockerz\s*[5-9]\d\d/i,
-    look: { cup: "oval", cupSize: 0.72, cupDepth: 0.36, band: 0.08, shell: "#1b1c20", accent: "#3d7bd9", cushion: "#111114", metal: 0.1, gloss: 0.55, sliders: true },
-  },
-  {
-    id: "airpods-max",
-    brand: "Apple",
-    name: "AirPods Max",
-    kind: "overear",
-    match: /airpods\s*max/i,
-    look: { cup: "rect", cupSize: 0.74, cupDepth: 0.42, band: 0.06, shell: "#c9cacc", accent: "#e8e8ea", cushion: "#d8d8da", metal: 0.85, gloss: 0.8, canopy: true, sliders: true },
+    look: {
+      cup: { rx: 0.36, ry: 0.46, n: 2.3, depth: 0.19 },
+      cushion: { thick: 0.19, width: 0.13, ...BLACK_LEATHER },
+      shell: { color: "#18191b", finish: "matte" },
+      face: { color: "#1c1d20", finish: "satin" },
+      ring: { color: "#2f5fb8", finish: "gloss" },
+      band: { style: "padded", color: "#18191b", width: 0.32, height: 1.0 },
+      slider: "metal",
+      wordmark: { text: "boAt", color: "#d9d9dc" },
+    },
   },
   {
     id: "sony-wh1000xm",
@@ -66,7 +77,16 @@ export const CATALOG: HeadphoneModel[] = [
     name: "WH-1000XM",
     kind: "overear",
     match: /wh-?1000\s*xm\s*\d|wh-?1000/i,
-    look: { cup: "oval", cupSize: 0.76, cupDepth: 0.34, band: 0.07, shell: "#26262a", accent: "#b9a27a", cushion: "#1d1d20", metal: 0.05, gloss: 0.25 },
+    look: {
+      cup: { rx: 0.36, ry: 0.47, n: 2.2, depth: 0.18 },
+      cushion: { thick: 0.2, width: 0.13, fabric: "leather", color: "#1b1b1d" },
+      shell: { color: "#232325", finish: "matte" },
+      face: { color: "#262628", finish: "matte" },
+      ring: { color: "#a88d62", finish: "brushed" },
+      band: { style: "padded", color: "#232325", width: 0.3, height: 1.02 },
+      slider: "metal",
+      wordmark: { text: "SONY", color: "#bfa47a" },
+    },
   },
   {
     id: "bose-qc",
@@ -74,7 +94,16 @@ export const CATALOG: HeadphoneModel[] = [
     name: "QuietComfort",
     kind: "overear",
     match: /bose|quiet\s*comfort|\bqc\s*\d+/i,
-    look: { cup: "oval", cupSize: 0.74, cupDepth: 0.36, band: 0.065, shell: "#202124", accent: "#9aa0a6", cushion: "#18181b", metal: 0.35, gloss: 0.35, sliders: true },
+    look: {
+      cup: { rx: 0.36, ry: 0.48, n: 2.4, depth: 0.19 },
+      cushion: { thick: 0.19, width: 0.13, ...BLACK_LEATHER },
+      shell: { color: "#1d1e21", finish: "satin" },
+      face: { color: "#1d1e21", finish: "satin" },
+      ring: { color: "#b7bac0", finish: "chrome" },
+      band: { style: "padded", color: "#1d1e21", width: 0.3, height: 1.02 },
+      slider: "metal",
+      wordmark: { text: "BOSE", color: "#b7bac0" },
+    },
   },
   {
     id: "jbl-tune",
@@ -82,7 +111,16 @@ export const CATALOG: HeadphoneModel[] = [
     name: "Tune",
     kind: "onear",
     match: /jbl/i,
-    look: { cup: "round", cupSize: 0.6, cupDepth: 0.3, band: 0.07, shell: "#1d1e22", accent: "#ff6a00", cushion: "#131316", metal: 0.1, gloss: 0.45 },
+    look: {
+      cup: { rx: 0.34, ry: 0.36, n: 2, depth: 0.16 },
+      cushion: { thick: 0.14, width: 0.11, ...BLACK_LEATHER },
+      shell: { color: "#18181a", finish: "matte" },
+      face: { color: "#18181a", finish: "matte" },
+      ring: { color: "#2a2a2d", finish: "gloss" },
+      band: { style: "padded", color: "#18181a", width: 0.26, height: 0.92 },
+      slider: "metal",
+      wordmark: { text: "JBL", color: "#ff6a13" },
+    },
   },
   {
     id: "sennheiser-momentum",
@@ -90,7 +128,16 @@ export const CATALOG: HeadphoneModel[] = [
     name: "Momentum",
     kind: "overear",
     match: /sennheiser|momentum/i,
-    look: { cup: "oval", cupSize: 0.74, cupDepth: 0.38, band: 0.065, shell: "#1a1a1c", accent: "#8f8f94", cushion: "#121214", metal: 0.6, gloss: 0.5, sliders: true },
+    look: {
+      cup: { rx: 0.37, ry: 0.47, n: 2.3, depth: 0.2 },
+      cushion: { thick: 0.19, width: 0.13, ...BLACK_LEATHER },
+      shell: { color: "#19191a", finish: "satin" },
+      face: { color: "#202022", finish: "matte" },
+      ring: { color: "#9b9da2", finish: "brushed" },
+      band: { style: "padded", color: "#19191a", width: 0.3, height: 1.02 },
+      slider: "metal",
+      wordmark: { text: "SENNHEISER", color: "#c9cace" },
+    },
   },
   {
     id: "beats-studio",
@@ -98,7 +145,38 @@ export const CATALOG: HeadphoneModel[] = [
     name: "Studio",
     kind: "overear",
     match: /beats/i,
-    look: { cup: "oval", cupSize: 0.72, cupDepth: 0.36, band: 0.075, shell: "#141416", accent: "#d61f2c", cushion: "#0f0f11", metal: 0.1, gloss: 0.85 },
+    look: {
+      cup: { rx: 0.35, ry: 0.45, n: 2.2, depth: 0.19 },
+      cushion: { thick: 0.18, width: 0.12, ...BLACK_LEATHER },
+      shell: { color: "#111113", finish: "gloss" },
+      face: { color: "#111113", finish: "gloss" },
+      band: { style: "padded", color: "#111113", width: 0.3, height: 1.0 },
+      slider: "metal",
+      wordmark: { text: "beats", color: "#d6202f" },
+    },
+  },
+  {
+    id: "airpods-max",
+    brand: "Apple",
+    name: "AirPods Max",
+    kind: "overear",
+    match: /airpods\s*max/i,
+    look: {
+      cup: { rx: 0.37, ry: 0.46, n: 4.5, depth: 0.22 },
+      cushion: { thick: 0.2, width: 0.13, fabric: "knit", color: "#cfd0d2" },
+      shell: { color: "#c6c7ca", finish: "anodized" },
+      face: { color: "#c6c7ca", finish: "anodized" },
+      band: { style: "canopy", color: "#d4d5d7", width: 0.3, height: 1.05 },
+      slider: "telescopic",
+    },
+  },
+  {
+    id: "airpods-pro",
+    brand: "Apple",
+    name: "AirPods Pro",
+    kind: "earbuds",
+    match: /airpods\s*pro/i,
+    look: earbuds("#f3f3f1", { stem: true, tip: true, case: "#f3f3f1" }),
   },
   {
     id: "airpods",
@@ -106,7 +184,7 @@ export const CATALOG: HeadphoneModel[] = [
     name: "AirPods",
     kind: "earbuds",
     match: /airpods/i,
-    look: { cup: "round", cupSize: 0.5, cupDepth: 0.3, band: 0, shell: "#f2f2f2", accent: "#cfd1d4", cushion: "#e6e6e6", metal: 0.05, gloss: 0.9 },
+    look: earbuds("#f3f3f1", { stem: true, tip: false, case: "#f3f3f1" }),
   },
   {
     id: "boat-airdopes",
@@ -114,7 +192,7 @@ export const CATALOG: HeadphoneModel[] = [
     name: "Airdopes",
     kind: "earbuds",
     match: /airdopes/i,
-    look: { cup: "round", cupSize: 0.5, cupDepth: 0.3, band: 0, shell: "#1a1b1e", accent: "#d8343a", cushion: "#111113", metal: 0.1, gloss: 0.7 },
+    look: earbuds("#18191b", { stem: true, tip: true, case: "#18191b" }),
   },
   {
     id: "galaxy-buds",
@@ -122,9 +200,21 @@ export const CATALOG: HeadphoneModel[] = [
     name: "Galaxy Buds",
     kind: "earbuds",
     match: /galaxy\s*buds|\bbuds\s*(pro|live|fe|\d)/i,
-    look: { cup: "round", cupSize: 0.5, cupDepth: 0.3, band: 0, shell: "#2a2c33", accent: "#8ea3c7", cushion: "#20232a", metal: 0.1, gloss: 0.8 },
+    look: earbuds("#2a2c33", { stem: false, tip: true, case: "#2a2c33" }),
   },
 ];
+
+function earbuds(color: string, buds: NonNullable<HeadphoneLook["buds"]>): HeadphoneLook {
+  return {
+    cup: { rx: 0, ry: 0, n: 2, depth: 0 },
+    cushion: { thick: 0, width: 0, fabric: "leather", color: "#9a9a9c" },
+    shell: { color, finish: "gloss" },
+    face: { color, finish: "gloss" },
+    band: { style: "padded", color, width: 0, height: 0 },
+    slider: "metal",
+    buds,
+  };
+}
 
 export const GENERIC: Record<HeadphoneKind, HeadphoneModel> = {
   overear: {
@@ -133,7 +223,15 @@ export const GENERIC: Record<HeadphoneKind, HeadphoneModel> = {
     name: "Headphones",
     kind: "overear",
     match: /$^/,
-    look: { cup: "oval", cupSize: 0.72, cupDepth: 0.34, band: 0.07, shell: "#222226", accent: "#7d7d84", cushion: "#18181b", metal: 0.2, gloss: 0.4, sliders: true },
+    look: {
+      cup: { rx: 0.36, ry: 0.46, n: 2.3, depth: 0.19 },
+      cushion: { thick: 0.19, width: 0.13, ...BLACK_LEATHER },
+      shell: { color: "#1c1c1e", finish: "matte" },
+      face: { color: "#202022", finish: "satin" },
+      ring: { color: "#8e9096", finish: "brushed" },
+      band: { style: "padded", color: "#1c1c1e", width: 0.3, height: 1.0 },
+      slider: "metal",
+    },
   },
   onear: {
     id: "generic-onear",
@@ -141,7 +239,15 @@ export const GENERIC: Record<HeadphoneKind, HeadphoneModel> = {
     name: "Headphones",
     kind: "onear",
     match: /$^/,
-    look: { cup: "round", cupSize: 0.6, cupDepth: 0.3, band: 0.07, shell: "#222226", accent: "#7d7d84", cushion: "#18181b", metal: 0.2, gloss: 0.4 },
+    look: {
+      cup: { rx: 0.34, ry: 0.36, n: 2, depth: 0.16 },
+      cushion: { thick: 0.14, width: 0.11, ...BLACK_LEATHER },
+      shell: { color: "#1c1c1e", finish: "matte" },
+      face: { color: "#1c1c1e", finish: "satin" },
+      ring: { color: "#8e9096", finish: "brushed" },
+      band: { style: "padded", color: "#1c1c1e", width: 0.26, height: 0.92 },
+      slider: "metal",
+    },
   },
   earbuds: {
     id: "generic-earbuds",
@@ -149,7 +255,7 @@ export const GENERIC: Record<HeadphoneKind, HeadphoneModel> = {
     name: "Earbuds",
     kind: "earbuds",
     match: /$^/,
-    look: { cup: "round", cupSize: 0.5, cupDepth: 0.3, band: 0, shell: "#e9e9ea", accent: "#c9cacd", cushion: "#dedee0", metal: 0.05, gloss: 0.8 },
+    look: earbuds("#ececea", { stem: true, tip: true, case: "#ececea" }),
   },
 };
 
