@@ -154,49 +154,6 @@ export function TrendCard() {
   );
 }
 
-/** Right vertical card — the research layer, always cinder, always labelled experimental. */
-export function ResearchCard() {
-  const s = useStudyLoop();
-  const pal = usePalette();
-  return (
-    <section className={`card research-card ${s.research ? "is-on" : ""}`} aria-label="Research layer">
-      <header className="card__head">
-        <p className="card__title">Research</p>
-        <span className="chip chip--action-outline">Experimental</span>
-      </header>
-      <div className="research-card__viz" aria-hidden>
-        <div className="wave-strip">
-          <svg viewBox="0 0 200 40" preserveAspectRatio="none">
-            <path d={wavePath(200, 40, 16)} />
-          </svg>
-          <svg viewBox="0 0 200 40" preserveAspectRatio="none">
-            <path d={wavePath(200, 40, 16)} />
-          </svg>
-        </div>
-        <span className="research-card__orb">
-          <ThinkingOrb state="weaving" size={32} theme="dark" color={pal.action} speed={s.research ? 1 : 0.35} />
-        </span>
-        <span className="research-card__hz">
-          40<small>Hz</small>
-        </span>
-      </div>
-      <p className="research-card__copy">
-        Gamma-band rhythm, <em>under investigation</em> in memory research. Logged for study — not a treatment.
-      </p>
-      <div className="seg" role="radiogroup" aria-label="Research layer">
-        <button type="button" role="radio" aria-checked={!s.research} onClick={() => engine.setResearch(false)}>
-          {!s.research && <motion.span layoutId="seg-research" className="seg__thumb" />}
-          <span>Off</span>
-        </button>
-        <button type="button" role="radio" aria-checked={s.research} onClick={() => engine.setResearch(true)}>
-          {s.research && <motion.span layoutId="seg-research" className="seg__thumb seg__thumb--action" />}
-          <span>Layer on</span>
-        </button>
-      </div>
-    </section>
-  );
-}
-
 export function wavePath(w: number, h: number, cycles: number, amp = 0.36) {
   const pts: string[] = [];
   const steps = cycles * 16;

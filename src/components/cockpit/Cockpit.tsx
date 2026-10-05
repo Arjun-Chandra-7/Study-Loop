@@ -12,7 +12,8 @@ import { ProfileFoot, ProfileView } from "../views/ProfileView";
 import { ResearchFoot, ResearchView } from "../views/ResearchView";
 import { SessionFoot, SessionView } from "../views/SessionView";
 import { Dock } from "./Dock";
-import { PlayerCard, ProfilePill, ResearchCard, TrendCard } from "./LowerCards";
+import { HeadphonesCard } from "./HeadphonesCard";
+import { PlayerCard, ProfilePill, TrendCard } from "./LowerCards";
 import { BaselineCard, EdaCard, HeartRateCard, SignalCard } from "./MetricCards";
 import { Logo } from "../ui/Logo";
 import { StatusCapsule } from "./StatusCapsule";
@@ -138,7 +139,7 @@ export function Cockpit() {
           <TrendCard />
         </motion.div>
         <motion.div className="area-research" {...pop(6, ready)}>
-          <ResearchCard />
+          <HeadphonesCard />
         </motion.div>
         <motion.div className="area-profile" {...pop(7, ready)}>
           <ProfilePill />
