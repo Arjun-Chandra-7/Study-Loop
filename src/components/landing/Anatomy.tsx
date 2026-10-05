@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
@@ -148,16 +149,13 @@ export function Anatomy() {
   );
 
   return (
-    <section ref={root} className="anatomy" aria-label="Inside the band">
-      <span className="anatomy__ghost display" aria-hidden>
-        Inside · Inside · Inside
-      </span>
+    <section ref={root} className="anatomy field field--sage" aria-label="Inside the band">
       <div className="anatomy__head">
         <p className="eyebrow" data-reveal>
           <span className="eyebrow__rule" aria-hidden />
           Inside the band
         </p>
-        <h2 className="display display--md" data-split>
+        <h2 className="display campaign anatomy__title" data-split>
           Four parts.
         </h2>
         <p className="serif serif--lg" data-split="words">
@@ -165,6 +163,14 @@ export function Anatomy() {
         </p>
       </div>
       <div className="anatomy__track">
+        <div className="plate-wrap anatomy__exploded">
+          <Image
+            src="/media/campaign/exploded.webp"
+            alt="Exploded view of the band: top shell with the status light, circuit board, optical pulse sensor, battery, and the base with two electrodes on the woven strap."
+            fill
+            sizes="(min-width: 760px) 40vw, 82vw"
+          />
+        </div>
         {PARTS.map((p) => (
           <div key={p.n} className="plate-wrap">
             <Tilt className="plate">

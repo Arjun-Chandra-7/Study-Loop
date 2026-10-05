@@ -1,244 +1,397 @@
 "use client";
 
-import Image from "next/image";
-import { AnimatePresence, motion, useDragControls, useInView, type Variants } from "motion/react";
-import { useIntroDone } from "@/lib/intro";
-import { useRef, useState } from "react";
-import { ThinkingOrb, type OrbState } from "thinking-orbs";
-import { BASELINE_MS, type Tab } from "@/lib/engine";
+import { AnimatePresence, motion, useDragControls } from "motion/react";
+import { useSyncExternalStore } from "react";
+import { useAuth } from "@/lib/auth";
+import type { Tab } from "@/lib/engine";
 import { clock, signedPercent } from "@/lib/format";
+import { useIntroDone } from "@/lib/intro";
+import { gammaBeats, useGammaBeats } from "@/lib/music/gamma";
+import { vibeEngine } from "@/lib/music/vibe/engine";
+import { useLoopPlayer } from "../views/loops/shared";
 import { edaDelta, PHYSIO_LABEL } from "@/lib/sensors/classify";
 import { engine, useStudyLoop } from "@/lib/useStudyLoop";
-import { usePalette } from "@/lib/prefs";
 import { Sparkline } from "../charts/Sparkline";
-import { Dock } from "../cockpit/Dock";
-import { subjectCode } from "../cockpit/LowerCards";
 import { orbFor } from "../orb/orbState";
 import { StateOrb } from "../orb/StateOrb";
-import { Icon } from "../ui/Icon";
+import { toggleBeats } from "../session/SessionPrompts";
+import { Avatar } from "../ui/Avatar";
+import { Icon, type IconName } from "../ui/Icon";
 import { Logo } from "../ui/Logo";
-import { StateBadge } from "../ui/StateBadge";
 import { InsightsFoot, InsightsView } from "../views/InsightsView";
 import { MusicFoot, MusicView } from "../views/MusicView";
 import { ProfileFoot, ProfileView } from "../views/ProfileView";
 import { ResearchFoot, ResearchView } from "../views/ResearchView";
 import { SessionFoot, SessionView } from "../views/SessionView";
+import "./mobile.css";
 
-/* Section choreography: every piece enters on its own beat. */
-const sec: Variants = { hidden: {}, show: { transition: { staggerChildren: 0.08 } } };
-const pill: Variants = {
-  hidden: { opacity: 0, scale: 0.6, y: 10 },
-  show: { opacity: 1, scale: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 20 } },
-};
-const bar: Variants = {
-  hidden: { opacity: 0, scaleX: 0.5 },
-  show: { opacity: 1, scaleX: 1, transition: { type: "spring", stiffness: 160, damping: 20 } },
-};
-const note: Variants = {
-  hidden: { opacity: 0, x: 24 },
-  show: { opacity: 1, x: 0, transition: { duration: 0.7, ease: [0.2, 0.8, 0.2, 1] } },
-};
-const main: Variants = {
-  hidden: { opacity: 0, y: 60, scale: 0.88 },
-  show: { opacity: 1, y: 0, scale: 1, transition: { type: "spring", stiffness: 120, damping: 16 } },
-};
-const side = (dir: 1 | -1): Variants => ({
-  hidden: { opacity: 0, x: 40 * dir, rotate: 10 * dir, scale: 0.8 },
-  show: { opacity: 1, x: 0, rotate: 0, scale: 1, transition: { type: "spring", stiffness: 160, damping: 14, delay: 0.15 } },
+/*
+ * Phone layout, built on patterns from the best health and focus apps:
+ *  - the first screen is one hero and nothing else: the one thing that matters now (Oura's Today);
+ *  - below the fold, one scrolling Today list, not swipe-tabs (Whoop's 2025 home);
+ *  - glanceable dials first, trends a tap away, detail in sheets (progressive disclosure);
+ *  - navigation and the live session in the thumb zone at the bottom.
+ */
+
+const rise = (i: number) => ({
+  initial: { opacity: 0, y: 18 },
+  animate: { opacity: 1, y: 0 },
+  transition: { delay: 0.08 * i, type: "spring" as const, stiffness: 220, damping: 26 },
 });
-const strip: Variants = {
-  hidden: { opacity: 0, clipPath: "inset(0 50% 0 50%)" },
-  show: { opacity: 1, clipPath: "inset(0 0% 0 0%)", transition: { duration: 0.9, ease: [0.65, 0, 0.35, 1] } },
-};
 
-function Section({ id, children }: { id: number; children: React.ReactNode }) {
-  const ref = useRef<HTMLElement>(null);
-  const inView = useInView(ref, { once: true, amount: 0.25 });
-  const ready = useIntroDone();
-  return (
-    <motion.section
-      ref={ref}
-      className="m-sec"
-      id={`m-sec-${id}`}
-      data-sec={id}
-      variants={sec}
-      initial="hidden"
-      animate={ready && inView ? "show" : "hidden"}
-    >
-      {children}
-    </motion.section>
-  );
+const LIVE = ["baseline", "active", "paused"];
+const noSub = () => () => {};
+
+function greeting() {
+  const h = new Date().getHours();
+  return h < 5 ? "Burning the midnight oil" : h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening";
 }
 
-function Thumb({ orb, value, label, tone, dir }: { orb: OrbState; value: React.ReactNode; label: string; tone?: string; dir: 1 | -1 }) {
-  const pal = usePalette();
-  return (
-    <motion.div className={`m-side ${dir < 0 ? "m-side--l" : "m-side--r"}`} variants={side(dir)}>
-      <div className="m-thumb">
-        <ThinkingOrb state={orb} size={32} theme="dark" color={tone ?? pal.measured} speed={0.7} />
-      </div>
-      <p className="m-cap">
-        <b className="tnum">{value}</b>
-        <span>{label}</span>
-      </p>
-    </motion.div>
-  );
-}
-
-function Marquee({ items, tone }: { items: string[]; tone?: "action" }) {
-  return (
-    <motion.div className={`m-strip ${tone === "action" ? "m-strip--action" : ""}`} variants={strip}>
-      <div className="marquee__track">
-        {[0, 1].map((k) => (
-          <span key={k} className="marquee__group">
-            {items.map((m, i) => (
-              <span key={i}>
-                {m}
-                <i />
-              </span>
-            ))}
-          </span>
-        ))}
-      </div>
-    </motion.div>
-  );
-}
-
-function TopRow() {
+function TopBar() {
   const s = useStudyLoop();
-  const ready = useIntroDone();
-  const [open, setOpen] = useState(false);
-  const on = s.reading.connection === "connected";
-  const d = edaDelta(s.reading.eda, s.session.baseline);
-  const orb = orbFor({ connection: s.reading.connection, phase: s.session.phase, physio: s.physio, research: s.research });
-  const live = s.session.phase === "active" || s.session.phase === "paused";
-  const q = s.reading.quality;
-
+  const r = s.reading;
+  const on = r.connection === "connected";
   return (
-    <motion.header
-      className="m-top"
-      initial={{ y: -30, opacity: 0 }}
-      animate={ready ? { y: 0, opacity: 1 } : undefined}
-      transition={{ type: "spring", stiffness: 200, damping: 22, delay: 0.1 }}
-    >
-      <div className="m-top__stats" aria-label="Live values">
-        <span className="tnum">{on && s.reading.hr != null ? Math.round(s.reading.hr) : "—"}</span>
-        <span className="tnum">{d != null ? signedPercent(d) : on && s.reading.eda != null ? s.reading.eda.toFixed(1) : "—"}</span>
-        <span className="tnum">{on ? q.slice(0, 4) : "—"}</span>
-      </div>
-
-      <motion.button
-        layout
+    <header className="mx-top">
+      <Logo size="sm" />
+      <button
         type="button"
-        className={`m-island ${open ? "is-open" : ""}`}
-        onClick={() => setOpen((o) => !o)}
-        aria-expanded={open}
-        aria-label={`${live ? clock(s.session.config.minutes * 60_000 - s.session.elapsedMs) : PHYSIO_LABEL[s.physio]} — system ${orb.label.toLowerCase()}`}
-        transition={{ type: "spring", stiffness: 380, damping: 30 }}
+        className={`mx-band mx-band--${r.connection}`}
+        onClick={on ? () => engine.setTab("profile") : engine.toggleConnection}
+        aria-label={on ? "Band connected, open band settings" : "Pair your band"}
       >
-        <motion.span layout className="m-island__orb">
-          <StateOrb {...orb} size={20} dotScale={1.1} label="" />
-        </motion.span>
-        <AnimatePresence initial={false} mode="popLayout">
-          {open ? (
-            <motion.span
-              key="open"
-              className="m-island__detail"
-              initial={{ opacity: 0, filter: "blur(4px)" }}
-              animate={{ opacity: 1, filter: "blur(0px)" }}
-              exit={{ opacity: 0 }}
-            >
-              <b>{live ? clock(s.session.config.minutes * 60_000 - s.session.elapsedMs) : orb.label}</b>
-              <span>{on ? `${PHYSIO_LABEL[s.physio]} · ${s.reading.battery ?? "—"}%` : "Band offline"}</span>
-            </motion.span>
-          ) : (
-            <motion.span key="closed" className="m-island__word" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-              {live ? clock(s.session.config.minutes * 60_000 - s.session.elapsedMs) : PHYSIO_LABEL[s.physio]}
-            </motion.span>
-          )}
-        </AnimatePresence>
-      </motion.button>
-
-      <div className="m-top__dots" role="status" aria-label="Band status">
-        <span data-tone={on ? "measured" : s.reading.connection === "connecting" ? "pulse" : "off"} title="Link" />
-        <span data-tone={!on ? "off" : (s.reading.battery ?? 100) <= 15 ? "action" : "measured"} title="Battery" />
-        <span data-tone={!on ? "off" : q === "poor" ? "action" : "measured"} title="Signal" />
-        <span data-tone={s.research ? "action" : "off"} title="Research layer" />
-      </div>
-    </motion.header>
+        <span className={`link-dot link-dot--${r.connection}`} aria-hidden />
+        {on ? (
+          <>
+            SL-01 <span className="tnum">{r.battery ?? "—"}%</span>
+          </>
+        ) : r.connection === "connecting" ? (
+          "Pairing…"
+        ) : (
+          "Pair band"
+        )}
+      </button>
+      <button type="button" className="mx-me" onClick={() => engine.setTab("profile")} aria-label="Open your profile">
+        <Avatar size="sm" />
+      </button>
+    </header>
   );
 }
 
-/** The tall centre card of section one — whatever the session needs right now. */
-function LiveCard() {
+/** Progress ring drawn around the orb: elapsed time, or baseline progress. */
+function Ring({ progress, tone }: { progress: number; tone: "measured" | "action" | "muted" }) {
+  const r = 46;
+  const c = 2 * Math.PI * r;
+  return (
+    <svg className={`mx-ring mx-ring--${tone}`} viewBox="0 0 100 100" aria-hidden>
+      <circle cx="50" cy="50" r={r} className="mx-ring__track" />
+      <circle cx="50" cy="50" r={r} className="mx-ring__fill" strokeDasharray={c} strokeDashoffset={c * (1 - Math.max(0, Math.min(1, progress)))} />
+    </svg>
+  );
+}
+
+/**
+ * The first screen is this and nothing else: one orb, one line, one action.
+ * Everything else waits below the fold.
+ */
+function Hero() {
   const s = useStudyLoop();
-  const phase = s.session.phase;
+  const { user } = useAuth();
+  const { phase, config, elapsedMs, baselineProgress } = s.session;
   const orb = orbFor({ connection: s.reading.connection, phase, physio: s.physio, research: s.research });
-  const { config, elapsedMs } = s.session;
+  const banded = s.reading.connection === "connected";
+  const total = config.minutes * 60_000;
+  const first = user?.uid === "demo" ? "judge" : user?.displayName?.split(/\s+/)[0];
+  const today = useSyncExternalStore(
+    noSub,
+    () => new Date().toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" }),
+    () => "",
+  );
+  const last = s.summaries[0];
+  const live = phase === "active" || phase === "paused";
 
-  const body = (() => {
-    if (phase === "baseline") {
-      const left = Math.ceil(((1 - s.session.baselineProgress) * BASELINE_MS) / 1000);
-      return (
-        <>
-          <StateOrb {...orb} size={150} density={1.6} dotScale={0.7} />
-          <p className="label label--action">Baseline</p>
-          <p className="m-main__big tnum">00:{String(left).padStart(2, "0")}</p>
-          <p className="serif m-main__serif">Sit still.</p>
-        </>
-      );
-    }
-    if (phase === "active" || phase === "paused") {
-      return (
-        <>
-          <StateOrb {...orb} size={140} density={2} dotScale={0.75} paused={phase === "paused"} />
-          <p className="label">{config.subject}</p>
-          <p className="m-main__big tnum">{clock(config.minutes * 60_000 - elapsedMs)}</p>
-          {phase === "paused" ? <span className="state state--paused">Paused</span> : <StateBadge state={s.physio} />}
-        </>
-      );
-    }
-    if (phase === "complete") {
-      const last = s.summaries[0];
-      return (
-        <>
-          <p className="label label--measured">Complete</p>
-          <p className="m-main__big tnum">{last?.minutes ?? 0}m</p>
-          <p className="small muted">{Math.round((last?.stableShare ?? 0) * 100)}% near baseline</p>
-        </>
-      );
-    }
-    return (
-      <>
-        <div className="m-main__img">
-          <Image src="/media/studyloop-band.png" alt="The StudyLoop band" fill sizes="60vw" preload />
-        </div>
-        <p className="serif m-main__serif">Designed for deeper focus</p>
-      </>
-    );
-  })();
-
-  const action = () => {
-    if (phase === "active" || phase === "paused") engine.togglePause();
-    else {
-      if (phase === "complete") engine.newSession();
-      engine.setTab("session");
-    }
-  };
+  let title: React.ReactNode;
+  let line: React.ReactNode;
+  let ring = 0;
+  let tone: "measured" | "action" | "muted" = "muted";
+  if (phase === "baseline") {
+    title = <span className="tnum">0:{String(Math.ceil(((1 - baselineProgress) * engine.baselineMs) / 1000)).padStart(2, "0")}</span>;
+    line = "Capturing your baseline. Sit still.";
+    ring = baselineProgress;
+    tone = "measured";
+  } else if (live) {
+    title = <span className="tnum">{clock(Math.max(0, total - elapsedMs))}</span>;
+    line = phase === "paused" ? "Paused" : banded ? PHYSIO_LABEL[s.physio] : "Timer only";
+    ring = elapsedMs / total;
+    tone = s.physio === "elevated" ? "action" : "measured";
+  } else if (phase === "complete") {
+    title = "Nice work";
+    line = `${last?.minutes ?? 0} min · ${Math.round((last?.stableShare ?? 0) * 100)}% near baseline`;
+    ring = 1;
+    tone = "measured";
+  } else {
+    title = "Ready when you are";
+    line = `${config.subject} · ${config.minutes} min · ${config.mode}`;
+  }
 
   return (
-    <motion.div className="m-main" variants={main}>
-      <div className="m-main__body">{body}</div>
-      {phase !== "baseline" && (
-        <motion.button type="button" className="btn btn--primary m-main__btn" whileTap={{ scale: 0.94 }} onClick={action}>
-          {phase === "active" ? "Pause" : phase === "paused" ? "Resume" : "Start"}
-          <Icon name={phase === "active" ? "pause" : "play"} size={14} />
-        </motion.button>
-      )}
-    </motion.div>
+    <section className={`mx-hero mx-hero--${phase}`} aria-label="Now">
+      <p className="mx-hero__eyebrow">
+        {today}
+        {first ? ` · ${greeting()}, ${first}` : ""}
+      </p>
+
+      <div className="mx-hero__center">
+        <div className="mx-hero__stage">
+          <Ring progress={ring} tone={tone} />
+          <StateOrb {...orb} size={168} density={1.6} dotScale={0.7} paused={phase === "paused"} />
+        </div>
+        <div className="mx-hero__copy">
+          {live && <p className="mx-hero__kicker">{config.subject}</p>}
+          <h1 className={`mx-hero__title ${live || phase === "baseline" ? "is-clock" : ""}`}>{title}</h1>
+          <p className={`mx-hero__line ${live && s.physio === "elevated" ? "is-action" : ""}`}>{line}</p>
+        </div>
+      </div>
+
+      <div className="mx-hero__cta">
+        {phase === "idle" && (
+          <>
+            <button type="button" className="btn btn--primary mx-cta" onClick={startHere}>
+              <Icon name="play" size={16} />
+              {banded ? "Start session" : "Start without band"}
+            </button>
+            <div className="mx-hero__links">
+              <button type="button" onClick={() => engine.setTab("session")}>
+                Change session
+              </button>
+              {!banded && (
+                <button type="button" onClick={engine.toggleConnection}>
+                  Pair band
+                </button>
+              )}
+            </div>
+          </>
+        )}
+        {phase === "baseline" && (
+          <div className="mx-hero__links">
+            <button type="button" onClick={engine.end}>
+              Cancel
+            </button>
+          </div>
+        )}
+        {live && (
+          <div className="mx-controls">
+            <button type="button" className="mx-round" onClick={engine.mark} disabled={phase === "paused"} aria-label="Mark this moment">
+              <Icon name="flag" size={18} />
+            </button>
+            <button type="button" className={`btn ${phase === "paused" ? "btn--primary" : "btn--solid"} mx-cta`} onClick={engine.togglePause}>
+              <Icon name={phase === "paused" ? "play" : "pause"} size={16} />
+              {phase === "paused" ? "Resume" : "Pause"}
+            </button>
+            <button type="button" className="mx-round" onClick={engine.end} aria-label="End session">
+              <Icon name="stop" size={18} />
+            </button>
+          </div>
+        )}
+        {phase === "complete" && (
+          <>
+            <button type="button" className="btn btn--primary mx-cta" onClick={() => engine.setTab("insights")}>
+              Review session
+              <Icon name="arrow" size={16} />
+            </button>
+            <div className="mx-hero__links">
+              <button type="button" onClick={engine.newSession}>
+                Start a new one
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+    </section>
   );
 }
 
+/** On the phone the hero becomes the live session, so starting stays on Today. */
+function startHere() {
+  engine.beginSession();
+  engine.setTab("home");
+}
+
+/** Three equal tiles, same anatomy each: label, value, one-line note, trace. */
+function Dial({ icon, label, value, sub, series, base, tone }: { icon: IconName; label: string; value: React.ReactNode; sub: string; series: (number | null)[]; base?: number | null; tone?: "action" }) {
+  return (
+    <div className={`mx-dial ${tone === "action" ? "is-action" : ""}`}>
+      <p className="mx-dial__label">
+        <Icon name={icon} size={13} />
+        {label}
+      </p>
+      <p className="mx-dial__value tnum">{value}</p>
+      <p className="mx-dial__sub">{sub}</p>
+      <div className="mx-dial__spark">{series.filter((x) => x != null).length > 1 && <Sparkline values={series} baseline={base} height={20} pad={0.25} tone={tone ?? "measured"} />}</div>
+    </div>
+  );
+}
+
+function Dials() {
+  const s = useStudyLoop();
+  const on = s.reading.connection === "connected";
+  const b = s.session.baseline;
+  const d = edaDelta(s.reading.eda, b);
+  const hr = on && s.reading.hr != null ? Math.round(s.reading.hr) : null;
+  const recent = s.history.slice(-90);
+  const elevated = on && s.physio === "elevated";
+  return (
+    <button type="button" className="mx-dials" onClick={() => engine.setTab("session")} aria-label="Live signals, open session">
+      <Dial icon="heart" label="Heart" value={hr ?? "—"} sub={hr != null && b ? `${signedPercent((hr - b.hr) / b.hr)} vs base` : "bpm"} series={recent.map((x) => x.hr)} base={b?.hr} />
+      <Dial
+        icon="eda"
+        label="Skin"
+        value={d != null ? signedPercent(d) : on && s.reading.eda != null ? s.reading.eda.toFixed(1) : "—"}
+        sub={d != null ? "vs base" : "µS"}
+        series={recent.map((x) => x.eda)}
+        base={b?.eda}
+        tone={elevated ? "action" : undefined}
+      />
+      <Dial icon="baseline" label="State" value={on ? PHYSIO_LABEL[s.physio] : "—"} sub={on ? (b ? "vs baseline" : "no baseline") : "band offline"} series={[]} tone={elevated ? "action" : undefined} />
+    </button>
+  );
+}
+
+/** What's playing, with play and 40 Hz under your thumb. */
+function SoundRow() {
+  const p = useLoopPlayer();
+  const beats = useGammaBeats();
+  const live = LIVE.includes(useStudyLoop().session.phase);
+  const title = p.playing ? p.loop?.name : beats ? "40 Hz beats" : p.loop ? p.loop.name : "Nothing playing";
+  const sub = p.playing ? `${p.params?.bpm ?? "—"} BPM · following your band` : beats ? "Binaural on headphones" : "Turn your songs into beats";
+  return (
+    <div className="mx-row">
+      <button type="button" className="mx-row__main" onClick={() => engine.setTab("music")} aria-label="Open Music">
+        <span className={`mx-row__art ${p.playing || beats ? "is-on" : ""}`} aria-hidden>
+          <i />
+          <i />
+          <i />
+          <i />
+        </span>
+        <span className="mx-row__text">
+          <b>{title}</b>
+          <span>{sub}</span>
+        </span>
+      </button>
+      {p.loop && !beats && (
+        <button type="button" className="mx-round" onClick={() => void vibeToggle()} aria-label={p.playing ? "Pause Loop" : "Play Loop"}>
+          <Icon name={p.playing ? "pause" : "play"} size={16} />
+        </button>
+      )}
+      {(live || beats) && (
+        <button type="button" className={`mx-chip ${beats ? "is-on" : ""}`} onClick={toggleBeats} aria-pressed={beats}>
+          40 Hz
+        </button>
+      )}
+    </div>
+  );
+}
+
+/** One soundtrack at a time: resuming a Loop ends the 40 Hz beats. */
+async function vibeToggle() {
+  if (gammaBeats.getSnapshot()) gammaBeats.stop();
+  await vibeEngine.toggle();
+}
+
+function LastSessionRow() {
+  const last = useStudyLoop().summaries[0];
+  if (!last) return null;
+  return (
+    <button type="button" className="mx-row mx-row--link" onClick={() => engine.setTab("insights")} aria-label="Last session, open Insights">
+      <span className="mx-row__art mx-row__art--stat tnum" aria-hidden>
+        {Math.round(last.stableShare * 100)}
+        <small>%</small>
+      </span>
+      <span className="mx-row__text">
+        <b>
+          {last.subject} · {last.minutes} min
+        </b>
+        <span>{last.isSample ? "Sample session" : last.dateLabel} · near baseline · {last.elevatedMoments} elevated</span>
+      </span>
+      <Icon name="arrow" size={16} className="mx-row__go" />
+    </button>
+  );
+}
+
+function ResearchRow() {
+  return (
+    <button type="button" className="mx-row mx-row--link mx-row--research" onClick={() => engine.setTab("research")} aria-label="Research, open">
+      <span className="mx-row__art mx-row__art--research" aria-hidden>
+        <Icon name="research" size={18} />
+      </span>
+      <span className="mx-row__text">
+        <b>The signals behind focus</b>
+        <span>Experimental research, with papers</span>
+      </span>
+      <Icon name="arrow" size={16} className="mx-row__go" />
+    </button>
+  );
+}
+
+/** Pinned above the tabs while a session runs and you're looking at something else. */
+function LiveStrip() {
+  const s = useStudyLoop();
+  const { phase, config, elapsedMs } = s.session;
+  const show = LIVE.includes(phase) && s.tab !== "session" && s.tab !== "home";
+  const orb = orbFor({ connection: s.reading.connection, phase, physio: s.physio, research: s.research });
+  return (
+    <AnimatePresence>
+      {show && (
+        <motion.div className="mx-strip" initial={{ y: 30, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 30, opacity: 0 }}>
+          <button type="button" className="mx-strip__main" onClick={() => engine.setTab("session")}>
+            <StateOrb {...orb} size={28} dotScale={1} label="" />
+            <span>
+              <b className="tnum">{phase === "baseline" ? "Baseline" : clock(Math.max(0, config.minutes * 60_000 - elapsedMs))}</b>
+              {config.subject}
+            </span>
+          </button>
+          {phase !== "baseline" && (
+            <button type="button" className="play-btn" onClick={engine.togglePause} aria-label={phase === "active" ? "Pause" : "Resume"}>
+              <Icon name={phase === "active" ? "pause" : "play"} size={14} />
+            </button>
+          )}
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
+
+const TABS: { id: Tab; label: string; icon: IconName }[] = [
+  { id: "home", label: "Today", icon: "home" },
+  { id: "session", label: "Session", icon: "session" },
+  { id: "insights", label: "Insights", icon: "insights" },
+  { id: "music", label: "Music", icon: "music" },
+  { id: "profile", label: "You", icon: "user" },
+];
+
+function TabBar() {
+  const s = useStudyLoop();
+  const live = LIVE.includes(s.session.phase);
+  return (
+    <nav className="mx-tabs" aria-label="Primary">
+      {TABS.map((t) => {
+        const on = s.tab === t.id || (t.id === "home" && s.tab === "research");
+        return (
+          <button key={t.id} type="button" className={`mx-tab ${on ? "is-on" : ""}`} onClick={() => engine.setTab(t.id)} aria-current={on ? "page" : undefined}>
+            {on && <motion.span layoutId="mx-tab-pill" className="mx-tab__pill" transition={{ type: "spring", stiffness: 420, damping: 34 }} />}
+            <span className="mx-tab__icon">
+              <Icon name={t.icon} size={20} />
+              {t.id === "session" && live && <i className="mx-tab__live" aria-label="Session running" />}
+            </span>
+            <span className="mx-tab__label">{t.label}</span>
+          </button>
+        );
+      })}
+    </nav>
+  );
+}
+
+/** Detail lives in a sheet above the tabs: drag down or tap outside to go back to Today. */
 function Sheet() {
   const { tab, session } = useStudyLoop();
   const drag = useDragControls();
@@ -256,16 +409,10 @@ function Sheet() {
     <AnimatePresence>
       {open && (
         <>
-          <motion.div
-            className="m-scrim"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={() => engine.setTab("home")}
-          />
+          <motion.div className="m-scrim mx-scrim" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => engine.setTab("home")} />
           <motion.div
             key="sheet"
-            className="m-sheet"
+            className="m-sheet mx-sheet"
             role="dialog"
             aria-modal="true"
             aria-label={tab}
@@ -285,7 +432,7 @@ function Sheet() {
           >
             <div className="m-sheet__grip" onPointerDown={(e) => drag.start(e)}>
               <span />
-              <button type="button" className="icon-btn" aria-label="Close" onClick={() => engine.setTab("home")}>
+              <button type="button" className="icon-btn" aria-label="Back to Today" onClick={() => engine.setTab("home")}>
                 <Icon name="close" size={16} />
               </button>
             </div>
@@ -297,7 +444,7 @@ function Sheet() {
                   initial={{ opacity: 0, y: 16 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -16 }}
-                  transition={{ duration: 0.3 }}
+                  transition={{ duration: 0.25 }}
                 >
                   {views[tab as Exclude<Tab, "home">][0]}
                   <div className="m-sheet__foot">{views[tab as Exclude<Tab, "home">][1]}</div>
@@ -312,140 +459,32 @@ function Sheet() {
 }
 
 export function MobileApp() {
-  const s = useStudyLoop();
-  const pal = usePalette();
-  const root = useRef<HTMLDivElement>(null);
-  const on = s.reading.connection === "connected";
-  const { config } = s.session;
-  const d = edaDelta(s.reading.eda, s.session.baseline);
-  const last = s.summaries[0];
-  const phase = s.session.phase;
-  const running = phase === "active";
-
-  const values = [
-    `HR ${on && s.reading.hr != null ? Math.round(s.reading.hr) : "—"} bpm`,
-    `EDA ${d != null ? signedPercent(d) : "—"}`,
-    `Signal ${on ? s.reading.quality : "none"}`,
-    `State ${PHYSIO_LABEL[s.physio]}`,
-    `Baseline ${s.session.baseline ? "set" : "not set"}`,
-  ];
-
+  const ready = useIntroDone();
   return (
-    <div className="m-app" ref={root}>
-      <TopRow />
-
-      {/* 01 · Now */}
-      <Section id={0}>
-        <motion.span className="m-pill" variants={pill}>
-          <span className={`link-dot link-dot--${s.reading.connection}`} aria-hidden />
-          {on ? `Live · SL-01 · ${s.reading.battery ?? "—"}%` : s.reading.connection === "connecting" ? "Pairing…" : "Band offline"}
-        </motion.span>
-        <motion.div className="m-bar" variants={bar}>
-          <Logo />
-          <StateBadge state={s.physio} />
-        </motion.div>
-        <motion.p className="m-note" variants={note}>
-          A wearable study interface that shows how your physiology changes while you learn.
-        </motion.p>
-        <div className="m-tri">
-          <Thumb dir={-1} orb="listening" value={on && s.reading.hr != null ? Math.round(s.reading.hr) : "—"} label="bpm · heart" />
-          <LiveCard />
-          <Thumb dir={1} orb="breathing" value={d != null ? signedPercent(d) : on && s.reading.eda != null ? s.reading.eda.toFixed(2) : "—"} label={d != null ? "EDA vs base" : "µS · EDA"} />
-        </div>
-        <Marquee items={values} />
-      </Section>
-
-      {/* 02 · Session */}
-      <Section id={1}>
-        <motion.span className="m-pill" variants={pill}>
-          Session · {config.mode}
-        </motion.span>
-        <motion.div className="m-bar m-bar--player" variants={bar}>
-          <span className="m-bar__code">{subjectCode(config.subject)}</span>
-          <span className="m-bar__title">
-            <b>{config.subject}</b>
-            <span>{config.topic}</span>
-          </span>
-          <motion.button
-            type="button"
-            className="play-btn m-bar__play"
-            whileTap={{ scale: 0.9 }}
-            aria-label={running ? "Pause" : phase === "paused" ? "Resume" : "Open session"}
-            onClick={() => (running || phase === "paused" ? engine.togglePause() : engine.setTab("session"))}
-            data-running={running || undefined}
-          >
-            <Icon name={running ? "pause" : "play"} size={16} />
-          </motion.button>
-        </motion.div>
-        <motion.p className="m-note" variants={note}>
-          Goal {config.minutes} min. {clock(s.session.elapsedMs)} studied so far.
-        </motion.p>
-        <div className="m-tri">
-          <Thumb dir={-1} orb="searching" value={on ? s.reading.quality : "—"} label="signal" tone={s.reading.quality === "poor" ? pal.action : pal.measured} />
-          <motion.div className="m-main m-main--chart" variants={main}>
-            <p className="label">EDA · last 5 min</p>
-            <div className="m-main__chart">
-              <Sparkline values={s.history.slice(-300).map((x) => x.eda)} baseline={s.session.baseline?.eda} height={120} pad={0.25} />
-            </div>
-            <StateBadge state={s.physio} />
+    <div className="mx">
+      <TopBar />
+      {ready && (
+        <main className="mx-today">
+          <motion.div {...rise(0)}>
+            <Hero />
           </motion.div>
-          <Thumb dir={1} orb="connecting" value={s.session.baseline ? "Set" : "—"} label="baseline" />
-        </div>
-        <motion.button
-          type="button"
-          className={`m-strip m-strip--action m-strip--btn ${s.research ? "is-on" : ""}`}
-          variants={strip}
-          onClick={engine.toggleResearch}
-          aria-pressed={s.research}
-        >
-          <div className="marquee__track">
-            {[0, 1].map((k) => (
-              <span key={k} className="marquee__group">
-                {["Research layer " + (s.research ? "on" : "off"), "40 Hz", "Experimental", "Not a treatment", "Tap to toggle"].map((m, i) => (
-                  <span key={i}>
-                    {m}
-                    <i />
-                  </span>
-                ))}
-              </span>
-            ))}
-          </div>
-        </motion.button>
-      </Section>
-
-      {/* 03 · Insights */}
-      <Section id={2}>
-        <motion.span className="m-pill" variants={pill}>
-          Insights · {last?.dateLabel ?? "—"}
-        </motion.span>
-        <motion.button type="button" className="m-bar m-bar--link" variants={bar} onClick={() => engine.setTab("insights")}>
-          <span>
-            <b>{last?.subject}</b> — {last?.topic}
-          </span>
-          <Icon name="arrow" size={16} />
-        </motion.button>
-        <motion.p className="m-note" variants={note}>
-          “Near baseline” is time close to your starting signal — not a focus score.
-        </motion.p>
-        <div className="m-tri">
-          <Thumb dir={-1} orb="shaping" value={`${Math.round((last?.stableShare ?? 0) * 100)}%`} label="near base" />
-          <motion.div className="m-main m-main--chart" variants={main}>
-            <p className="label">{last?.minutes} min session</p>
-            <div className="m-main__chart">
-              <Sparkline values={(last?.samples ?? []).map((x) => x.hr)} baseline={last?.baseline?.hr} height={60} />
-              <Sparkline values={(last?.samples ?? []).map((x) => x.eda)} baseline={last?.baseline?.eda} height={60} />
+          <section className="mx-below" aria-label="Today">
+            <h2 className="mx-section">Today</h2>
+            <Dials />
+            <h2 className="mx-section">Listening</h2>
+            <SoundRow />
+            <h2 className="mx-section">Recent</h2>
+            <div className="mx-list">
+              <LastSessionRow />
+              <ResearchRow />
             </div>
-            <p className="small muted">HR above · EDA below</p>
-          </motion.div>
-          <Thumb dir={1} orb="composing" value={last?.elevatedMoments ?? 0} label="elevated" tone={pal.action} />
-        </div>
-        <Marquee items={["Not a medical device", "Measures HR + EDA", "No brain reading", "No stress score"]} />
-      </Section>
-
-      <div className="m-dock">
-        <Dock />
-      </div>
+            <p className="mx-fine">StudyLoop is a study tool, not a medical device. It measures heart rate and skin conductance; it never scores your focus or stress.</p>
+          </section>
+        </main>
+      )}
       <Sheet />
+      <LiveStrip />
+      <TabBar />
     </div>
   );
 }

@@ -11,7 +11,9 @@ export function clock(ms: number) {
 export function signedPercent(x: number | null, digits = 0) {
   if (x == null || !Number.isFinite(x)) return "—";
   const v = (x * 100).toFixed(digits);
-  return `${x >= 0 ? "+" : ""}${v}%`;
+  // A tiny negative that rounds to zero reads "0%", never "-0%".
+  if (Number(v) === 0) return `${(0).toFixed(digits)}%`;
+  return `${x > 0 ? "+" : ""}${v}%`;
 }
 
 /** Catmull-Rom → cubic Bézier: calm, continuous curves through every point. */

@@ -1,15 +1,13 @@
-import Image from "next/image";
-
-/** Brand lockup: cinder STUDY, sage LOOP on warm carbon, slanted forward. Transparent background. */
+/** Brand wordmark: cinder STUDY, sage LOOP, slanted forward, set in the headline voice. */
 export function Logo({ size = "md" }: { size?: "sm" | "md" }) {
   return (
-    <Image
-      src="/media/studyloop-logo.png"
-      alt="StudyLoop"
-      width={1951}
-      height={782}
-      preload
-      className={`logo logo--${size}`}
-    />
+    <span className={`logo logo--${size}`} role="img" aria-label="StudyLoop">
+      <span className="logo__a" aria-hidden>
+        Study
+      </span>
+      <span className="logo__b" aria-hidden>
+        Loop
+      </span>
+    </span>
   );
 }

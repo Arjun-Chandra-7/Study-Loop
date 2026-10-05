@@ -97,6 +97,18 @@ export const SCHEMA: string[] = [
      created_at    DOUBLE PRECISION NOT NULL
    )`,
   `CREATE INDEX IF NOT EXISTS music_loops_by_user ON music_loops (user_id, created_at)`,
+  // Beat playlists: a Spotify playlist rebuilt as beats, one per song, in the same order.
+  `CREATE TABLE IF NOT EXISTS music_beat_playlists (
+     id          TEXT PRIMARY KEY,
+     user_id     TEXT NOT NULL,
+     name        TEXT NOT NULL,
+     source_url  TEXT,
+     artwork_url TEXT,
+     songs_json  TEXT NOT NULL,
+     created_at  DOUBLE PRECISION NOT NULL,
+     UNIQUE (user_id, source_url)
+   )`,
+  `CREATE INDEX IF NOT EXISTS music_beat_playlists_by_user ON music_beat_playlists (user_id, created_at)`,
   // Worker liveness, so the app can tell "waiting in line" from "nobody is processing".
   `CREATE TABLE IF NOT EXISTS music_workers (
      id      TEXT PRIMARY KEY,

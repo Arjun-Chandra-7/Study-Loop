@@ -3,6 +3,7 @@
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useRef } from "react";
 import { useAuth } from "@/lib/auth";
+import { isDemo } from "@/lib/demo";
 import { clock } from "@/lib/format";
 import { engine, useStudyLoop } from "@/lib/useStudyLoop";
 import { Icon } from "../ui/Icon";
@@ -17,7 +18,8 @@ export function SessionRecovery() {
   const firstBtn = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
-    engine.attachUser(user?.uid ?? null);
+    // A judge's demo sessions are never saved or recovered.
+    engine.attachUser(isDemo() ? null : (user?.uid ?? null));
   }, [user?.uid]);
 
   useEffect(() => {

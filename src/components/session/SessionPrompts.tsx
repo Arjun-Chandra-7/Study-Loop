@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useRef, useSyncExternalStore } from "react";
 import { gammaBeats } from "@/lib/music/gamma";
 import { vibeEngine } from "@/lib/music/vibe/engine";
+import { isDemo } from "@/lib/demo";
 import { getPrefs, setPref } from "@/lib/prefs";
 import { engine } from "@/lib/useStudyLoop";
 import { Icon } from "../ui/Icon";
@@ -45,7 +46,7 @@ if (typeof window !== "undefined") {
     if (next === prev) return;
     // A session just started with nothing playing: offer a Loop.
     const started = (prev === "idle" || prev === "complete") && (next === "baseline" || next === "active");
-    if (started && getPrefs().askMusicOnStart && !vibeEngine.getSnapshot().playing && !gammaBeats.getSnapshot()) {
+    if (started && !isDemo() && getPrefs().askMusicOnStart && !vibeEngine.getSnapshot().playing && !gammaBeats.getSnapshot()) {
       show("music");
     }
     // Beats belong to a session: they stop when it ends.

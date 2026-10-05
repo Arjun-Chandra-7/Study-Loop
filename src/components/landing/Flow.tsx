@@ -1,26 +1,56 @@
 "use client";
 
+import Image from "next/image";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
 import { useRef } from "react";
-import { usePalette } from "@/lib/prefs";
-import { ThinkingOrb, type OrbState } from "thinking-orbs";
 import { DotCanvas } from "../motion/DotCanvas";
 import { flowScene } from "../motion/scenes";
 import { Tilt } from "../motion/Tilt";
 
 gsap.registerPlugin(ScrollTrigger, useGSAP);
 
-const STEPS: { n: string; title: string; body: string; orb: OrbState; at: number }[] = [
-  { n: "01", title: "Connect", body: "Put the band on. It pairs with your laptop in a few seconds.", orb: "connecting", at: 0.08 },
-  { n: "02", title: "Baseline", body: "Twenty still seconds. The band learns what normal looks like today.", orb: "breathing", at: 0.3 },
-  { n: "03", title: "Study", body: "One subject, one timer. The screen gets quieter the longer you work.", orb: "working", at: 0.58 },
-  { n: "04", title: "Review", body: "See where your signals moved away from baseline — and what you were doing then.", orb: "composing", at: 0.86 },
+const STEPS: { n: string; title: string; body: string; at: number; img: string; pos?: string; alt: string }[] = [
+  {
+    n: "01",
+    title: "Connect",
+    body: "Put the band on. It pairs with your laptop in a few seconds.",
+    at: 0.08,
+    img: "/media/campaign/connect.webp",
+    pos: "50% 55%",
+    alt: "Hands fastening the band's woven strap through its buckle at a desk.",
+  },
+  {
+    n: "02",
+    title: "Baseline",
+    body: "Twenty still seconds. The band learns what normal looks like today.",
+    at: 0.3,
+    img: "/media/campaign/baseline.webp",
+    pos: "50% 62%",
+    alt: "A student sitting still at a desk, hands resting, the band on one wrist.",
+  },
+  {
+    n: "03",
+    title: "Study",
+    body: "One subject, one timer. The screen gets quieter the longer you work.",
+    at: 0.58,
+    img: "/media/campaign/study.webp",
+    pos: "50% 55%",
+    alt: "Over-the-shoulder view of a student writing notes beside an open textbook, the band on the writing wrist.",
+  },
+  {
+    n: "04",
+    title: "Review",
+    body: "See where your signals moved away from baseline — and what you were doing then.",
+    at: 0.86,
+    img: "/media/campaign/review.webp",
+    pos: "50% 45%",
+    alt: "A student's hand on a laptop showing the StudyLoop dashboard, the band on the wrist.",
+  },
 ];
 
 export function Flow() {
-  const pal = usePalette();
   const root = useRef<HTMLElement>(null);
   const progress = useRef(0);
 
@@ -81,7 +111,7 @@ export function Flow() {
           <span className="eyebrow__rule" aria-hidden />
           How it works
         </p>
-        <h2 className="display display--md" data-split>
+        <h2 className="display campaign flow__title" data-split>
           Your session has a signal.
         </h2>
       </div>
@@ -104,8 +134,8 @@ export function Flow() {
         {STEPS.map((s) => (
           <li key={s.n} className="flow__step">
             <Tilt className="flow__card" max={6}>
-              <div className="flow__orb">
-                <ThinkingOrb state={s.orb} size={64} theme="dark" color={pal.measured} speed={0.7} aria-label={`${s.title} state`} />
+              <div className="flow__photo">
+                <Image src={s.img} alt={s.alt} fill sizes="(min-width: 760px) 25vw, 50vw" style={{ objectPosition: s.pos }} />
               </div>
               <span className="flow__n tnum">{s.n}</span>
               <h3 className="h-section">{s.title}</h3>

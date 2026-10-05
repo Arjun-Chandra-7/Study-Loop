@@ -3,16 +3,6 @@
    Collegiate track: sea-pine sage = measured · cinder brick = action/research · bone on warm carbon = structure
    ───────────────────────────────────────────────────────────── */
 
-@font-face {
-  /* ASTROZ is licensed separately. Uses a locally installed copy if present;
-     to self-host, add public/fonts/Astroz.woff2 and append:
-     url("/fonts/Astroz.woff2") format("woff2")
-     Michroma (Google Fonts) stands in until then. */
-  font-family: "Astroz";
-  src: local("Astroz"), local("ASTROZ"), local("Astroz Regular");
-  font-display: swap;
-}
-
 :root {
   /* ── Colour primitives ── */
   /* Accent slots. Defaults are "Collegiate track"; a chosen palette overrides them
@@ -82,18 +72,23 @@
   --r-pill: 999px;
 
   /* ── Type ── */
-  --font-display: "Astroz", var(--font-display-fallback), "Satoshi", sans-serif;
-  --font-ui: "Satoshi", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-serif: var(--font-instrument-serif), "Iowan Old Style", Georgia, serif;
+  /* One family: Mona Sans. Display = the same face, expanded and bolder. */
+  --font-ui: var(--font-mona), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: var(--font-ui);
+  --font-serif: var(--font-ui);
+  /* Two voices from one family. Text and app headings: normal width.
+     Headlines and big numbers: narrow and heavy (--stretch-headline). Nothing is set wide. */
+  --stretch-display: 100%;
+  --stretch-headline: 75%;
 
-  --fs-label: 11px;
+  --fs-label: 12px;
   --fs-small: 13px;
   --fs-body: 16px;
   --fs-title: 20px;
   --fs-metric: 32px;
   --fs-display: clamp(44px, 5vw, 96px);
-  --tracking-label: 0.12em;
-  --tracking-display: 0.04em;
+  --tracking-label: 0.01em;
+  --tracking-display: -0.02em;
 
   /* ── Elevation ── */
   --shadow-rest: 0 1px 0 rgba(0, 0, 0, 0.4), 0 8px 24px -16px rgba(0, 0, 0, 0.8);
@@ -114,7 +109,7 @@
   --o-dim: 0.64;
 
   /* ── Layout ── */
-  --chassis-max: 1440px;
+  --chassis-max: 1680px;
   --gutter: var(--s-2);
   --page-x: clamp(16px, 3vw, 48px);
 }

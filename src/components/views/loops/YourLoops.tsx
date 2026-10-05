@@ -7,8 +7,8 @@ import { engine } from "@/lib/useStudyLoop";
 import { Icon } from "../../ui/Icon";
 import { FEEL, useLoopPlayer } from "./shared";
 
-/** Loops they saved, ready to play again. */
-export function YourLoops({ version, onCreate }: { version: number; onCreate: () => void }) {
+/** Single beats they saved, ready to play again. */
+export function YourLoops({ version }: { version: number }) {
   const player = useLoopPlayer();
   const [loops, setLoops] = useState<SavedLoop[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -70,18 +70,13 @@ export function YourLoops({ version, onCreate }: { version: number; onCreate: ()
   }
   if (!loops.length) {
     return (
-      <div className="loops-empty">
-        <Icon name="music" size={22} />
-        <p className="loops-empty__title">Your collection starts here</p>
-        <p className="small muted">When a Loop clicks, save it. It&apos;ll be right here whenever you sit down to study.</p>
-        <button type="button" className="btn btn--sm btn--primary" onClick={onCreate}>
-          Make a Loop
-        </button>
-      </div>
+      <p className="small muted">
+        Tap <Icon name="plus" size={12} /> on any song in a playlist to keep its beat here.
+      </p>
     );
   }
   return (
-    <ul className="music__list" aria-label="Your Loops" data-lenis-prevent>
+    <ul className="music__list" aria-label="Saved beats" data-lenis-prevent>
       {loops.map((l) => {
         const on = player.playing && player.loop?.savedId === l.id;
         return (

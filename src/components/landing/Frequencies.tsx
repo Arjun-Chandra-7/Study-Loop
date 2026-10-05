@@ -10,6 +10,9 @@ import { Papers } from "../research/Papers";
 import { DotCanvas } from "../motion/DotCanvas";
 import { ribbonScene } from "../motion/scenes";
 
+/** Ink on the cinder field: the 40 Hz moment floods the section, so its wave goes dark. */
+const INK = "#12110f";
+
 gsap.registerPlugin(ScrollTrigger, useGSAP);
 
 /** Visual cycles across the frame per band (log-spaced so 40 Hz stays legible). */
@@ -99,7 +102,7 @@ export function Frequencies() {
               <span className="eyebrow__rule" aria-hidden />
               Research
             </p>
-            <h2 className="display sig__title" data-split>
+            <h2 className="display campaign sig__title" data-split>
               The signals behind focus
             </h2>
           </div>
@@ -111,7 +114,7 @@ export function Frequencies() {
         </header>
 
         <div className="sig__wave">
-          <DotCanvas scene={ribbonScene} param={cycles} tint={exp ? pal.action : pal.measured} label="Oscillation at the selected frequency" />
+          <DotCanvas scene={ribbonScene} param={cycles} tint={exp ? INK : pal.measured} label="Oscillation at the selected frequency" />
         </div>
 
         <ol className="sig__bands">

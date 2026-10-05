@@ -41,7 +41,7 @@ export default function HeadphonesScene({ model, ringColor, reduced }: SceneProp
       <directionalLight position={[-3.5, 1.2, -2.5]} intensity={1.4} color="#ffe2cf" />
       <directionalLight position={[3, -1.5, -3]} intensity={0.5} color="#cfe0ff" />
       <ambientLight intensity={0.06} />
-      <Fit box={buds ? [1.05, 1.05] : wired ? [0.9, 1.15] : [3.0, 3.25]} />
+      <Fit box={buds ? [1.05, 1.05] : wired ? [0.9, 1.15] : [3.0, 2.8]} />
       <Rig key={model.id} reduced={reduced}>
         {buds ? (
           <Earbuds look={model.look} ringColor={ringColor} />

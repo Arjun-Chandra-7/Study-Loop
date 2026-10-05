@@ -100,7 +100,7 @@ export function Cockpit() {
             <StatusCapsule />
           </div>
 
-          <div className="stage">
+          <div className="stage" data-lenis-prevent>
             <AnimatePresence mode="wait" initial={false}>
               <motion.div key={s.tab} className="view" {...viewMotion}>
                 {s.tab === "home" && <HomeView stageRef={stageRef} />}

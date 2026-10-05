@@ -3,6 +3,7 @@
 import { useReducedMotionSafe } from "@/lib/useReducedMotionSafe";
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useRef } from "react";
+import { isLite } from "@/lib/device";
 import { scaleCounts, scaleRadii, type OrbState } from "thinking-orbs";
 import { MODE_FRAMES, paintFrame, resolvePreset } from "thinking-orbs/engine";
 
@@ -71,6 +72,9 @@ function OrbCanvas({ state, size, color, speedRef, paused, density = 1, dotScale
       return;
     }
 
+    // Small orbs don't need film frame rates: the eye can't tell 15 fps at 48 px, the CPU can.
+    let fps = size <= 64 ? 15 : size <= 160 ? 24 : 30;
+    if (isLite()) fps = Math.max(10, Math.round(fps / 2));
     let raf = 0;
     let last = performance.now();
     let acc = 0;
@@ -82,7 +86,7 @@ function OrbCanvas({ state, size, color, speedRef, paused, density = 1, dotScale
       // Ease speed so state changes feel like a change of pace, never a jump.
       cur += ((speedRef.current ?? 1) - cur) * Math.min(1, dt * 1.5);
       t += dt * base * cur;
-      if (acc >= 1 / 30) {
+      if (acc >= 1 / fps) {
         acc = 0;
         draw();
       }

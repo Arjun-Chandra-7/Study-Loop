@@ -12,7 +12,7 @@ export function InsightsView() {
     return (
       <div className="empty">
         <p className="label">Insights</p>
-        <p className="serif serif--lg">Your first session lands here. Start one when you're ready and we'll map how it went.</p>
+        <p className="serif serif--lg">Your first session lands here. Start one when you’re ready and we’ll map how it went.</p>
       </div>
     );
   }

@@ -1,22 +1,21 @@
 import type { Metadata, Viewport } from "next";
-import { Instrument_Serif, Michroma } from "next/font/google";
+import localFont from "next/font/local";
 import { AuthProvider } from "@/lib/auth";
 import { prePaintScript } from "@/lib/palettes";
+import { LITE_SCRIPT } from "@/lib/device";
 import "./globals.css";
 
-// Editorial accent — taglines, research statements, transitions.
-const instrumentSerif = Instrument_Serif({
-  variable: "--font-instrument-serif",
-  subsets: ["latin"],
-  weight: "400",
-  style: ["normal", "italic"],
-});
-
-// Stand-in for ASTROZ until the licensed file is dropped into /public/fonts.
-const michroma = Michroma({
-  variable: "--font-display-fallback",
-  subsets: ["latin"],
-  weight: "400",
+// One family for everything: GitHub's Mona Sans, variable in weight, width and optical size.
+// Interface text sits at normal width; headings use the expanded width (see tokens.css).
+// Self-hosted from GitHub's own release (SIL OFL, see fonts/OFL.txt): the Google Fonts build
+// mis-spaces some letters at text sizes ("o nly"), and lacks the optical-size axis.
+const mona = localFont({
+  src: "./fonts/MonaSansVF.woff2",
+  variable: "--font-mona",
+  weight: "200 900",
+  style: "normal",
+  display: "swap",
+  declarations: [{ prop: "font-stretch", value: "75% 125%" }],
 });
 
 export const metadata: Metadata = {
@@ -40,16 +39,11 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" data-theme="dark" suppressHydrationWarning className={`${instrumentSerif.variable} ${michroma.variable}`}>
+    <html lang="en" data-theme="dark" suppressHydrationWarning className={mona.variable}>
       <head>
         {/* Apply the saved colour palette before first paint. */}
         <script dangerouslySetInnerHTML={{ __html: prePaintScript() }} />
-        {/* Satoshi is distributed by Fontshare, not Google Fonts. */}
-        <link rel="preconnect" href="https://api.fontshare.com" crossOrigin="" />
-        <link
-          rel="stylesheet"
-          href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700&display=swap"
-        />
+        <script dangerouslySetInnerHTML={{ __html: LITE_SCRIPT }} />
       </head>
       <body>
         <AuthProvider>{children}</AuthProvider>

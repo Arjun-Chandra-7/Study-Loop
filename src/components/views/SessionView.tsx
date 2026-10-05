@@ -2,7 +2,7 @@
 
 import { AnimatePresence, motion } from "motion/react";
 import { useLayoutEffect, useRef, useState } from "react";
-import { BASELINE_MS, type StudyMode } from "@/lib/engine";
+import type { StudyMode } from "@/lib/engine";
 import { clock } from "@/lib/format";
 import { PHYSIO_HINT } from "@/lib/sensors/classify";
 import { useGammaBeats } from "@/lib/music/gamma";
@@ -172,7 +172,7 @@ function BaselineCapture() {
   const orb = useOrb();
   const [box, size] = useBoxSize<HTMLDivElement>();
   const p = s.session.baselineProgress;
-  const remaining = Math.ceil(((1 - p) * BASELINE_MS) / 1000);
+  const remaining = Math.ceil(((1 - p) * engine.baselineMs) / 1000);
   const ring = Math.min(size, 380);
   const r = ring / 2 - 2;
   const c = 2 * Math.PI * r;
