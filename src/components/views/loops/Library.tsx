@@ -65,7 +65,7 @@ function PlaylistRow({
             <span className="loop-card__text">
               <span className="card__title">{p.name}</span>
               <span className="card__sub">
-                {p.songs.length} song{p.songs.length === 1 ? "" : "s"} · {p.sourceUrl ? "from Spotify" : "demo"}
+                {p.songs.length} song{p.songs.length === 1 ? "" : "s"} · {p.sourceUrl?.startsWith("list:") ? "pasted songs" : p.sourceUrl ? "from Spotify" : "demo"}
               </span>
             </span>
           </button>

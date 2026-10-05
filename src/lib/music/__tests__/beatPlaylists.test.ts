@@ -50,6 +50,10 @@ function mockSpotify() {
     const asUser = new Headers(init?.headers).get("authorization") === `Bearer ${TOKEN}`;
     if (url.includes("accounts.spotify.com")) return Response.json({ access_token: "tok", expires_in: 3600 });
     if (url.endsWith(`/playlists/${PLAYLIST}?fields=name`)) return Response.json({ name: "Night Drive" });
+    // Single tracks are readable with the app's own token: no listener needed.
+    const one = url.match(/\/tracks\/([A-Za-z0-9]{22})$/);
+    if (one && one[1] === "a".repeat(22)) return Response.json(track(one[1], "Get Lucky", "Daft Punk"));
+    if (one && one[1] === "b".repeat(22)) return Response.json(track(one[1], "Let It Be", "The Beatles"));
     if (url.includes(`/playlists/${PLAYLIST}/items`)) {
       if (!asUser) return Response.json({ error: { status: 401 } }, { status: 401 });
       return Response.json({ items: [{ item: track("a".repeat(22), "Get Lucky", "Daft Punk") }, { item: track("b".repeat(22), "Let It Be", "The Beatles") }], next: null });
@@ -150,6 +154,33 @@ describe("beat playlists from Spotify", () => {
     expect(res.body.error.code).toBe("spotify_login_required");
     expect((await create(null)).status).toBe(401);
     expect((await create("user-a", { url: "not a link" })).status).toBe(400);
+  });
+
+  it("makes a playlist from songs copied out of the Spotify app, with no Spotify sign-in", async () => {
+    setVibeModelForTests(model(() => reading(0, 1)));
+    // What Spotify copies for two selected songs, here run together on one line, plus a duplicate.
+    const copied = `https://open.spotify.com/track/${"a".repeat(22)}?si=x1https://open.spotify.com/track/${"b".repeat(22)}\nhttps://open.spotify.com/track/${"a".repeat(22)}`;
+    const { status, body } = await create("user-a", { url: copied });
+    expect(status).toBe(201);
+    expect(body.playlist.songs.map((s: { title: string; artist: string }) => [s.title, s.artist])).toEqual([["Get Lucky", "Daft Punk"], ["Let It Be", "The Beatles"]]);
+    expect(body.playlist.sourceUrl).toMatch(/^list:/);
+    expect(body.playlist.name).toBe("Get Lucky and 1 more");
+    // Pasting the same songs again refreshes that playlist.
+    expect((await create("user-a", { url: copied })).status).toBe(200);
+    expect(await list()).toHaveLength(1);
+  });
+
+  it("makes a playlist from typed “Title — Artist” lines", async () => {
+    setVibeModelForTests(model(() => reading(0, 1)));
+    const { status, body } = await create("user-a", { url: "1. Get Lucky — Daft Punk\n2. Let It Be - The Beatles\n" });
+    expect(status).toBe(201);
+    expect(body.playlist.songs).toHaveLength(2);
+    expect(prompts[0]).toContain("Get Lucky — Daft Punk");
+  });
+
+  it("explains how to paste a playlist's songs when Spotify won't share it", async () => {
+    const res = await create("user-a", { url: LINK });
+    expect(res.body.error.message).toMatch(/select all songs/);
   });
 
   it("renames and removes, only for its owner", async () => {

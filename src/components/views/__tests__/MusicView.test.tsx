@@ -92,14 +92,14 @@ const nightDrive = (over: Partial<BeatPlaylist> = {}): BeatPlaylist => ({
 
 describe("Loops — Create", () => {
   const paste = async (link = LINK) => {
-    await userEvent.type(screen.getByLabelText("Spotify link"), link);
+    await userEvent.type(screen.getByLabelText("Spotify link or songs"), link);
     await userEvent.click(screen.getByRole("button", { name: "Make beats" }));
   };
 
   it("welcomes a first-timer with a clear next step", async () => {
     render(<MusicView />);
     expect(screen.getByText("Your playlist, as study beats")).toBeTruthy();
-    expect(screen.getByPlaceholderText("Paste a Spotify playlist, album or song link")).toBeTruthy();
+    expect(screen.getByPlaceholderText("Paste a Spotify link, or the songs themselves")).toBeTruthy();
     expect(screen.getByRole("region", { name: "Now playing" }).textContent).toContain("Nothing's playing yet");
   });
 

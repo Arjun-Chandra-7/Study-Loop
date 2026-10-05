@@ -13,7 +13,7 @@ import { BeatPlaylistView } from "./BeatPlaylistView";
 const memo: { uid: string | null; playlist: BeatPlaylist | null } = { uid: null, playlist: null };
 
 /** What's happening while a playlist turns into beats; one long request, told in steps. */
-const STEPS = ["Finding your songs on Spotify…", "Reading each song’s tempo, key and groove…", "Building your beats…"];
+const STEPS = ["Finding your songs…", "Reading each song’s tempo, key and groove…", "Building your beats…"];
 
 /** Paste a Spotify link; get the same playlist back as beats, saved to your library. */
 export function CreateLoop({ onSaved }: { onSaved: () => void }) {
@@ -93,13 +93,33 @@ export function CreateLoop({ onSaved }: { onSaved: () => void }) {
         }}
       >
         <label className="sr-only" htmlFor={`${id}-url`}>
-          Spotify link
+          Spotify link or songs
         </label>
-        <input id={`${id}-url`} className="input" type="url" inputMode="url" placeholder="Paste a Spotify playlist, album or song link" value={url} onChange={(e) => setUrl(e.target.value)} required disabled={busy} />
+        <textarea
+          id={`${id}-url`}
+          className="input music-import__text"
+          rows={Math.min(6, Math.max(1, url.split("\n").length))}
+          placeholder="Paste a Spotify link, or the songs themselves"
+          value={url}
+          onChange={(e) => setUrl(e.target.value)}
+          onKeyDown={(e) => {
+            // Enter makes beats; Shift+Enter starts a new line in a typed list.
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              void make(url);
+            }
+          }}
+          required
+          disabled={busy}
+          spellCheck={false}
+        />
         <button type="submit" className="btn btn--solid" disabled={busy || !url.trim()}>
           {busy ? "Working…" : "Make beats"}
         </button>
       </form>
+      <p className="music-import__tip small">
+        Any playlist, on any device: open it in Spotify, press <kbd>Ctrl/⌘ A</kbd> then <kbd>Ctrl/⌘ C</kbd>, and paste here. Or type songs as “Title — Artist”, one per line.
+      </p>
 
       {busy && (
         <p className="music-import__note small bp-progress" role="status" aria-live="polite">
@@ -126,8 +146,8 @@ export function CreateLoop({ onSaved }: { onSaved: () => void }) {
           <Icon name="music" size={22} />
           <p className="loops-empty__title">Your playlist, as study beats</p>
           <p className="small muted">
-            Paste any Spotify playlist. StudyLoop finds every song, reads its tempo, key, chords and groove, and builds the same playlist as lyric-free
-            beats that sound like the originals. It’s saved to your Library, and it eases off when stress climbs.
+            Paste any Spotify playlist, or its songs. StudyLoop finds every song, reads its tempo, key, chords and groove, and builds the same playlist as
+            lyric-free beats that sound like the originals, arranged to flow. It’s saved to your Library, and it eases off when stress climbs.
           </p>
         </div>
       )}

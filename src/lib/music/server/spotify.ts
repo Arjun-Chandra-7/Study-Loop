@@ -43,6 +43,8 @@ const invalid = () =>
   new ApiError(400, "invalid_spotify_link", "Paste a Spotify playlist, album or track link (open.spotify.com/…).");
 
 let token: { value: string; expires: number } | null = null;
+/** A token request already on its way, shared by parallel track reads. */
+let pending: Promise<string> | null = null;
 
 async function accessToken(): Promise<string> {
   const { clientId, clientSecret } = musicConfig().spotify;
@@ -50,6 +52,11 @@ async function accessToken(): Promise<string> {
     throw new ApiError(503, "spotify_not_configured", "Spotify import isn't set up on this server yet. Add tracks by name instead.");
   }
   if (token && token.expires > Date.now() + 30_000) return token.value;
+  pending ??= newAccessToken(clientId, clientSecret).finally(() => (pending = null));
+  return pending;
+}
+
+async function newAccessToken(clientId: string, clientSecret: string): Promise<string> {
   const res = await fetch("https://accounts.spotify.com/api/token", {
     method: "POST",
     headers: {
@@ -80,6 +87,15 @@ async function get<T>(url: string, userToken?: string): Promise<T> {
   if (res.status === 403) {
     // Spotify refuses developer-mode apps whose owner lacks Premium, for every endpoint.
     const reason = await res.text().catch(() => "");
+    if (userToken && /not be registered|developer\.spotify\.com\/dashboard|user may not/i.test(reason)) {
+      // Development mode: only the app's few allow-listed Spotify accounts may sign in.
+      log("spotify_failed", { stage: "fetch", status: 403, reason: "user_not_allowlisted" });
+      throw new ApiError(
+        403,
+        "spotify_not_allowlisted",
+        "Spotify only lets a few approved accounts connect to StudyLoop. Open the playlist in the Spotify app, select all songs (Ctrl/Cmd+A), copy (Ctrl/Cmd+C) and paste them here instead.",
+      );
+    }
     if (/premium/i.test(reason)) {
       log("spotify_failed", { stage: "fetch", status: 403, reason: "app_owner_needs_premium" });
       throw new ApiError(503, "spotify_app_blocked", "Spotify import is unavailable right now: Spotify hasn't enabled StudyLoop's access yet. Add tracks by name instead.");
@@ -160,7 +176,11 @@ export async function fetchSpotify(ref: SpotifyRef, userToken?: string): Promise
   const pl = await get<{ name: string }>(`/playlists/${ref.id}?fields=name`);
   // Spotify only lists a playlist's songs to a signed-in Spotify user, not to an app on its own.
   if (!userToken) {
-    throw new ApiError(409, "spotify_login_required", `Connect Spotify to import “${pl.name.slice(0, 80)}”. Spotify only shares a playlist's songs with a signed-in listener.`);
+    throw new ApiError(
+      409,
+      "spotify_login_required",
+      `Spotify only shares “${pl.name.slice(0, 80)}” with approved accounts. Open it in the Spotify app, select all songs (Ctrl/Cmd+A), copy (Ctrl/Cmd+C) and paste them here.`,
+    );
   }
   try {
     await readPlaylistPages(`/playlists/${ref.id}/items?limit=50&additional_types=track`, userToken, tracks);
@@ -169,7 +189,11 @@ export async function fetchSpotify(ref: SpotifyRef, userToken?: string): Promise
     if (!(e instanceof ApiError) || e.code !== "spotify_not_found") throw e;
     await readPlaylistPages(`/playlists/${ref.id}/tracks?limit=50&additional_types=track`, userToken, tracks).catch((e2) => {
       if (e2 instanceof ApiError && e2.code === "spotify_not_found") {
-        throw new ApiError(403, "spotify_playlist_forbidden", "Spotify didn't let StudyLoop read this playlist's songs. Try a playlist you created, or import its albums or tracks.");
+        throw new ApiError(
+          403,
+          "spotify_playlist_forbidden",
+          "Spotify only lets StudyLoop read playlists you made yourself. Open this one in the Spotify app, select all songs (Ctrl/Cmd+A), copy (Ctrl/Cmd+C) and paste them here.",
+        );
       }
       throw e2;
     });
@@ -177,8 +201,57 @@ export async function fetchSpotify(ref: SpotifyRef, userToken?: string): Promise
   return { name: pl.name, tracks: tracks.slice(0, MAX_TRACKS) };
 }
 
+const TRACK_LINK = /(?:open\.spotify\.com\/(?:intl-[a-z]{2}(?:-[a-z]{2})?\/)?track\/|spotify:track:)([A-Za-z0-9]{22})/g;
+const ANY_LINK = /(?:https?:\/\/\S+|spotify:[a-z]+:[A-Za-z0-9]+)/g;
+
+/**
+ * A pasted list of songs: Spotify track links (what the Spotify app copies when you select songs
+ * and press Ctrl/Cmd+C, one link per song, sometimes run together), and/or "Title — Artist" lines.
+ */
+export function parseSongList(text: string): { trackIds: string[]; names: string[] } {
+  const trackIds = [...new Set([...text.matchAll(TRACK_LINK)].map((m) => m[1]))];
+  const names = [
+    ...new Set(
+      text
+        .replace(ANY_LINK, "\n")
+        .split(/\r?\n/)
+        .map((l) =>
+          l
+            .replace(/^\s*(?:\d{1,3}[.)]|[-*•])\s+/, "") // "1. ", "- ", "• "
+            .replace(/\s+/g, " ")
+            .trim(),
+        )
+        .filter((l) => l.length >= 2 && l.length <= 200 && /\p{L}/u.test(l)),
+    ),
+  ];
+  return { trackIds, names };
+}
+
+/**
+ * Tracks by id, read one by one with the app's own credentials: no listener sign-in, so it works
+ * for everyone. (Spotify removed the batch /tracks endpoint for development-mode apps.)
+ */
+export async function fetchTracks(ids: string[]): Promise<ImportedTrack[]> {
+  const out: (ImportedTrack | null)[] = new Array(ids.length).fill(null);
+  let next = 0;
+  const worker = async () => {
+    while (next < ids.length) {
+      const i = next++;
+      try {
+        out[i] = mapTrack(await get<SpTrack>(`/tracks/${ids[i]}`));
+      } catch (e) {
+        // One missing or region-locked song shouldn't sink the whole list.
+        if (!(e instanceof ApiError) || e.code !== "spotify_not_found") throw e;
+      }
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(4, ids.length) }, worker));
+  return out.filter((t): t is ImportedTrack => t !== null);
+}
+
 /** Tests only. */
 export function resetSpotifyToken() {
+  pending = null;
   token = null;
 }
 
