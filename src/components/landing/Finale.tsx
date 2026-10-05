@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
@@ -35,7 +34,7 @@ export function Finale() {
   const [orbSize, setOrbSize] = useState(420);
 
   useEffect(() => {
-    const fit = () => setOrbSize(Math.round(Math.min(440, window.innerWidth * 0.7, window.innerHeight * 0.46)));
+    const fit = () => setOrbSize(Math.round(Math.min(440, window.innerWidth * 0.7, window.innerHeight * 0.4)));
     fit();
     window.addEventListener("resize", fit);
     return () => window.removeEventListener("resize", fit);
@@ -57,24 +56,25 @@ export function Finale() {
           scrollTrigger: {
             trigger: root.current,
             start: "top top",
-            end: "+=260%",
+            end: "+=130%",
             pin: true,
             scrub: 1,
-            onUpdate: (self) => setLive(self.progress > 0.55),
+            onUpdate: (self) => setLive(self.progress > 0.2),
           },
         });
-        tl.to(q(".finale__band"), { scale: 5, filter: "brightness(1.4)", duration: 1.2, ease: "power3.in" }, 0)
-          .to(q(".finale__flash"), { opacity: 1, scale: 3, duration: 0.7, ease: "power2.in" }, 0.55)
-          .set(q(".finale__band"), { opacity: 0 }, 1.25)
-          .to(q(".finale__flash"), { opacity: 0, scale: 6, duration: 0.8, ease: "power2.out" }, 1.25)
-          .fromTo(q(".finale__orbit"), { scale: 0.4, opacity: 0, rotate: -90 }, { scale: 1, opacity: 1, rotate: 0, duration: 1, ease: "expo.out" }, 1.3)
-          .from(q(".finale__label"), { opacity: 0, scale: 0.6, stagger: 0.08, duration: 0.5, ease: "back.out(2)" }, 1.6)
-          .from(q(".finale__line .w"), { yPercent: 120, opacity: 0, stagger: 0.05, duration: 0.6, ease: "expo.out" }, 1.7)
-          .from(q(".finale__cta"), { y: 30, opacity: 0, scale: 0.9, duration: 0.5, ease: "back.out(2)" }, 2)
-          .from(q(".finale__word .c"), { yPercent: 110, stagger: 0.04, duration: 0.6, ease: "expo.out" }, 2);
+        tl.fromTo(q(".finale__orbit"), { scale: 0.5, opacity: 0, rotate: -60 }, { scale: 1, opacity: 1, rotate: 0, duration: 0.9, ease: "expo.out" }, 0)
+          .from(q(".finale__label"), { opacity: 0, scale: 0.6, stagger: 0.08, duration: 0.5, ease: "back.out(2)" }, 0.5)
+          .from(q(".finale__line .w"), { yPercent: 120, stagger: 0.05, duration: 0.6, ease: "expo.out" }, 0.6)
+          .from(q(".finale__cta"), { y: 30, opacity: 0, duration: 0.5, ease: "back.out(2)" }, 0.9);
+        gsap.from(q(".finale__word .c"), {
+          yPercent: 110,
+          stagger: 0.05,
+          duration: 1,
+          ease: "expo.out",
+          scrollTrigger: { trigger: root.current, start: "top 75%", toggleActions: "play none none reverse" },
+        });
       });
       mm.add("(prefers-reduced-motion: reduce)", () => {
-        gsap.set(q(".finale__band"), { opacity: 0 });
         setLive(true);
       });
     },
@@ -89,11 +89,6 @@ export function Finale() {
 
   return (
     <section ref={root} className={`finale ${live ? "is-live" : ""}`} aria-label="StudyLoop">
-      <div className="finale__band" aria-hidden>
-        <Image src="/media/studyloop-band.png" alt="" fill sizes="100vw" className="finale__img" />
-      </div>
-      <div className="finale__flash" aria-hidden />
-
       <div className="finale__stage">
         <div className="finale__orbit" style={{ width: orbSize * 1.35, height: orbSize * 1.35 }}>
           <svg viewBox="0 0 100 100" className="finale__ring" aria-hidden>
@@ -121,7 +116,7 @@ export function Finale() {
         </div>
 
         <div className="finale__copy">
-          <p className="serif serif--xl finale__line" aria-label="Built around how you learn.">
+          <p className="campaign finale__line" aria-label="Built around how you learn.">
             {"Built around how you learn.".split(" ").map((w, i) => (
               <span key={i} className="w-mask">
                 <span className="w">{w}&nbsp;</span>
@@ -153,7 +148,7 @@ export function Finale() {
         </div>
       </div>
 
-      <p className="finale__word display" data-text="StudyLoop" aria-hidden>
+      <p className="finale__word campaign" data-text="StudyLoop" aria-hidden>
         {"StudyLoop".split("").map((c, i) => (
           <span key={i} className="c-mask">
             <span className="c">{c}</span>

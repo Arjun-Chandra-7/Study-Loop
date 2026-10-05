@@ -9,7 +9,7 @@ import { usePalette } from "@/lib/prefs";
 import { Sparkline } from "../charts/Sparkline";
 import { Icon } from "../ui/Icon";
 import { StateBadge } from "../ui/StateBadge";
-import { ThinkingOrb } from "thinking-orbs";
+import { StateOrb } from "../orb/StateOrb";
 
 const SUBJECT_CODES: Record<string, string> = {
   Physics: "PHY",
@@ -47,12 +47,12 @@ export function PlayerCard() {
     <section className="card player" aria-label="Session">
       <div className="player__tile" aria-hidden>
         <span className="player__orb">
-          <ThinkingOrb
+          <StateOrb
             state={running ? "working" : phase === "baseline" ? "connecting" : "breathing"}
             size={32}
-            theme="dark"
             color={pal.measuredHi}
             speed={running ? 0.8 : 0.4}
+            label="Session state"
           />
         </span>
         <span className="player__code">{subjectCode(config.subject)}</span>
@@ -174,7 +174,7 @@ export function ResearchCard() {
           </svg>
         </div>
         <span className="research-card__orb">
-          <ThinkingOrb state="weaving" size={32} theme="dark" color={pal.action} speed={s.research ? 1 : 0.35} />
+          <StateOrb state="weaving" size={32} color={pal.action} speed={s.research ? 1 : 0.35} label="Research layer" />
         </span>
         <span className="research-card__hz">
           40<small>Hz</small>

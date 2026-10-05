@@ -4,6 +4,7 @@ import Lenis from "lenis";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useEffect } from "react";
+import { isLite } from "@/lib/device";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -32,7 +33,8 @@ export function lockScroll(locked: boolean) {
 /** Inertial scrolling, driven by GSAP's ticker so ScrollTrigger stays in lockstep. */
 export function SmoothScroll() {
   useEffect(() => {
-    if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    // Low-end machines scroll natively: inertia costs a frame of work on every tick.
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches || isLite()) return;
     lenis = new Lenis({ lerp: 0.085, wheelMultiplier: 0.9 });
     lenis.on("scroll", ScrollTrigger.update);
     const tick = (time: number) => lenis?.raf(time * 1000);

@@ -80,9 +80,6 @@ export function ProfileView() {
             </p>
           )}
         </div>
-        <div className="profile__render">
-          <BandSpec live={r.connection === "connected"} />
-        </div>
       </section>
 
       <section className="profile__band">
@@ -142,6 +139,9 @@ export function ProfileView() {
               <Icon name="alert" size={14} /> {s.providerError}
             </p>
           )}
+        </div>
+        <div className="profile__render">
+          <BandSpec live={r.connection === "connected"} />
         </div>
       </section>
 

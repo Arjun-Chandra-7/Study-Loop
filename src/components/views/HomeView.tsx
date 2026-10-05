@@ -52,7 +52,7 @@ export function HomeView({ stageRef }: { stageRef: React.RefObject<HTMLDivElemen
       <motion.div className="hero__product" style={{ x: imgX, y: imgY }}>
         <div className="hero__plate" aria-hidden>
           <Image
-            src="/media/studyloop-band.png"
+            src="/media/studyloop-band-hd.png"
             alt=""
             fill
             preload
@@ -62,15 +62,15 @@ export function HomeView({ stageRef }: { stageRef: React.RefObject<HTMLDivElemen
         </div>
         {/* Coordinates are in the render's own image space. */}
         <ul className="hero__callouts" aria-label="Band hardware">
-          <li data-side="up" style={{ left: "46%", top: "33%" }}>
+          <li style={{ left: "50%", top: "36.5%" }}>
             <span className="callout__dot" />
             <span className="callout__text">Status light</span>
           </li>
-          <li style={{ left: "63.5%", top: "44%" }}>
+          <li style={{ left: "68.5%", top: "37%" }}>
             <span className="callout__dot" />
             <span className="callout__text">One button</span>
           </li>
-          <li data-side="down" style={{ left: "37%", top: "63%" }}>
+          <li data-side="down" style={{ left: "37.8%", top: "51%" }}>
             <span className="callout__dot" />
             <span className="callout__text">EDA electrodes</span>
           </li>
@@ -80,15 +80,12 @@ export function HomeView({ stageRef }: { stageRef: React.RefObject<HTMLDivElemen
       <motion.div className="hero__rim" style={{ x: glowX }} aria-hidden />
 
       <motion.div className="hero__copy" style={{ x: textX }}>
-        <p className="eyebrow">
-          <span className="eyebrow__rule" aria-hidden />
-          Cognitive performance system
-        </p>
-        <h1 className="display hero__title">StudyLoop</h1>
-        <p className="serif hero__serif">Designed for deeper focus</p>
-        <p className="body hero__body">
-          A wearable and adaptive study interface built to understand how your physiology changes while you learn.
-        </p>
+        {/* The logo already says StudyLoop: the headline says what it does. */}
+        <h1 className="display hero__title">
+          <span className="campaign hero__title-1">A band that feels stress.</span>
+          <span className="hero__title-2">Music that answers it.</span>
+        </h1>
+        <p className="body hero__body">Wear it while you study. When stress climbs, your music slows and softens with you.</p>
         <div className="hero__ctas">
           <Magnetic>
             <button type="button" className="btn btn--primary" onClick={start}>
@@ -124,12 +121,6 @@ export function HomeFoot() {
               : "Start a session now, or pair your band from the top bar"}
         </span>
       </div>
-      <p className="foot__spec">
-        <span>PPG pulse</span>
-        <span>EDA electrodes</span>
-        <span>No screen</span>
-        <span>One button</span>
-      </p>
       <a className="foot__scroll" href="#story">
         Inside the band
         <Icon name="arrow" size={14} style={{ transform: "rotate(90deg)" }} />

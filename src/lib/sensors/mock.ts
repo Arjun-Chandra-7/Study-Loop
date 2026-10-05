@@ -50,6 +50,12 @@ export class MockSensorProvider implements SensorProvider {
   setScenario(next: MockScenario) {
     const prev = this.scenario;
     this.scenario = next;
+    if (next === "elevated" && prev !== "elevated") {
+      // A visible spike now, not a slow drift: demos need the change while someone's watching.
+      this.hrLevel = Math.max(this.hrLevel, 88);
+      this.edaLevel = Math.max(this.edaLevel, 5.6);
+      this.phasic += 0.8;
+    }
     if (next === "recovery" && this.hrLevel < 84) {
       // Recovery only reads as recovery if it starts from somewhere elevated.
       this.hrLevel = 90;

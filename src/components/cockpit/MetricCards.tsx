@@ -6,7 +6,8 @@ import { useStudyLoop } from "@/lib/useStudyLoop";
 import { usePalette } from "@/lib/prefs";
 import { Sparkline } from "../charts/Sparkline";
 import { AnimatedNumber } from "../ui/AnimatedNumber";
-import { ThinkingOrb, type OrbState } from "thinking-orbs";
+import { StateOrb } from "../orb/StateOrb";
+import type { OrbState } from "thinking-orbs";
 
 function MetricCard({
   orb,
@@ -30,13 +31,13 @@ function MetricCard({
     <section className={`card metric ${offline ? "is-offline" : ""}`} aria-label={label}>
       <header className="card__head">
         <span className="icon-well" aria-hidden>
-          <ThinkingOrb
+          <StateOrb
             state={orb}
             size={20}
-            theme="dark"
             color={offline ? "#8A8376" : chipTone === "action" ? pal.action : pal.measuredHi}
             speed={offline ? 0.3 : 0.8}
             paused={offline}
+            label={`${label} state`}
           />
         </span>
         {chip && <span className={`chip chip--${chipTone === "unit" ? "measured chip--unit" : chipTone}`}>{chip}</span>}

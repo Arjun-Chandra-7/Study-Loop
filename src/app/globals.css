@@ -84,6 +84,18 @@ h3,
 p {
   text-wrap: pretty;
 }
+/* Mona Sans has no true italic; emphasis is weight, never a slanted fake. */
+/* SVG labels are set small and then scaled with their viewBox; without this, Chrome spaces the
+   letters for the small size and scales the gaps up ("Statu slight"). */
+svg text {
+  text-rendering: geometricPrecision;
+}
+em,
+i {
+  font-style: normal;
+  font-weight: 500;
+  color: var(--text-1);
+}
 
 /* Focused elements and anchors are never hidden under fixed bars (WCAG 2.4.11):
    below 1024px the dock is fixed at the bottom; on phones the top row is sticky too. */
@@ -119,125 +131,6 @@ p {
   margin-bottom: var(--s-4);
 }
 
-/* Login: the band on the left, one sign-in card on the right. */
-.login {
-  display: grid;
-  grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
-  gap: var(--s-3);
-  min-height: 100svh;
-  padding: var(--s-3);
-}
-
-/* ── Visual ── */
-.login__visual {
-  position: relative;
-  overflow: hidden;
-  border-radius: var(--r-chassis);
-  background: var(--chassis);
-  box-shadow: inset 0 0 0 1px var(--line-1), var(--shadow-lift);
-  isolation: isolate;
-}
-.login__img {
-  z-index: -1;
-  object-fit: cover;
-  object-position: 40% 50%;
-}
-.login__visual::after {
-  /* Light falls off toward the caption so it stays legible. */
-  content: "";
-  position: absolute;
-  inset: 45% 0 0;
-  z-index: -1;
-  background: linear-gradient(180deg, rgba(11, 10, 7, 0), rgba(11, 10, 7, 0.85));
-}
-.login__logo {
-  position: absolute;
-  top: var(--s-6);
-  left: var(--s-6);
-}
-.login__logo .logo {
-  height: 72px;
-}
-.login__facts {
-  position: absolute;
-  left: var(--s-6);
-  right: var(--s-6);
-  bottom: var(--s-6);
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--s-2);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-.login__facts li {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--s-2);
-  height: 40px;
-  padding: 0 var(--s-4) 0 var(--s-3);
-  border-radius: var(--r-pill);
-  background: rgba(19, 18, 15, 0.72);
-  -webkit-backdrop-filter: blur(var(--blur-glass));
-  backdrop-filter: blur(var(--blur-glass));
-  box-shadow: inset 0 0 0 1px var(--line-2);
-  font-size: var(--fs-small);
-  color: var(--text-2);
-}
-.login__facts svg {
-  color: var(--measured);
-}
-.login__facts b {
-  font-weight: 500;
-  color: var(--text-1);
-}
-
-/* ── Form ── */
-.login__panel {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: var(--s-8);
-  padding: var(--s-8) clamp(var(--s-5), 4vw, var(--s-9));
-}
-.login__body {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  width: 100%;
-  max-width: 440px;
-  margin: auto 0;
-}
-.login__body .eyebrow {
-  margin-bottom: var(--s-4);
-}
-.login__title {
-  font-size: clamp(32px, 3vw, 44px);
-  line-height: 1.05;
-}
-.login__body .login__serif {
-  margin: var(--s-3) 0 var(--s-6);
-  line-height: 1.3;
-  font-size: var(--fs-title);
-  color: var(--text-2);
-}
-.login__card {
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  padding: var(--s-5);
-  border-radius: var(--r-panel);
-  background:
-    radial-gradient(90% 70% at 50% 0%, rgb(var(--measured-rgb) / 0.06), transparent 70%),
-    var(--surface-1);
-  box-shadow: inset 0 0 0 1px var(--line-2), var(--highlight), var(--shadow-rest);
-}
-.login__cta {
-  width: 100%;
-}
-.login__cta:disabled {
-  cursor: progress;
-}
 .g-mark {
   display: grid;
   place-items: center;
@@ -245,90 +138,6 @@ p {
   height: 28px;
   border-radius: var(--r-pill);
   background: #fff;
-}
-.login__error {
-  min-height: 0;
-  margin: 0;
-  color: var(--a-300);
-}
-.login__error:not(:empty) {
-  margin-top: var(--s-3);
-}
-.login__notes {
-  display: flex;
-  flex-direction: column;
-  gap: var(--s-3);
-  margin: var(--s-5) 0 0;
-  padding: var(--s-5) 0 0;
-  border-top: 1px solid var(--line-1);
-  list-style: none;
-  font-size: var(--fs-small);
-  line-height: 1.45;
-  color: var(--text-2);
-}
-.login__notes li {
-  display: grid;
-  grid-template-columns: 16px 1fr;
-  gap: var(--s-3);
-  align-items: start;
-}
-.login__notes svg {
-  margin-top: 1px;
-  color: var(--text-3);
-}
-.login__fine {
-  margin: 0;
-}
-
-/* Portrait tablets and phones stack: the band as a banner, the card below it. */
-@media (max-width: 1023px) {
-  .login {
-    grid-template-columns: 1fr;
-    align-content: start;
-  }
-  .login__visual {
-    aspect-ratio: 16 / 10;
-  }
-  .login__panel {
-    align-items: center;
-  }
-  .login__body {
-    margin: 0;
-  }
-}
-@media (max-width: 759px) {
-  .login__visual {
-    aspect-ratio: 5 / 4;
-  }
-  .login__facts li:last-child {
-    display: none;
-  }
-  .login__panel {
-    align-items: stretch;
-  }
-  .login__logo {
-    top: var(--s-4);
-    left: var(--s-4);
-  }
-  .login__logo .logo {
-    height: 52px;
-  }
-  .login__facts {
-    left: var(--s-4);
-    right: var(--s-4);
-    bottom: var(--s-4);
-  }
-  .login__facts li {
-    height: 32px;
-    padding: 0 var(--s-3) 0 var(--s-2);
-  }
-  .login__panel {
-    gap: var(--s-6);
-    padding: var(--s-5) var(--s-2) var(--s-4);
-  }
-  .login__card {
-    padding: var(--s-4);
-  }
 }
 
 .sr-only {
@@ -370,7 +179,6 @@ p {
   font-size: var(--fs-label);
   line-height: 16px;
   letter-spacing: var(--tracking-label);
-  text-transform: uppercase;
   font-weight: 500;
   color: var(--text-3);
   margin: 0;
@@ -389,7 +197,6 @@ p {
   font-size: var(--fs-label);
   line-height: 16px;
   letter-spacing: var(--tracking-label);
-  text-transform: uppercase;
   font-weight: 500;
   color: var(--text-2);
   margin: 0;
@@ -410,10 +217,10 @@ p {
 
 .display {
   font-family: var(--font-display);
-  font-weight: 400;
-  text-transform: uppercase;
-  letter-spacing: var(--tracking-display);
-  line-height: 0.95;
+  font-stretch: var(--stretch-display);
+  font-weight: 650;
+  letter-spacing: -0.028em;
+  line-height: 1.02;
   margin: 0;
 }
 .display--md {
@@ -423,11 +230,13 @@ p {
   font-size: clamp(40px, 6.4vw, 112px);
 }
 
+/* Formerly an italic serif accent: now the same face, lighter and quieter. */
 .serif {
-  font-family: var(--font-serif);
-  font-style: italic;
+  font-family: var(--font-ui);
+  font-style: normal;
   font-weight: 400;
-  letter-spacing: -0.005em;
+  letter-spacing: -0.01em;
+  color: var(--text-2);
   margin: 0;
 }
 .serif--md {
@@ -447,8 +256,8 @@ p {
 .h-section {
   font-size: var(--fs-metric);
   line-height: 1.1;
-  font-weight: 500;
-  letter-spacing: -0.02em;
+  font-weight: 600;
+  letter-spacing: -0.025em;
   margin: 0;
 }
 .h-section .serif {
@@ -471,29 +280,45 @@ p {
 
 .timer {
   font-family: var(--font-ui);
-  font-weight: 500;
-  font-size: clamp(72px, 9.2vw, 164px);
+  font-stretch: var(--stretch-headline);
+  font-weight: 750;
+  font-size: clamp(80px, 10.4vw, 184px);
   line-height: 0.86;
-  letter-spacing: -0.045em;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
   margin: 0;
 }
 .timer--md {
   font-size: clamp(48px, 5vw, 80px);
 }
 
+/* Wordmark: the headline voice, slanted forward. Cinder STUDY, sage LOOP. */
 .logo {
-  display: block;
-  width: auto;
-  height: 60px;
+  --logo-h: 60px;
+  display: inline-flex;
+  align-items: baseline;
   flex-shrink: 0;
-  /* The lockup is slanted; let it lean a touch past its box rather than crowd neighbours. */
-  margin-left: -4px;
+  margin: 0;
+  font-family: var(--font-ui);
+  font-stretch: var(--stretch-headline);
+  font-weight: 900;
+  font-size: calc(var(--logo-h) * 0.5);
+  line-height: 1;
+  letter-spacing: -0.01em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  transform: skewX(-9deg);
+  transform-origin: 0 100%;
+  user-select: none;
+}
+.logo__a {
+  color: var(--action);
+}
+.logo__b {
+  color: var(--measured);
 }
 .logo--sm {
-  height: 64px;
-}
-.m-bar .logo {
-  height: 44px;
+  --logo-h: 52px;
 }
 
 /* ═════════════════════════════════════════════════════════════
@@ -576,8 +401,7 @@ p {
   padding: 0 var(--s-2);
   border-radius: var(--r-pill);
   font-size: var(--fs-label);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  letter-spacing: 0.01em;
   font-weight: 500;
   white-space: nowrap;
   color: var(--text-2);
@@ -618,10 +442,9 @@ p {
   height: var(--h);
   padding: 0 var(--s-5);
   border-radius: var(--r-tile);
-  font-size: var(--fs-small);
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
   white-space: nowrap;
   transition:
     background var(--dur-2) var(--ease-out),
@@ -789,8 +612,7 @@ p {
   align-items: center;
   gap: 6px;
   font-size: var(--fs-label);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  letter-spacing: 0.01em;
   font-weight: 500;
   color: var(--measured);
   white-space: nowrap;
@@ -798,8 +620,9 @@ p {
 .state--lg {
   gap: var(--s-3);
   font-family: var(--font-display);
+  font-stretch: var(--stretch-display);
   font-size: clamp(20px, 2vw, 28px);
-  letter-spacing: 0.06em;
+  letter-spacing: 0.01em;
 }
 .state--changing {
   color: var(--m-300);
@@ -912,12 +735,16 @@ p {
    COCKPIT — the locked wireframe
    ═════════════════════════════════════════════════════════════ */
 
+/* The chassis fills the window on any laptop: room for the top capsule and the dock scales
+   with the window's height, so 1280x720 and 1920x1080 both show the whole cockpit. */
 .cockpit-shell {
+  --shell-t: clamp(40px, 6.5vh, 56px);
+  --shell-b: clamp(36px, 6.5vh, 64px);
   position: relative;
   display: grid;
   place-items: center;
   min-height: 100svh;
-  padding: 56px var(--page-x) 64px;
+  padding: var(--shell-t) var(--page-x) var(--shell-b);
 }
 /* The floor light from the wireframe — the chassis sits on a lit surface. */
 .cockpit-shell::before {
@@ -933,7 +760,9 @@ p {
 }
 
 .cockpit {
-  --row-c: clamp(136px, 17vh, 172px);
+  --row-c: clamp(112px, 16vh, 176px);
+  /* Where views begin, below the logo. */
+  --view-top: 84px;
   --row-b: calc(var(--row-c) + var(--gutter));
   --row-d: 56px;
   --foot-h: calc(var(--row-b) + var(--gutter));
@@ -942,7 +771,7 @@ p {
   position: relative;
   width: 100%;
   max-width: var(--chassis-max);
-  height: clamp(700px, calc(100svh - 120px), 1000px);
+  height: clamp(560px, calc(100svh - var(--shell-t) - var(--shell-b)), 1040px);
   display: grid;
   grid-template-columns: 0.77fr 0.77fr 1.95fr 1.69fr 1.29fr;
   grid-template-rows: minmax(0, 1fr) var(--row-b) var(--row-c) var(--row-d);
@@ -959,6 +788,17 @@ p {
 
 .m-header {
   display: none;
+}
+
+/* Short laptop screens (720–820px tall): a smaller logo, slimmer lower rows, more room for the view. */
+@media (min-width: 1024px) and (max-height: 820px) {
+  .cockpit {
+    --row-c: clamp(100px, 14vh, 120px);
+    --view-top: 68px;
+  }
+  .main__chip .logo {
+    --logo-h: 44px;
+  }
 }
 
 /* Main panel spans rows 1–2; notches carve the L-shape. */
@@ -992,8 +832,7 @@ p {
   align-items: center;
   gap: 6px;
   font-size: var(--fs-label);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  letter-spacing: 0.01em;
   color: var(--action);
 }
 .rec::before {
@@ -1129,6 +968,17 @@ p {
 .area-profile {
   grid-row: 4;
   grid-column: 1 / 3;
+}
+/* Desktop: the top-right capsule already shows who you are and your band, so the pill would only
+   repeat it. Its row goes to the two metric cards above, which get the height they were missing. */
+@media (min-width: 1024px) {
+  .area-profile {
+    display: none;
+  }
+  .area-c,
+  .area-d {
+    grid-row: 3 / 5;
+  }
 }
 [class^="area-"] {
   min-width: 0;
@@ -1382,10 +1232,11 @@ html[data-quiet] .foot__scroll {
   min-height: 32px;
 }
 .metric__num {
-  font-size: var(--fs-metric);
+  font-size: calc(var(--fs-metric) + 4px);
+  font-stretch: var(--stretch-headline);
   line-height: 1;
-  font-weight: 500;
-  letter-spacing: -0.03em;
+  font-weight: 700;
+  letter-spacing: -0.01em;
   font-variant-numeric: tabular-nums;
 }
 .metric__word {
@@ -1421,6 +1272,19 @@ html[data-quiet] .foot__scroll {
 .metric.is-offline .icon-well {
   background: rgba(236, 230, 217, 0.04);
   color: var(--text-3);
+}
+/* Offline already reads from the grey; a badge saying so is noise. */
+.metric.is-offline .card__head .chip {
+  display: none;
+}
+/* Short laptop screens: the decorative icon row goes, the reading keeps its room. */
+@media (min-width: 1024px) and (max-height: 820px) {
+  .metric .card__head {
+    display: none;
+  }
+  .metric {
+    justify-content: center;
+  }
 }
 
 .bars {
@@ -1458,6 +1322,7 @@ html[data-quiet] .foot__scroll {
 .player {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
   gap: var(--s-4);
   padding: var(--s-3);
 }
@@ -1473,18 +1338,19 @@ html[data-quiet] .foot__scroll {
   box-shadow: inset 0 0 0 1px var(--line-2);
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  justify-content: flex-end;
+  gap: 2px;
   padding: var(--s-3);
 }
 .player__code {
   font-family: var(--font-display);
+  font-stretch: var(--stretch-display);
   font-size: var(--fs-title);
-  letter-spacing: 0.06em;
+  letter-spacing: 0.01em;
 }
 .player__mode {
   font-size: var(--fs-label);
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  letter-spacing: 0.01em;
   color: var(--text-2);
 }
 .player__main {
@@ -1568,7 +1434,7 @@ html[data-quiet] .foot__scroll {
   top: 6px;
   left: var(--s-2);
   font-size: var(--fs-label);
-  letter-spacing: 0.1em;
+  letter-spacing: 0.01em;
   color: var(--text-3);
 }
 .trend__facts {
@@ -1581,7 +1447,6 @@ html[data-quiet] .foot__scroll {
 .trend__facts dt {
   font-size: var(--fs-label);
   letter-spacing: var(--tracking-label);
-  text-transform: uppercase;
   color: var(--text-3);
 }
 .trend__facts dd {
@@ -1653,6 +1518,7 @@ html[data-quiet] .foot__scroll {
   display: flex;
   align-items: baseline;
   font-family: var(--font-display);
+  font-stretch: var(--stretch-display);
   font-size: var(--fs-title);
   line-height: 1;
 }
@@ -1661,7 +1527,7 @@ html[data-quiet] .foot__scroll {
   font-size: var(--fs-label);
   color: var(--text-2);
   margin-left: 4px;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.01em;
 }
 .research-card__copy {
   font-size: var(--fs-small);
@@ -1673,6 +1539,65 @@ html[data-quiet] .foot__scroll {
   font-family: var(--font-serif);
   font-size: 1.08em;
   color: var(--text-1);
+}
+
+/* ── Lower row: every card fills exactly its slot, and sheds secondary lines when the slot is short ── */
+.area-player,
+.area-trend,
+.area-research {
+  container-type: size;
+}
+.area-player > .card,
+.area-trend > .card,
+.area-research > .card {
+  height: 100%;
+  overflow: hidden;
+}
+@container (max-height: 150px) {
+  .player__main .card__sub,
+  .player__times,
+  .player__orb {
+    display: none;
+  }
+  .player .play-btn {
+    width: 36px;
+    height: 36px;
+  }
+  .player .icon-btn {
+    width: 28px;
+    height: 28px;
+  }
+  .player__tile {
+    aspect-ratio: auto;
+    width: 88px;
+    padding: var(--s-2);
+  }
+  .player__mode {
+    white-space: nowrap;
+  }
+  /* Signal: the facts in one row; the mini chart only when there's a signal to draw. */
+  .trend {
+    gap: var(--s-2);
+  }
+  .trend__body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .trend__tile:has(> .small) {
+    display: none;
+  }
+  .trend__tile {
+    min-height: 0;
+  }
+  .trend__facts {
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: var(--s-6);
+  }
+}
+@container (max-height: 270px) {
+  .research-card__copy {
+    display: none;
+  }
 }
 
 /* ── Profile pill ── */
@@ -1742,7 +1667,6 @@ html[data-quiet] .foot__scroll {
   margin: 0;
   font-size: var(--fs-label);
   letter-spacing: var(--tracking-label);
-  text-transform: uppercase;
   color: var(--text-3);
 }
 .foot__spec span + span::before {
@@ -1762,7 +1686,6 @@ html[data-quiet] .foot__scroll {
   min-height: 32px;
   font-size: var(--fs-label);
   letter-spacing: var(--tracking-label);
-  text-transform: uppercase;
   color: var(--text-2);
   text-decoration: none;
   white-space: nowrap;
@@ -1825,27 +1748,27 @@ html[data-quiet] .foot__scroll {
 .hero__copy {
   position: absolute;
   left: var(--s-7);
-  top: max(72px, calc((100% - var(--foot-h)) / 2 - 190px));
+  top: max(96px, calc((100% - var(--foot-h)) / 2 - 150px));
   z-index: 2;
   display: flex;
   flex-direction: column;
   gap: var(--s-4);
-  max-width: 560px;
+  max-width: min(760px, 52%);
 }
 .hero__title {
-  font-size: var(--fs-display);
-  white-space: nowrap;
+  display: flex;
+  flex-direction: column;
+  font-size: clamp(28px, min(3.1vw, 5.2vh), 52px);
+  line-height: 1.06;
   text-shadow: 0 2px 40px rgba(0, 0, 0, 0.6);
 }
-.hero__serif {
-  font-size: clamp(24px, 2.4vw, 36px);
-  line-height: 1;
-  color: var(--text-1);
-  margin-top: calc(-1 * var(--s-2));
+.hero__title-2 {
+  color: var(--text-2);
+  font-weight: 500;
 }
 .hero__body {
   color: var(--text-2);
-  max-width: 400px;
+  max-width: 380px;
 }
 .hero__ctas {
   display: flex;
@@ -1898,7 +1821,6 @@ html[data-quiet] .foot__scroll {
   gap: var(--s-2);
   font-size: var(--fs-label);
   letter-spacing: var(--tracking-label);
-  text-transform: uppercase;
   color: var(--text-2);
 }
 .callout__text::before {
@@ -1919,8 +1841,13 @@ html[data-quiet] .foot__scroll {
 .profile,
 .empty {
   position: absolute;
-  inset: 0;
-  padding: 72px var(--s-7) calc(var(--foot-h) + var(--s-4));
+  /* Ends above the foot row, so scrolled content never slides under the foot's text. */
+  inset: 0 0 var(--foot-h) 0;
+  padding: var(--view-top) var(--s-7) var(--s-4);
+  /* Never clip: if a view's content outgrows a short screen, it scrolls inside the panel. */
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
 }
 
 /* ── Session: setup ── */
@@ -1928,7 +1855,7 @@ html[data-quiet] .foot__scroll {
   display: grid;
   grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
   gap: var(--s-7);
-  padding-top: 84px;
+  padding-top: var(--view-top);
 }
 .setup__form {
   display: flex;
@@ -2136,7 +2063,6 @@ html[data-quiet] .foot__scroll {
 .stat-row dt {
   font-size: var(--fs-label);
   letter-spacing: var(--tracking-label);
-  text-transform: uppercase;
   color: var(--text-3);
 }
 .stat-row dd {
@@ -2155,7 +2081,7 @@ html[data-quiet] .foot__scroll {
   display: flex;
   flex-direction: column;
   gap: var(--s-3);
-  padding-top: 84px;
+  padding-top: var(--view-top);
 }
 .insights__head {
   display: flex;
@@ -2171,7 +2097,9 @@ html[data-quiet] .foot__scroll {
 .chart {
   position: relative;
   flex: 1;
-  min-height: 0;
+  /* The chart never draws shorter than 180px (SessionChart); its box agrees, so on a short
+     screen the view scrolls a little instead of the axis landing on the legend. */
+  min-height: 180px;
 }
 .chart svg {
   position: absolute;
@@ -2180,7 +2108,7 @@ html[data-quiet] .foot__scroll {
 }
 .chart__lane {
   font-size: var(--fs-label);
-  letter-spacing: 0.1em;
+  letter-spacing: 0.01em;
   fill: var(--text-3);
 }
 .chart__tick {
@@ -2228,8 +2156,7 @@ html[data-quiet] .foot__scroll {
 }
 .chart__tip-time {
   font-size: var(--fs-label);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  letter-spacing: 0.01em;
   color: var(--text-3);
 }
 .legend {
@@ -2322,8 +2249,9 @@ html[data-quiet] .foot__scroll {
   border-radius: var(--r-chip);
   background: var(--surface-2);
   font-family: var(--font-display);
+  font-stretch: var(--stretch-display);
   font-size: var(--fs-label);
-  letter-spacing: 0.06em;
+  letter-spacing: 0.01em;
 }
 .history__meta {
   display: flex;
@@ -2370,7 +2298,7 @@ html[data-quiet] .foot__scroll {
   grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
   grid-template-rows: auto 1fr;
   gap: var(--s-4) var(--s-7);
-  padding-top: 84px;
+  padding-top: var(--view-top);
 }
 .research__head {
   display: flex;
@@ -2514,7 +2442,6 @@ html[data-quiet] .foot__scroll {
   color: var(--text-3);
 }
 .papers--compact .papers__label {
-  text-transform: uppercase;
   letter-spacing: var(--tracking-label);
   font-size: var(--fs-label);
 }
@@ -2578,7 +2505,7 @@ html[data-quiet] .foot__scroll {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: var(--s-7);
-  padding-top: 84px;
+  padding-top: var(--view-top);
   overflow-y: auto;
   scrollbar-width: none;
 }
@@ -2603,12 +2530,9 @@ html[data-quiet] .foot__scroll {
   position: relative;
 }
 .profile__render {
-  /* Sits in the empty right side of the "you" row without changing its height. */
-  position: absolute;
-  right: 0;
-  top: 50%;
-  translate: 0 -50%;
-  height: 140px;
+  /* The band's diagram, under its facts, at a size its labels can be read. */
+  width: 100%;
+  max-width: 520px;
   aspect-ratio: 5 / 3;
   border-radius: var(--r-card);
   overflow: hidden;
@@ -2625,11 +2549,12 @@ html[data-quiet] .foot__scroll {
 }
 .band-spec__kicker {
   font-size: 10px;
-  letter-spacing: 0.18em;
+  letter-spacing: 0.01em;
   fill: var(--text-3);
 }
 .band-spec__model {
   font-family: var(--font-display);
+  font-stretch: var(--stretch-display);
   font-size: 22px;
   fill: var(--text-1);
 }
@@ -2671,7 +2596,7 @@ html[data-quiet] .foot__scroll {
 .band-spec__callout text {
   font-size: 12px;
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.01em;
   fill: var(--measured);
 }
 .band-spec__callout .band-spec__note {
@@ -3097,6 +3022,7 @@ html.lenis body {
   mix-blend-mode: screen;
 }
 
+/* Top-right; the subject code and mode sit together at the bottom, clear of it. */
 .player__orb {
   position: absolute;
   top: 8px;
@@ -3238,7 +3164,6 @@ html.lenis body {
   padding-right: var(--s-5);
   font-size: var(--fs-label);
   letter-spacing: var(--tracking-label);
-  text-transform: uppercase;
   color: var(--text-2);
   white-space: nowrap;
 }
@@ -3368,6 +3293,7 @@ html.lenis body {
   height: 1em;
   overflow: hidden;
   font-family: var(--font-display);
+  font-stretch: var(--stretch-display);
   font-size: clamp(40px, 7vh, 72px);
   line-height: 1;
   color: var(--text-1);
@@ -3458,6 +3384,7 @@ html.lenis body {
 }
 .plate__n {
   font-family: var(--font-display);
+  font-stretch: var(--stretch-display);
   font-size: var(--fs-title);
   color: var(--text-3);
 }
@@ -3480,8 +3407,7 @@ html.lenis body {
   padding: 4px var(--s-2);
   border-radius: var(--r-chip);
   font-size: var(--fs-label);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  letter-spacing: 0.01em;
   color: var(--text-2);
   box-shadow: inset 0 0 0 1px var(--line-2);
 }
@@ -3540,6 +3466,7 @@ html.lenis body {
   align-items: baseline;
   gap: var(--s-2);
   font-family: var(--font-display);
+  font-stretch: var(--stretch-display);
   color: var(--measured);
   transition: color var(--dur-3);
 }
@@ -3615,9 +3542,9 @@ html.lenis body {
 }
 .sig__name {
   font-family: var(--font-display);
+  font-stretch: var(--stretch-display);
   font-size: clamp(20px, 2.6vw, 44px);
   line-height: 1;
-  text-transform: uppercase;
 }
 .sig__band[data-active] .sig__name {
   text-shadow: 0 0 30px rgb(var(--measured-rgb) / 0.45);
@@ -3710,7 +3637,6 @@ html.lenis body {
   border-radius: var(--r-pill);
   font-size: var(--fs-label);
   letter-spacing: var(--tracking-label);
-  text-transform: uppercase;
   color: var(--text-3);
   box-shadow: inset 0 0 0 1px var(--line-1);
   transition: all var(--dur-3) var(--ease-out);
@@ -3731,7 +3657,7 @@ html.lenis body {
     position: static;
     translate: none;
     padding: var(--s-1) var(--s-2);
-    letter-spacing: 0.06em;
+    letter-spacing: 0.01em;
   }
 }
 .flow__rail {
@@ -3814,13 +3740,31 @@ html.lenis body {
     inset 0 0 0 1px var(--measured-line),
     0 20px 50px -20px rgb(var(--measured-rgb) / 0.45);
 }
-.flow__orb {
-  margin-bottom: var(--s-2);
-  transition: transform var(--dur-3) cubic-bezier(0.3, 1.6, 0.5, 1);
-  transform-origin: left center;
+/* Each step's photo: dim and grey until it's the step you're on. */
+.flow__photo {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  max-height: 24vh;
+  margin: calc(-1 * var(--s-4) + var(--s-2)) calc(-1 * var(--s-5) + var(--s-2)) var(--s-2);
+  border-radius: calc(var(--r-card) - 6px);
+  overflow: hidden;
+  background: var(--surface-2);
 }
-.flow__step[data-active] .flow__orb {
-  transform: scale(1.25);
+.flow__photo img {
+  object-fit: cover;
+  filter: grayscale(1) brightness(0.55);
+  transform: scale(1.06);
+  transition:
+    filter 0.6s var(--ease-out),
+    transform 1.2s var(--ease-out);
+}
+.flow__step[data-active] .flow__photo img,
+.flow__step[data-done] .flow__photo img {
+  filter: none;
+  transform: none;
+}
+.flow__step[data-done] .flow__photo img {
+  filter: grayscale(0.4) brightness(0.8);
 }
 .flow__n {
   font-size: var(--fs-label);
@@ -3909,7 +3853,6 @@ html.lenis body {
   background: var(--room);
   font-size: var(--fs-label);
   letter-spacing: var(--tracking-label);
-  text-transform: uppercase;
   color: var(--text-3);
   box-shadow: inset 0 0 0 1px var(--line-1);
   transition: all var(--dur-3) var(--ease-out);
@@ -3959,9 +3902,9 @@ html.lenis body {
 .finale__now {
   margin: 0;
   font-family: var(--font-display);
+  font-stretch: var(--stretch-display);
   font-size: var(--fs-title);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  letter-spacing: 0.01em;
   color: var(--measured);
 }
 .finale__word {
@@ -4014,329 +3957,6 @@ html.lenis body {
    PHONE — the mobile wireframe
    ═════════════════════════════════════════════════════════════ */
 
-.m-app {
-  --mx: 16px;
-  position: relative;
-  padding: 0 0 140px;
-}
-.m-top {
-  position: sticky;
-  top: 0;
-  z-index: 30;
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  align-items: center;
-  gap: var(--s-2);
-  /* Solid behind the controls, fade only below them, so scrolled content never collides. */
-  padding: var(--s-2) var(--mx) var(--s-5);
-  background: linear-gradient(180deg, var(--room) 70%, rgba(11, 10, 7, 0));
-}
-.m-top__stats {
-  display: flex;
-  gap: var(--s-1);
-}
-.m-top__stats span {
-  padding: var(--s-1) var(--s-2);
-  border-radius: var(--r-pill);
-  background: var(--surface-1);
-  box-shadow: inset 0 0 0 1px var(--line-1);
-  font-size: var(--fs-label);
-  color: var(--text-2);
-}
-.m-island {
-  display: flex;
-  align-items: center;
-  gap: var(--s-2);
-  height: 40px;
-  padding: 0 var(--s-3) 0 var(--s-2);
-  border-radius: var(--r-pill);
-  background: #000;
-  box-shadow: inset 0 0 0 1px var(--line-2), 0 8px 20px -8px rgba(0, 0, 0, 0.8);
-  overflow: hidden;
-}
-.m-island.is-open {
-  height: 48px;
-  padding-right: var(--s-4);
-}
-.m-island__word {
-  font-size: var(--fs-small);
-  font-weight: 500;
-  white-space: nowrap;
-}
-.m-island__detail {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  font-size: 11px;
-  line-height: 1.3;
-  color: var(--text-2);
-  white-space: nowrap;
-}
-.m-island__detail b {
-  font-size: 15px;
-  color: var(--text-1);
-  font-weight: 500;
-}
-.m-top__dots {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-}
-.m-top__dots span {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  box-shadow: inset 0 0 0 1.5px var(--text-3);
-}
-.m-top__dots span[data-tone="measured"] {
-  background: var(--measured);
-  box-shadow: 0 0 8px var(--measured);
-}
-.m-top__dots span[data-tone="action"] {
-  background: var(--action);
-  box-shadow: 0 0 8px var(--action);
-}
-.m-top__dots span[data-tone="pulse"] {
-  background: var(--measured);
-  animation: pulse 1.1s infinite;
-}
-
-.m-sec {
-  display: flex;
-  flex-direction: column;
-  gap: var(--s-3);
-  padding: var(--s-6) var(--mx) 0;
-}
-.m-pill {
-  align-self: center;
-  display: inline-flex;
-  align-items: center;
-  gap: var(--s-2);
-  height: 32px;
-  padding: 0 var(--s-4);
-  border-radius: var(--r-pill);
-  background: var(--surface-2);
-  box-shadow: inset 0 0 0 1px var(--line-2);
-  font-size: var(--fs-small);
-  font-weight: 500;
-}
-.m-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--s-3);
-  height: 48px;
-  padding: 0 var(--s-2) 0 var(--s-5);
-  border-radius: var(--r-pill);
-  background:
-    linear-gradient(90deg, rgb(var(--measured-rgb) / 0.12), transparent 60%),
-    var(--surface-1);
-  box-shadow: inset 0 0 0 1px var(--line-2), var(--highlight);
-  transform-origin: center;
-  text-align: left;
-}
-.m-bar .state {
-  padding-right: var(--s-3);
-}
-.m-bar--player {
-  padding-left: 6px;
-}
-.m-bar__code {
-  display: grid;
-  place-items: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: var(--surface-3);
-  font-family: var(--font-display);
-  font-size: var(--fs-label);
-}
-.m-bar__title {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  font-size: var(--fs-small);
-  line-height: 1.3;
-}
-.m-bar__title span {
-  color: var(--text-2);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.m-bar__play {
-  position: relative;
-  width: 40px;
-  height: 40px;
-}
-.m-bar__play::before {
-  /* 48px touch target around a 40px visual that fits the 48px bar. */
-  content: "";
-  position: absolute;
-  inset: -4px;
-}
-.m-bar--link {
-  width: 100%;
-  padding-right: var(--s-4);
-  font-size: 13px;
-  color: var(--text-1);
-}
-.m-bar--link span {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.m-note {
-  align-self: flex-end;
-  width: 58%;
-  margin: 0;
-  font-size: var(--fs-small);
-  line-height: 1.4;
-  color: var(--text-2);
-  text-align: right;
-}
-
-/* Triptych: tall centre card, small cards either side, offset vertically. */
-.m-tri {
-  position: relative;
-  height: min(118vw, 460px);
-  margin-top: var(--s-2);
-}
-.m-main {
-  position: absolute;
-  left: 22%;
-  width: 56%;
-  top: 0;
-  bottom: 0;
-  display: flex;
-  flex-direction: column;
-  border-radius: 24px;
-  background:
-    radial-gradient(90% 60% at 50% 30%, rgb(var(--measured-rgb) / 0.14), transparent 70%),
-    var(--surface-1);
-  box-shadow: inset 0 0 0 1px var(--line-2), var(--shadow-lift);
-  overflow: hidden;
-}
-.m-main__body {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: var(--s-4) var(--s-3) 0;
-  text-align: center;
-}
-.m-main__img {
-  position: relative;
-  width: 160%;
-  aspect-ratio: 3 / 2;
-  -webkit-mask-image: radial-gradient(ellipse 45% 50% at 50% 50%, #000 50%, transparent);
-  mask-image: radial-gradient(ellipse 45% 50% at 50% 50%, #000 50%, transparent);
-}
-.m-main__img img {
-  object-fit: cover;
-}
-.m-main__big {
-  margin: 0;
-  font-size: 40px;
-  font-weight: 500;
-  letter-spacing: -0.04em;
-  line-height: 1;
-}
-.m-main__serif {
-  font-size: var(--fs-title);
-  color: var(--text-1);
-}
-.m-main__btn {
-  margin: var(--s-3);
-}
-.m-main--chart {
-  justify-content: space-between;
-  gap: var(--s-3);
-  padding: var(--s-4) var(--s-3);
-}
-.m-main__chart {
-  display: flex;
-  flex-direction: column;
-  gap: var(--s-3);
-  flex: 1;
-  justify-content: center;
-}
-.m-side {
-  position: absolute;
-  width: 18%;
-  display: flex;
-  flex-direction: column;
-  gap: var(--s-2);
-}
-.m-side--l {
-  left: 0;
-  top: 38%;
-}
-.m-side--r {
-  right: 0;
-  top: 56%;
-}
-.m-thumb {
-  display: grid;
-  place-items: center;
-  aspect-ratio: 0.76;
-  border-radius: var(--r-tile);
-  background:
-    radial-gradient(circle at 50% 40%, rgb(var(--measured-rgb) / 0.18), transparent 70%),
-    var(--surface-2);
-  box-shadow: inset 0 0 0 1px var(--line-2);
-}
-.m-cap {
-  display: flex;
-  flex-direction: column;
-  margin: 0;
-  font-size: var(--fs-label);
-  line-height: 1.3;
-  color: var(--text-3);
-}
-.m-cap b {
-  font-size: 15px;
-  font-weight: 500;
-  color: var(--text-1);
-  text-transform: capitalize;
-}
-.m-strip {
-  margin: var(--s-4) calc(-1 * var(--mx)) 0;
-  padding: var(--s-4) 0;
-  background: #000;
-  border-block: 1px solid var(--line-1);
-  overflow: hidden;
-}
-.m-strip--action .marquee__group i {
-  background: var(--action);
-  box-shadow: 0 0 8px var(--action);
-}
-.m-strip--btn {
-  display: block;
-  width: calc(100% + 2 * var(--mx));
-}
-.m-strip--btn.is-on {
-  background: rgb(var(--action-rgb) / 0.1);
-}
-.m-strip--btn.is-on .marquee__group > span {
-  color: var(--action);
-}
-
-.m-dock {
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: max(16px, calc(env(safe-area-inset-bottom) + 10px));
-  z-index: 50;
-  height: 0;
-}
-.m-dock .dock {
-  bottom: 0;
-  gap: 8px;
-}
 
 .m-scrim {
   position: fixed;
@@ -4676,102 +4296,86 @@ html.lenis body {
   opacity: 0;
 }
 
-/* phone skeleton — the mobile wireframe */
+/* phone skeleton — shaped like the Today screen, so the hand-off lands in place */
 .sk-phone {
   display: flex;
   flex-direction: column;
-  gap: var(--s-3);
+  gap: 12px;
+  min-height: 100svh;
   padding: 10px 16px;
 }
 .sk-phone__top {
   display: flex;
   align-items: center;
-  gap: 6px;
-  height: 32px;
-}
-.sk-phone__top span {
-  width: 28px;
-  height: 14px;
-  border-radius: 7px;
-  background: rgba(236, 230, 217, 0.07);
+  gap: 8px;
+  height: 40px;
 }
 .sk-phone__top b {
-  width: 96px;
-  height: 32px;
-  margin: 0 auto;
-  border-radius: 16px;
-  background: #000;
+  width: 92px;
+  height: 30px;
+  margin-right: auto;
+  border-radius: 8px;
+  background: var(--surface-2);
+}
+.sk-phone__top span {
+  width: 104px;
+  height: 36px;
+  border-radius: var(--r-pill);
+  background: var(--surface-1);
   box-shadow: inset 0 0 0 1px var(--line-2);
 }
 .sk-phone__top i {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: rgba(236, 230, 217, 0.12);
-}
-.sk-phone__pill {
-  align-self: center;
-  width: 44%;
+  width: 32px;
   height: 32px;
-  margin-top: var(--s-5);
-  border-radius: var(--r-pill);
+  border-radius: 50%;
+  background: var(--surface-2);
 }
-.sk-phone__bar {
-  height: 48px;
-  border-radius: var(--r-pill);
-}
-.sk-phone__note {
-  align-self: flex-end;
+.sk-phone__hero {
+  flex: 1;
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
-  gap: 5px;
-  width: 40%;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  padding-bottom: calc(84px + env(safe-area-inset-bottom, 0px));
 }
-.sk-phone__note span {
-  width: 100%;
-  height: 6px;
-  border-radius: 3px;
-  background: rgba(236, 230, 217, 0.08);
+.sk-phone__eyebrow,
+.sk-phone__title,
+.sk-phone__line {
+  border-radius: 6px;
+  background: var(--surface-2);
 }
-.sk-phone__note span:last-child {
-  width: 70%;
-}
-.sk-phone__tri {
-  position: relative;
-  height: min(118vw, 460px);
-  margin-top: var(--s-2);
-}
-.sk-phone__c {
-  position: absolute;
-  left: 22%;
+.sk-phone__eyebrow {
   width: 56%;
-  top: 0;
-  bottom: 0;
-  height: auto;
-  border-radius: 24px;
+  height: 10px;
 }
-.sk-phone__l,
-.sk-phone__r {
-  position: absolute;
-  width: 18%;
-  aspect-ratio: 0.76;
-  height: auto;
-  border-radius: var(--r-tile);
+.sk-phone__orb {
+  width: min(232px, 62vw);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1.6px var(--line-2);
 }
-.sk-phone__l {
+.sk-phone__title {
+  width: 70%;
+  height: 30px;
+}
+.sk-phone__line {
+  width: 50%;
+  height: 12px;
+}
+.sk-phone__cta {
+  width: 100%;
+  height: 52px;
+  border-radius: var(--r-pill);
+}
+.sk-phone__tabs {
+  position: fixed;
   left: 0;
-  top: 38%;
-}
-.sk-phone__r {
   right: 0;
-  top: 56%;
-}
-.sk-phone__strip {
-  height: 48px;
-  margin: var(--s-4) -16px 0;
-  background: #000;
-  border-block: 1px solid var(--line-1);
+  bottom: 0;
+  height: calc(64px + env(safe-area-inset-bottom, 0px));
+  background: var(--chassis);
+  box-shadow: inset 0 1px 0 var(--line-2);
 }
 
 /* curtains + core */
@@ -4853,9 +4457,12 @@ html.lenis body {
 }
 .intro__tag {
   margin: 0;
+  max-width: calc(100vw - 2 * var(--page-x));
+  text-align: center;
+  text-wrap: balance;
+  line-height: 1.8;
   font-size: var(--fs-label);
-  letter-spacing: 0.32em;
-  text-transform: uppercase;
+  letter-spacing: 0.01em;
   color: var(--text-3);
   opacity: 0;
 }
@@ -4869,7 +4476,6 @@ html.lenis body {
   border-radius: var(--r-pill);
   font-size: var(--fs-label);
   letter-spacing: var(--tracking-label);
-  text-transform: uppercase;
   color: var(--text-3);
   box-shadow: inset 0 0 0 1px var(--line-2);
   transition: color var(--dur-2), box-shadow var(--dur-2);
@@ -4883,7 +4489,7 @@ html.lenis body {
     width: 88vw;
   }
   .intro__tag {
-    letter-spacing: 0.2em;
+    letter-spacing: 0.01em;
   }
 }
 
@@ -4910,7 +4516,7 @@ html.lenis body {
   display: grid;
   grid-template-columns: minmax(0, 1.4fr) minmax(280px, 1fr);
   gap: var(--s-6);
-  padding-top: 56px;
+  padding-top: var(--view-top);
 }
 .music__lib {
   display: flex;
@@ -5026,7 +4632,6 @@ html.lenis body {
 .np-stats dt {
   font-size: var(--fs-label);
   letter-spacing: var(--tracking-label);
-  text-transform: uppercase;
   color: var(--text-3);
 }
 .np-stats dd {
@@ -5110,6 +4715,162 @@ html.lenis body {
 }
 .beats__note {
   margin: 0;
+}
+
+/* Beat playlists */
+.bp-cover {
+  flex: none;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 10px;
+  color: var(--measured);
+  background: var(--measured-soft);
+  box-shadow: inset 0 0 0 1px var(--line-1);
+}
+.bp-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.bp__head {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  min-width: 0;
+}
+.mqueue__main.songs__main {
+  flex-direction: row;
+  align-items: center;
+  gap: var(--s-3);
+}
+.songs__text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.bp-progress {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+}
+.bp-progress__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--measured);
+  animation: pulse 1.4s var(--ease-in-out) infinite;
+}
+.lib__heading {
+  margin: var(--s-2) 0 0;
+}
+.lib__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+.lib-item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+.lib-row__main .loop-card__text {
+  display: flex;
+  flex-direction: column;
+}
+.lib-row__main {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  min-width: 0;
+  text-align: left;
+  border-radius: var(--r-chip);
+}
+.lib-item[data-open] .lib-row {
+  box-shadow: inset 0 0 0 1px var(--measured-line), var(--highlight);
+}
+
+/* Songs → beats */
+.songs-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+.songs-form__input {
+  height: auto;
+  min-height: 112px;
+  padding: var(--s-3);
+  resize: vertical;
+  line-height: 1.5;
+  font: inherit;
+}
+.songs-form__row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--s-2);
+}
+.songs-form__row > span {
+  margin-right: auto;
+}
+.songs {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+.songs__row .mqueue__main {
+  padding: 2px 0;
+}
+.songs__facts {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.songs__end {
+  display: flex;
+  align-items: center;
+  gap: var(--s-1);
+}
+/* The playing song: three bars moving, in place of its number. */
+.songs__eq {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 12px;
+}
+.songs__eq i {
+  width: 3px;
+  height: 100%;
+  border-radius: 1px;
+  background: var(--measured);
+  transform-origin: bottom;
+  animation: songs-eq 0.9s var(--ease-in-out) infinite;
+}
+.songs__eq i:nth-child(2) {
+  animation-delay: -0.3s;
+}
+.songs__eq i:nth-child(3) {
+  animation-delay: -0.6s;
+}
+@keyframes songs-eq {
+  0%,
+  100% {
+    transform: scaleY(0.3);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .songs__eq i {
+    animation: none;
+  }
 }
 
 /* Queue */
@@ -5352,6 +5113,13 @@ html.lenis body {
 .music-player--empty {
   gap: var(--s-2);
 }
+/* Nothing playing yet: the playlist gets the whole panel; Now playing appears with the music. */
+.music:has(.music-player--empty) {
+  grid-template-columns: minmax(0, 1fr);
+}
+.music .music-player--empty {
+  display: none;
+}
 .music-player__name {
   margin: 0;
   font-size: var(--fs-title);
@@ -5367,6 +5135,12 @@ html.lenis body {
 }
 .music-player__title {
   min-width: 0;
+}
+.music-player__ctl {
+  display: flex;
+  align-items: center;
+  gap: var(--s-1);
+  flex: none;
 }
 .music-player__name {
   white-space: nowrap;
@@ -5710,4 +5484,47 @@ html.lenis body {
   .palettes {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+}
+
+/* First visit: StudyLoop in three beats. */
+.prompt--how {
+  width: min(600px, 100%);
+  gap: var(--s-4);
+}
+.prompt__kicker {
+  margin: 0;
+  font-size: var(--fs-label);
+  letter-spacing: var(--tracking-label);
+  color: var(--measured);
+}
+.prompt__title--lg {
+  margin: 0;
+  font-family: var(--font-display);
+  font-stretch: var(--stretch-display);
+  font-size: clamp(24px, 3vw, 32px);
+  letter-spacing: var(--tracking-display);
+  line-height: 1.05;
+  text-wrap: balance;
+}
+
+/* ═════════════════════════════════════════════════════════════
+   LITE — low-end machines (few cores, little memory, data saver, or ?lite).
+   Same layout and features; the expensive glass and idle decoration go.
+   ═════════════════════════════════════════════════════════════ */
+html[data-lite] * {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+/* Without blur, glass panels need a solid fill to stay legible. */
+html[data-lite] :is(.top-capsule, .dock, .mx-tabs, .story__step, .tour-pill, .entry__demo, .login__facts li) {
+  background-color: var(--surface-2);
+}
+/* Purely decorative loops that run forever. */
+html[data-lite] :is(.marquee__track, .wave-strip, .tour-pill__dot, .story__focus span),
+html[data-lite] .finale__word::after {
+  animation: none !important;
+}
+html[data-lite] .entry__img {
+  translate: none;
+  transition: none;
 }

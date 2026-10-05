@@ -18,24 +18,24 @@ const STOPS = [
     n: "01",
     title: "Status light",
     body: "A single cyan line. It breathes during baseline, holds while you study, and never asks to be looked at.",
-    px: 0.46,
-    py: 0.37,
+    px: 0.5,
+    py: 0.365,
     s: 1.75,
   },
   {
     n: "02",
     title: "One button",
     body: "Press to start. Press again to mark a moment. Hold to end the session.",
-    px: 0.6,
-    py: 0.45,
+    px: 0.685,
+    py: 0.37,
     s: 1.9,
   },
   {
     n: "03",
     title: "Inner-wrist contacts",
     body: "Two electrodes read skin conductance. A PPG sensor between them reads your pulse.",
-    px: 0.46,
-    py: 0.62,
+    px: 0.5,
+    py: 0.51,
     s: 1.6,
   },
   {
@@ -78,7 +78,7 @@ export function ProductStory() {
           scrollTrigger: {
             trigger: root.current,
             start: "top top",
-            end: "+=420%",
+            end: "+=300%",
             pin: true,
             scrub: 1,
             anticipatePin: 1,
@@ -127,8 +127,8 @@ export function ProductStory() {
       <div className="story__frame">
         <div className="story__camera">
           <Image
-            src="/media/studyloop-band.png"
-            alt="StudyLoop band: a matte black enclosure with a cyan status light and one button on a woven strap, two metal electrodes on the inside."
+            src="/media/studyloop-band-hd.png"
+            alt="StudyLoop band seen head-on: a matte black enclosure with a cyan status light and one button on a woven strap, two metal electrodes beneath."
             fill
             sizes="100vw"
             className="story__img"
@@ -146,7 +146,7 @@ export function ProductStory() {
           <span className="eyebrow__rule" aria-hidden />
           The band
         </p>
-        <h2 className="display story__title" data-split>
+        <h2 className="display campaign story__title" data-split>
           Focus,
           <br />
           measured

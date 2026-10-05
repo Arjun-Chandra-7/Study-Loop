@@ -3,8 +3,10 @@
 import { gsap } from "gsap";
 import { useGSAP } from "@gsap/react";
 import { useEffect, useRef, useState } from "react";
+import { isDemo } from "@/lib/demo";
 import { intro } from "@/lib/intro";
 import { lockScroll } from "../motion/SmoothScroll";
+import { TAGLINE } from "../ui/HowItWorks";
 import { WORDMARK_LETTERS, WORDMARK_VIEWBOX } from "./wordmark";
 
 gsap.registerPlugin(useGSAP);
@@ -111,7 +113,8 @@ export function Intro() {
         seen = sessionStorage.getItem("sl-intro-seen") === "1";
         sessionStorage.setItem("sl-intro-seen", "1");
       } catch {}
-      tl.timeScale(seen ? 4 : 1);
+      // Judges are short on time: the film runs fast in demo mode.
+      tl.timeScale(seen ? 4 : isDemo() ? 2.2 : 1);
 
       whenLoaded().then(() => {
         loaded = true;
@@ -170,28 +173,18 @@ export function Intro() {
         <div className="only-phone">
           <div className="sk-phone">
             <div className="sk-phone__top sk-anim">
-              <span />
-              <span />
-              <span />
               <b />
-              <i />
-              <i />
-              <i />
+              <span />
               <i />
             </div>
-            <span className="sk sk-anim sk-phone__pill" />
-            <span className="sk sk-anim sk-phone__bar" />
-            <span className="sk-phone__note sk-anim">
-              <span />
-              <span />
-              <span />
-            </span>
-            <div className="sk-phone__tri">
-              <span className="sk sk-anim sk-phone__l" />
-              <span className="sk sk-anim sk-phone__c" />
-              <span className="sk sk-anim sk-phone__r" />
+            <div className="sk-phone__hero">
+              <span className="sk-phone__eyebrow sk-anim" />
+              <span className="sk-phone__orb sk-anim" />
+              <span className="sk-phone__title sk-anim" />
+              <span className="sk-phone__line sk-anim" />
+              <span className="sk sk-anim sk-phone__cta" />
             </div>
-            <span className="sk-anim sk-phone__strip" />
+            <span className="sk-anim sk-phone__tabs" />
           </div>
         </div>
         <span className="intro__scan" />
@@ -220,7 +213,7 @@ export function Intro() {
               ))}
             </g>
           </svg>
-          <p className="intro__tag">Focus, measured differently</p>
+          <p className="intro__tag">{TAGLINE}</p>
         </div>
       </div>
 

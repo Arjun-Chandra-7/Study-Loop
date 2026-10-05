@@ -1,0 +1,577 @@
+/* ═════════════════════════════════════════════════════════════
+   PHONE · one hero, then a quiet Today list, tabs in the thumb zone
+   Alignment system: 16px edges · 20px card radius · 16px inner pad ·
+   48px controls · 64px rows · every text line truncates, never wraps.
+   ═════════════════════════════════════════════════════════════ */
+.mx {
+  --mx-pad: 16px;
+  --mx-radius: 20px;
+  --mx-inner: 16px;
+  --mx-top-h: 60px;
+  --mx-tabs-h: calc(64px + env(safe-area-inset-bottom, 0px));
+  position: relative;
+  min-height: 100svh;
+  padding-bottom: calc(var(--mx-tabs-h) + 24px);
+  background: var(--room);
+}
+
+/* ── Top bar: brand · band · you ── */
+.mx-top {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: calc(var(--mx-top-h) + env(safe-area-inset-top, 0px));
+  padding: env(safe-area-inset-top, 0px) var(--mx-pad) 0;
+  background: linear-gradient(180deg, var(--room) 75%, transparent);
+}
+.mx-top .logo {
+  --logo-h: 40px;
+  margin: 0 auto 0 -4px;
+}
+.mx-band,
+.mx-me {
+  height: 36px;
+}
+.mx-band {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 14px;
+  border-radius: var(--r-pill);
+  font-size: var(--fs-small);
+  line-height: 1;
+  color: var(--text-1);
+  background: var(--surface-1);
+  box-shadow: inset 0 0 0 1px var(--line-2);
+}
+.mx-band--disconnected {
+  color: var(--measured);
+  box-shadow: inset 0 0 0 1px var(--measured-line);
+}
+.mx-band .tnum {
+  color: var(--text-3);
+}
+.mx-me {
+  width: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+}
+
+.mx-today {
+  padding: 0 var(--mx-pad);
+}
+
+/* ── Hero: the whole first screen, one centred column ── */
+.mx-hero {
+  position: relative;
+  min-height: calc(100svh - var(--mx-top-h) - env(safe-area-inset-top, 0px) - var(--mx-tabs-h));
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  justify-items: center;
+  gap: 16px;
+  padding: 8px 0 20px;
+  text-align: center;
+}
+/* Orb and words read as one group, centred in the space between eyebrow and button. */
+.mx-hero__center {
+  align-self: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 28px;
+  max-width: 100%;
+}
+.mx-hero__eyebrow {
+  margin: 0;
+  max-width: 100%;
+  font-size: var(--fs-label);
+  letter-spacing: var(--tracking-label);
+  color: var(--text-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mx-hero__stage {
+  position: relative;
+  width: min(232px, 62vw);
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+}
+.mx-hero__stage > :not(svg) {
+  grid-area: 1 / 1;
+}
+.mx-ring {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+.mx-ring circle {
+  fill: none;
+  stroke-width: 1.6;
+}
+.mx-ring__track {
+  stroke: var(--line-2);
+}
+.mx-ring__fill {
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.6s linear, stroke var(--dur-3);
+}
+.mx-ring--muted .mx-ring__fill {
+  stroke: transparent;
+}
+.mx-ring--measured .mx-ring__fill {
+  stroke: var(--measured);
+}
+.mx-ring--action .mx-ring__fill {
+  stroke: var(--action);
+}
+.mx-hero__copy {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  max-width: 100%;
+}
+.mx-hero__kicker {
+  margin: 0;
+  font-size: var(--fs-label);
+  letter-spacing: var(--tracking-label);
+  color: var(--text-3);
+}
+.mx-hero__title {
+  margin: 0;
+  font-size: 32px;
+  font-weight: 500;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+  color: var(--text-1);
+  text-wrap: balance;
+}
+.mx-hero__title.is-clock {
+  font-family: var(--font-display);
+  font-stretch: var(--stretch-display);
+  font-size: 56px;
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: 0.02em;
+}
+.mx-hero__line {
+  margin: 0;
+  max-width: 100%;
+  font-size: var(--fs-body);
+  color: var(--text-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mx-hero__line.is-action {
+  color: var(--action);
+}
+.mx-hero__cta {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+.mx-cta {
+  width: 100%;
+  height: 52px;
+  justify-content: center;
+}
+.mx-hero__links {
+  display: flex;
+  justify-content: center;
+  gap: 24px;
+  min-height: 24px;
+}
+.mx-hero__links button {
+  font-size: var(--fs-small);
+  color: var(--text-2);
+  text-decoration: underline;
+  text-decoration-color: var(--line-3);
+  text-underline-offset: 4px;
+}
+.mx-hero__links button:active {
+  color: var(--text-1);
+}
+.mx-controls {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr) 52px;
+  align-items: center;
+  gap: 12px;
+}
+.mx-round {
+  flex: none;
+  width: 52px;
+  height: 52px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--text-1);
+  background: var(--surface-1);
+  box-shadow: inset 0 0 0 1px var(--line-2);
+}
+.mx-round:disabled {
+  opacity: var(--o-disabled);
+}
+/* ── Below the fold: quiet sections on one grid ── */
+.mx-below {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 8px;
+}
+.mx-section {
+  margin: 12px 0 0;
+  padding: 0 2px;
+  font-size: var(--fs-label);
+  font-weight: 500;
+  letter-spacing: var(--tracking-label);
+  color: var(--text-3);
+}
+
+/* Dials: three equal tiles, identical anatomy. */
+.mx-dials {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  text-align: left;
+}
+.mx-dial {
+  min-width: 0;
+  height: 120px;
+  display: grid;
+  grid-template-rows: 16px 32px 16px 1fr;
+  align-items: center;
+  padding: 14px var(--mx-inner) 12px 14px;
+  border-radius: var(--mx-radius);
+  background: var(--surface-1);
+  box-shadow: inset 0 0 0 1px var(--line-1);
+}
+.mx-dial__label {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--fs-label);
+  letter-spacing: 0.01em;
+  color: var(--text-3);
+}
+.mx-dial__value {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 500;
+  line-height: 32px;
+  color: var(--text-1);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mx-dial__sub {
+  margin: 0;
+  font-size: 11px;
+  line-height: 16px;
+  color: var(--text-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mx-dial__spark {
+  align-self: end;
+  height: 20px;
+}
+.mx-dial.is-action .mx-dial__value {
+  color: var(--action);
+}
+.mx-dials:active .mx-dial {
+  background: var(--surface-2);
+}
+
+/* Rows: one height, one anatomy (art · two lines · action). */
+.mx-list {
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--mx-radius);
+  background: var(--surface-1);
+  box-shadow: inset 0 0 0 1px var(--line-1);
+  overflow: hidden;
+}
+.mx-row {
+  width: 100%;
+  min-height: 72px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px var(--mx-inner) 12px 12px;
+  text-align: left;
+}
+.mx-row:not(.mx-list .mx-row) {
+  border-radius: var(--mx-radius);
+  background: var(--surface-1);
+  box-shadow: inset 0 0 0 1px var(--line-1);
+}
+.mx-list .mx-row + .mx-row {
+  box-shadow: inset 0 1px 0 var(--line-1);
+}
+.mx-row--link:active {
+  background: var(--surface-2);
+}
+.mx-row__main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-align: left;
+}
+.mx-row__art {
+  flex: none;
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  color: var(--text-2);
+  background: linear-gradient(140deg, var(--surface-3), var(--carbon-950));
+}
+.mx-row__art i {
+  width: 3px;
+  height: 8px;
+  border-radius: 2px;
+  background: var(--text-3);
+}
+.mx-row__art.is-on i {
+  background: var(--measured);
+  animation: mx-eq 1.1s var(--ease-in-out) infinite;
+}
+.mx-row__art.is-on i:nth-child(2) {
+  animation-delay: -0.3s;
+}
+.mx-row__art.is-on i:nth-child(3) {
+  animation-delay: -0.6s;
+}
+.mx-row__art.is-on i:nth-child(4) {
+  animation-delay: -0.9s;
+}
+@keyframes mx-eq {
+  0%,
+  100% {
+    height: 6px;
+  }
+  50% {
+    height: 22px;
+  }
+}
+.mx-row__art--stat {
+  align-items: baseline;
+  padding-top: 12px;
+  gap: 1px;
+  font-size: 17px;
+  font-weight: 500;
+  color: var(--measured);
+}
+.mx-row__art--stat small {
+  font-size: 10px;
+}
+.mx-row__art--research {
+  color: var(--action);
+  background: rgb(var(--action-rgb) / 0.12);
+}
+.mx-row__text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.mx-row__text b,
+.mx-row__text span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mx-row__text b {
+  font-size: var(--fs-body);
+  font-weight: 500;
+  color: var(--text-1);
+}
+.mx-row__text span {
+  font-size: 12px;
+  color: var(--text-3);
+}
+.mx-row__go {
+  flex: none;
+  color: var(--text-3);
+}
+.mx-row .mx-round {
+  width: 44px;
+  height: 44px;
+}
+.mx-chip {
+  flex: none;
+  height: 36px;
+  padding: 0 14px;
+  border-radius: var(--r-pill);
+  font-size: var(--fs-small);
+  color: var(--text-2);
+  box-shadow: inset 0 0 0 1px var(--line-2);
+}
+.mx-chip.is-on {
+  color: var(--text-on-measured);
+  background: var(--measured);
+  box-shadow: none;
+}
+
+.mx-fine {
+  margin: 12px 2px 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-3);
+}
+
+/* ── Live strip: the running session, one tap away from any tab ── */
+.mx-strip {
+  position: fixed;
+  left: var(--mx-pad);
+  right: var(--mx-pad);
+  bottom: calc(var(--mx-tabs-h) + 8px);
+  z-index: 85;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 8px 0 12px;
+  border-radius: 18px;
+  background: color-mix(in oklab, var(--surface-2) 92%, transparent);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  box-shadow: inset 0 0 0 1px var(--measured-line), var(--shadow-float);
+}
+.mx-strip__main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-align: left;
+  font-size: var(--fs-small);
+  color: var(--text-2);
+}
+.mx-strip__main span {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.mx-strip__main b {
+  font-size: var(--fs-body);
+  font-weight: 500;
+  color: var(--text-1);
+}
+.mx-strip .play-btn {
+  width: 40px;
+  height: 40px;
+}
+
+/* ── Tab bar: five places, all under the thumb ── */
+.mx-tabs {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 90;
+  height: var(--mx-tabs-h);
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  padding: 6px 8px env(safe-area-inset-bottom, 0px);
+  background: color-mix(in oklab, var(--chassis) 90%, transparent);
+  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(18px);
+  box-shadow: inset 0 1px 0 var(--line-2);
+}
+.mx-tab {
+  position: relative;
+  height: 52px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  border-radius: 16px;
+  color: var(--text-3);
+  transition: color var(--dur-2);
+}
+.mx-tab.is-on {
+  color: var(--text-1);
+}
+.mx-tab__pill {
+  position: absolute;
+  inset: 2px 6px;
+  border-radius: 14px;
+  background: rgb(var(--measured-rgb) / 0.12);
+  box-shadow: inset 0 0 0 1px var(--measured-line);
+}
+.mx-tab__icon {
+  position: relative;
+  height: 20px;
+  display: grid;
+  place-items: center;
+}
+.mx-tab.is-on .mx-tab__icon {
+  color: var(--measured);
+}
+.mx-tab__live {
+  position: absolute;
+  top: -2px;
+  right: -5px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--action);
+  box-shadow: 0 0 0 2px var(--chassis);
+  animation: pulse 1.6s var(--ease-in-out) infinite;
+}
+.mx-tab__label {
+  position: relative;
+  font-size: 11px;
+  line-height: 1;
+  letter-spacing: 0.02em;
+}
+
+/* ── Detail sheets sit above the tab bar ── */
+.mx-scrim {
+  bottom: var(--mx-tabs-h);
+}
+.mx-sheet {
+  bottom: var(--mx-tabs-h);
+  max-height: calc(100svh - var(--mx-tabs-h) - 36px);
+  border-radius: 28px;
+}
+.mx:has(.mx-strip) .mx-sheet {
+  bottom: calc(var(--mx-tabs-h) + 72px);
+  max-height: calc(100svh - var(--mx-tabs-h) - 108px);
+}
+.mx-sheet .m-sheet__body {
+  padding-bottom: 24px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mx-row__art.is-on i,
+  .mx-tab__live {
+    animation: none;
+  }
+  .mx-ring__fill {
+    transition: none;
+  }
+}

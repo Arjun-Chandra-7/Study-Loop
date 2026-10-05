@@ -67,7 +67,7 @@ const get = async (qs: string, user = "user-a") => {
 
 describe("vibe API", () => {
   it("lists playlists, reads a vibe once and caches it per exact track list", async () => {
-    setVibeModelForTests(model(() => JSON.stringify(profile)));
+    setVibeModelForTests(model(() => JSON.stringify({ ...profile, harmonicRhythm: null, groove: null, bassRhythm: null })));
     await seed("user-a", "Chill", [["Husn", "Anuv Jain"], ["Baarishein", "Anuv Jain"]]);
     await seed("user-a", "Gym", [["Brown Munde", "AP Dhillon"]]);
     expect((await get("list=1")).body.playlists.map((p: { name: string }) => p.name).sort()).toEqual(["Chill", "Gym"]);

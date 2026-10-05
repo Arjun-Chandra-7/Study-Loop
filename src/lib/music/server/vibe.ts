@@ -3,17 +3,20 @@ import { createHash } from "node:crypto";
 import { google } from "@ai-sdk/google";
 import { groq } from "@ai-sdk/groq";
 import { generateText, Output, type LanguageModel } from "ai";
-import { VibeProfileSchema, type VibeProfile } from "../vibe/profile";
+import { fromModel, VibeProfileModelSchema, VibeProfileSchema, type VibeProfile } from "../vibe/profile";
 import { q } from "./db";
 import { ApiError } from "./http";
 import { log } from "./log";
 
 /**
- * Which model reads the vibe: Groq when GROQ_API_KEY is set, else Google Gemini when GOOGLE_GENERATIVE_AI_API_KEY is set (free tier
+ * Which model reads the vibe: MUSIC_VIBE_MODEL on the Vercel AI Gateway when set (e.g.
+ * "anthropic/claude-opus-5.5", which knows far more melodies than the free models), else Groq when
+ * GROQ_API_KEY is set, else Google Gemini when GOOGLE_GENERATIVE_AI_API_KEY is set (free tier
  * works), otherwise the Vercel AI Gateway. Returns [model, id used in the cache key].
  */
-function vibeModel(): [LanguageModel, string] {
+export function vibeModel(): [LanguageModel, string] {
   if (modelOverride) return [modelOverride, "test"];
+  if (process.env.MUSIC_VIBE_MODEL) return [process.env.MUSIC_VIBE_MODEL, `gateway/${process.env.MUSIC_VIBE_MODEL}`];
   if (process.env.GROQ_API_KEY) {
     const id = process.env.MUSIC_VIBE_GROQ_MODEL || "openai/gpt-oss-120b";
     return [groq(id), `groq/${id}`];
@@ -66,7 +69,7 @@ export async function playlistVibe(uid: string, playlist: string | null, refresh
   try {
     const { output } = await generateText({
       model,
-      output: Output.object({ schema: VibeProfileSchema }),
+      output: Output.object({ schema: VibeProfileModelSchema }),
       system:
         "You are a music producer designing an original, lyric-free study beat that carries the feel of a listener's playlist. " +
         "From the song titles and artists, infer the typical tempo, key, harmony, groove and instrumentation of these songs, " +
@@ -74,7 +77,7 @@ export async function playlistVibe(uid: string, playlist: string | null, refresh
         "Keep energy moderate: this plays while studying.",
       prompt: `Playlist${playlist ? ` "${playlist}"` : ""} (${tracks.length} songs):\n${list.join("\n")}`,
     });
-    profile = output;
+    profile = fromModel(output);
   } catch (e) {
     // Keep the music playing: a simpler reading from keywords, not cached so the AI one replaces it later.
     log("vibe_failed", { model: modelId, error: (e as Error).name, detail: (e as Error).message.slice(0, 200) });
