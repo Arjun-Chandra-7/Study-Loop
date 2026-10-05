@@ -10,6 +10,9 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
 }
 
+/** The event captured in <head> before hydration (see installCaptureScript). */
+const captured = () => (window as Window & { __slInstall?: BeforeInstallPromptEvent | null }).__slInstall ?? null;
+
 const dismissed = () => {
   try {
     return localStorage.getItem(DISMISS_KEY) === "1";
@@ -40,17 +43,22 @@ export function InstallPrompt() {
       setShow(true);
     }
 
-    const onPrompt = (e: Event) => {
-      e.preventDefault(); // keep it from showing on its own; we show our button
-      setDeferred(e as BeforeInstallPromptEvent);
+    // The event may already have fired (and been stashed) before this mounted.
+    const existing = captured();
+    if (existing) {
+      setDeferred(existing);
+      setShow(true);
+    }
+    const onReady = () => {
+      setDeferred(captured());
       setShow(true);
     };
     const onInstalled = () => setShow(false);
-    window.addEventListener("beforeinstallprompt", onPrompt);
-    window.addEventListener("appinstalled", onInstalled);
+    window.addEventListener("sl-install-ready", onReady);
+    window.addEventListener("sl-installed", onInstalled);
     return () => {
-      window.removeEventListener("beforeinstallprompt", onPrompt);
-      window.removeEventListener("appinstalled", onInstalled);
+      window.removeEventListener("sl-install-ready", onReady);
+      window.removeEventListener("sl-installed", onInstalled);
     };
   }, []);
 
@@ -62,9 +70,10 @@ export function InstallPrompt() {
   };
 
   const install = async () => {
-    if (!deferred) return;
-    await deferred.prompt();
-    await deferred.userChoice;
+    const evt = deferred ?? captured();
+    if (!evt) return;
+    await evt.prompt();
+    await evt.userChoice;
     setDeferred(null);
     setShow(false);
   };

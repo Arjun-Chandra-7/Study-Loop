@@ -3,7 +3,8 @@
   left: max(12px, env(safe-area-inset-left));
   right: max(12px, env(safe-area-inset-right));
   bottom: calc(12px + env(safe-area-inset-bottom));
-  z-index: 60;
+  /* Above every in-app overlay (the app's layers reach ~200); the install banner must sit on top. */
+  z-index: 1000;
   margin-inline: auto;
   max-width: 30rem;
   display: flex;

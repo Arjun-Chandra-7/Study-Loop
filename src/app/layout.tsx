@@ -5,6 +5,7 @@ import { InstallPrompt } from "@/components/pwa/InstallPrompt";
 import { ServiceWorkerManager } from "@/components/pwa/ServiceWorkerManager";
 import { prePaintScript } from "@/lib/palettes";
 import { LITE_SCRIPT } from "@/lib/device";
+import { installCaptureScript } from "@/lib/pwa";
 import "./globals.css";
 
 // One family for everything: GitHub's Mona Sans, variable in weight, width and optical size.
@@ -51,6 +52,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         {/* Apply the saved colour palette before first paint. */}
         <script dangerouslySetInnerHTML={{ __html: prePaintScript() }} />
         <script dangerouslySetInnerHTML={{ __html: LITE_SCRIPT }} />
+        <script dangerouslySetInnerHTML={{ __html: installCaptureScript() }} />
       </head>
       <body>
         <AuthProvider>{children}</AuthProvider>
