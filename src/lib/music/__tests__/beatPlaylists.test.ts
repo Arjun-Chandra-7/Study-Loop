@@ -35,6 +35,7 @@ const reading = (...i: number[]) =>
   });
 
 const PLAYLIST = "37i9dQZF1DXcBWIGoYBM5M";
+const PUBLIC = "4pUBLICpLAYLIST00000ab";
 const LINK = `https://open.spotify.com/playlist/${PLAYLIST}?si=abc`;
 const TOKEN = "listener-token-0123456789abcdef";
 const track = (id: string, name: string, artist: string) => ({
@@ -50,6 +51,19 @@ function mockSpotify() {
     const asUser = new Headers(init?.headers).get("authorization") === `Bearer ${TOKEN}`;
     if (url.includes("accounts.spotify.com")) return Response.json({ access_token: "tok", expires_in: 3600 });
     if (url.endsWith(`/playlists/${PLAYLIST}?fields=name`)) return Response.json({ name: "Night Drive" });
+    // Spotify's public player page: lists a playlist's songs to anyone.
+    if (url.endsWith(`/embed/playlist/${PUBLIC}`)) {
+      const data = { props: { pageProps: { state: { data: { entity: {
+        name: "Late Night Focus",
+        coverArt: { sources: [{ url: "https://i.scdn.co/image/cover" }] },
+        trackList: [
+          { uri: `spotify:track:${"a".repeat(22)}`, title: "Get Lucky", subtitle: "Daft Punk", duration: 200000, entityType: "track" },
+          { uri: `spotify:track:${"c".repeat(22)}`, title: "Let It Be", subtitle: "The Beatles", duration: 240000, entityType: "track" },
+          { uri: "spotify:episode:xyz", title: "A podcast", entityType: "episode" },
+        ],
+      } } } } } };
+      return new Response(`<html><script id="__NEXT_DATA__" type="application/json">${JSON.stringify(data)}</script></html>`);
+    }
     // Single tracks are readable with the app's own token: no listener needed.
     const one = url.match(/\/tracks\/([A-Za-z0-9]{22})$/);
     if (one && one[1] === "a".repeat(22)) return Response.json(track(one[1], "Get Lucky", "Daft Punk"));
@@ -154,6 +168,16 @@ describe("beat playlists from Spotify", () => {
     expect(res.body.error.code).toBe("spotify_login_required");
     expect((await create(null)).status).toBe(401);
     expect((await create("user-a", { url: "not a link" })).status).toBe(400);
+  });
+
+  it("reads any public playlist link for anyone, with no Spotify sign-in", async () => {
+    setVibeModelForTests(model(() => reading(0, 1)));
+    const { status, body } = await create("user-b", { url: `https://open.spotify.com/playlist/${PUBLIC}?si=zz` });
+    expect(status).toBe(201);
+    expect(body.playlist.name).toBe("Late Night Focus");
+    expect(body.playlist.songs.map((s: { title: string; artist: string }) => [s.title, s.artist])).toEqual([["Get Lucky", "Daft Punk"], ["Let It Be", "The Beatles"]]);
+    // Song artwork where Spotify shares the song itself, the playlist cover otherwise.
+    expect(body.playlist.songs.map((s: { artworkUrl: string }) => s.artworkUrl)).toEqual([`https://i.scdn.co/image/${"a".repeat(22)}`, "https://i.scdn.co/image/cover"]);
   });
 
   it("makes a playlist from songs copied out of the Spotify app, with no Spotify sign-in", async () => {

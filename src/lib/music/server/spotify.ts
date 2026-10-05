@@ -162,6 +162,8 @@ export async function fetchSpotify(ref: SpotifyRef, userToken?: string): Promise
   }
   const tracks: ImportedTrack[] = [];
   if (ref.kind === "album") {
+    const embedded = await fetchEmbed(ref).catch(() => null);
+    if (embedded?.tracks.length) return embedded;
     const al = await get<{ name: string; images?: { url: string; width?: number }[]; tracks: Page<SpTrack> }>(`/albums/${ref.id}`);
     let page: Page<SpTrack> | null = al.tracks;
     while (page && tracks.length < MAX_TRACKS) {
@@ -173,6 +175,12 @@ export async function fetchSpotify(ref: SpotifyRef, userToken?: string): Promise
     }
     return { name: al.name, tracks: tracks.slice(0, MAX_TRACKS) };
   }
+  // Spotify's public player page lists the songs to anyone, signed in or not, on any device.
+  const embedded = await fetchEmbed(ref).catch((e) => {
+    log("spotify_failed", { stage: "embed", message: e instanceof Error ? e.message.slice(0, 120) : "unknown" });
+    return null;
+  });
+  if (embedded?.tracks.length) return embedded;
   const pl = await get<{ name: string }>(`/playlists/${ref.id}?fields=name`);
   // Spotify only lists a playlist's songs to a signed-in Spotify user, not to an app on its own.
   if (!userToken) {
@@ -201,7 +209,64 @@ export async function fetchSpotify(ref: SpotifyRef, userToken?: string): Promise
   return { name: pl.name, tracks: tracks.slice(0, MAX_TRACKS) };
 }
 
-const TRACK_LINK = /(?:open\.spotify\.com\/(?:intl-[a-z]{2}(?:-[a-z]{2})?\/)?track\/|spotify:track:)([A-Za-z0-9]{22})/g;
+interface EmbedTrack {
+  uri?: string;
+  title?: string;
+  subtitle?: string;
+  duration?: number;
+  entityType?: string;
+}
+interface EmbedEntity {
+  name?: string;
+  coverArt?: { sources?: { url: string; width?: number | null }[] } | null;
+  trackList?: EmbedTrack[];
+}
+
+/**
+ * A playlist or album as Spotify's public embed player shows it (up to 100 songs). Spotify's API
+ * only lists a playlist's songs to a few approved, signed-in accounts; the player shows them to
+ * everyone. Each song is then read through the API for its artwork, where Spotify allows it.
+ */
+async function fetchEmbed(ref: SpotifyRef): Promise<{ name: string | null; tracks: ImportedTrack[] } | null> {
+  const res = await fetch(`https://open.spotify.com/embed/${ref.kind}/${ref.id}`, {
+    headers: { "User-Agent": "Mozilla/5.0 (compatible; StudyLoop)", "Accept-Language": "en" },
+    cache: "no-store",
+    signal: AbortSignal.timeout(15_000),
+  });
+  if (res.status === 404) throw new ApiError(404, "spotify_not_found", "Spotify couldn't find that link. Check it's a public playlist, album or song.");
+  if (!res.ok) throw new Error(`embed ${res.status}`);
+  const html = await res.text();
+  const json = /<script id="__NEXT_DATA__" type="application\/json">([\s\S]*?)<\/script>/.exec(html)?.[1];
+  if (!json) throw new Error("embed without data");
+  const entity = (JSON.parse(json) as { props?: { pageProps?: { state?: { data?: { entity?: EmbedEntity } } } } }).props?.pageProps?.state?.data?.entity;
+  if (!entity) throw new Error("embed without entity");
+  const cover = entity.coverArt?.sources?.find((s) => /^https:\/\/i\.scdn\.co\//.test(s.url))?.url ?? null;
+  const basic: ImportedTrack[] = [];
+  for (const t of entity.trackList ?? []) {
+    const id = /^spotify:track:([A-Za-z0-9]{22})$/.exec(t.uri ?? "")?.[1];
+    if (!id || !t.title || (t.entityType && t.entityType !== "track")) continue;
+    basic.push({
+      spotifyTrackId: id,
+      title: t.title.slice(0, 200),
+      artist: (t.subtitle ?? "").replace(/\s+/g, " ").trim().slice(0, 200),
+      album: ref.kind === "album" ? (entity.name ?? null) : null,
+      artworkUrl: cover,
+      durationMs: t.duration ?? null,
+      spotifyUrl: `https://open.spotify.com/track/${id}`,
+    });
+    if (basic.length >= MAX_TRACKS) break;
+  }
+  // Song artwork and albums, best effort: the songs are already known without them.
+  const full = await fetchTracks(basic.map((t) => t.spotifyTrackId)).catch(() => []);
+  const byId = new Map(full.map((t) => [t.spotifyTrackId, t]));
+  const tracks = basic.map((t) => {
+    const f = byId.get(t.spotifyTrackId);
+    return f ? { ...t, album: f.album ?? t.album, artworkUrl: f.artworkUrl ?? t.artworkUrl } : t;
+  });
+  return { name: entity.name?.slice(0, 120) ?? null, tracks };
+}
+
+const TRACK_LINK =/(?:open\.spotify\.com\/(?:intl-[a-z]{2}(?:-[a-z]{2})?\/)?track\/|spotify:track:)([A-Za-z0-9]{22})/g;
 const ANY_LINK = /(?:https?:\/\/\S+|spotify:[a-z]+:[A-Za-z0-9]+)/g;
 
 /**

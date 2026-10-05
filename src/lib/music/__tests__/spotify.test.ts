@@ -161,6 +161,8 @@ describe("Spotify import", () => {
 
   it("says so when Spotify isn't configured", async () => {
     vi.stubEnv("SPOTIFY_CLIENT_ID", "");
+    // The public player page needs no keys; here it's down, so the API (and its keys) are needed.
+    vi.stubGlobal("fetch", async () => new Response("", { status: 503 }));
     const res = await importUrl(`https://open.spotify.com/playlist/${ID}`);
     expect(res.status).toBe(503);
     expect((await res.json()).error.code).toBe("spotify_not_configured");
