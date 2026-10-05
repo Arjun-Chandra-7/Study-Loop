@@ -186,6 +186,8 @@ export class StudyLoopEngine {
   /** How long a baseline takes. The demo tour shortens it so judges aren't kept waiting. */
   baselineMs = BASELINE_MS;
   private storeKey: string | null = null;
+  /** The signed-in StudyLoop user; the band's readings are stored under it. */
+  private uid: string | null = null;
   private lastSave = 0;
   private savedPhase: SessionPhase | null = null;
   private savedSummaries: SessionSummary[] | null = null;
@@ -326,6 +328,15 @@ export class StudyLoopEngine {
    * and if a session was running when the page went away, holds it for "continue?".
    */
   attachUser = (uid: string | null) => {
+    // The band's readings are keyed by this uid (users/<uid>/device/live); reconnect if it changes mid-connection.
+    if (uid !== this.uid) {
+      this.uid = uid;
+      // Rebuild the band provider around the new uid if it's live.
+      if (this.snap.providerKind === "firebase" && this.snap.reading.connection !== "disconnected") {
+        this.useProvider("firebase", true);
+        void this.provider.connect();
+      }
+    }
     const key = uid ? `sl-sessions:${uid}` : null;
     if (key === this.storeKey) return;
     this.storeKey = key;
@@ -401,11 +412,11 @@ export class StudyLoopEngine {
 
   // ── internals ──────────────────────────────────────────────
 
-  private useProvider(kind: Snapshot["providerKind"]) {
-    if (kind === this.snap.providerKind) return;
+  private useProvider(kind: Snapshot["providerKind"], force = false) {
+    if (kind === this.snap.providerKind && !force) return;
     this.provider.disconnect();
     if (this.provider !== this.sim) this.provider.dispose();
-    this.provider = kind === "mock" ? this.sim : kind === "firebase" ? new FirebaseSensorProvider() : new BluetoothSensorProvider();
+    this.provider = kind === "mock" ? this.sim : kind === "firebase" ? new FirebaseSensorProvider(this.uid) : new BluetoothSensorProvider();
     this.attach(this.provider);
     this.set({ providerKind: kind, reading: this.provider.getReading() });
   }

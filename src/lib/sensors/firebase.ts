@@ -15,10 +15,16 @@ const config = {
   projectId: process.env.NEXT_PUBLIC_HARDWARE_FIREBASE_PROJECT_ID,
   appId: process.env.NEXT_PUBLIC_HARDWARE_FIREBASE_APP_ID,
 };
-/** Where the reading lives: an RTDB path ("/band") or, without a database URL, a Firestore doc ("devices/band"). */
-const PATH = process.env.NEXT_PUBLIC_HARDWARE_FIREBASE_PATH || "/";
+/**
+ * Where the live reading lives, as a template. The band writes per user, keyed by the StudyLoop
+ * login UID: `users/<uid>/device/live`. `{uid}` is filled in with the signed-in user's id. A set
+ * env value wins (a bare "/" is treated as "unset", so today's deployed value still uses the default).
+ */
+const PATH_ENV = (process.env.NEXT_PUBLIC_HARDWARE_FIREBASE_PATH ?? "").trim();
+const PATH_TEMPLATE = PATH_ENV && PATH_ENV !== "/" ? PATH_ENV : "users/{uid}/device/live";
+export const pathFor = (uid: string) => PATH_TEMPLATE.replace("{uid}", uid).replace(/^\/+/, "");
 
-export const hardwareConfigured = Boolean(config.apiKey && config.projectId && (config.databaseURL || PATH.replace(/^\/+/, "").split("/").length % 2 === 0));
+export const hardwareConfigured = Boolean(config.apiKey && config.projectId && config.databaseURL);
 
 /** Resting averages, used until the band has sent a real value to average from. */
 const TYPICAL = { hr: 72, eda: 4.2, battery: 82 };
@@ -83,8 +89,11 @@ export class FirebaseSensorProvider implements SensorProvider {
   private unsubSim: (() => void) | null = null;
   private unsubDb: (() => void) | null = null;
   private app: FirebaseApp | null = null;
-  private raw: { hr: number | null; eda: number | null; battery: number | null; at: number } = { hr: null, eda: null, battery: null, at: 0 };
+  private raw: { hr: number | null; eda: number | null; battery: number | null; online: boolean; contact: boolean; at: number } = { hr: null, eda: null, battery: null, online: true, contact: true, at: 0 };
   private avg = { hr: new Average(TYPICAL.hr), eda: new Average(TYPICAL.eda), battery: new Average(TYPICAL.battery) };
+
+  /** `uid`: the signed-in StudyLoop user, whose band readings live at `users/<uid>/device/live`. */
+  constructor(private uid: string | null = null) {}
 
   async connect() {
     if (this.reading.connection !== "disconnected") return;
@@ -92,38 +101,40 @@ export class FirebaseSensorProvider implements SensorProvider {
     // The simulation runs underneath and supplies every value the hardware doesn't.
     this.unsubSim = this.sim.subscribe((s) => s.connection === "connected" && this.merge(s));
     await this.sim.connect();
-    if (!hardwareConfigured) return;
+    // No hardware config, or no signed-in user to key the per-user path: simulate only.
+    if (!hardwareConfigured || !this.uid) return;
     try {
       this.app = getApps().some((a) => a.name === "hardware") ? getApp("hardware") : initializeApp(config, "hardware");
-      this.unsubDb = config.databaseURL ? await this.listenRealtime(this.app) : await this.listenFirestore(this.app);
+      const { getDatabase, onValue, ref } = await import("firebase/database");
+      this.unsubDb = onValue(
+        ref(getDatabase(this.app), pathFor(this.uid)),
+        (snap) => this.receive(snap.val()),
+        (e) => console.warn("[StudyLoop] hardware Firebase read refused, simulating", e),
+      );
     } catch (e) {
       // Unreachable or locked database: keep going on simulated values.
       console.warn("[StudyLoop] hardware Firebase unavailable, simulating", e);
     }
   }
 
-  private async listenRealtime(app: FirebaseApp) {
-    const { getDatabase, onValue, ref } = await import("firebase/database");
-    return onValue(
-      ref(getDatabase(app), PATH),
-      (snap) => this.receive(snap.val()),
-      (e) => console.warn("[StudyLoop] hardware Firebase read refused, simulating", e),
-    );
-  }
-
-  private async listenFirestore(app: FirebaseApp) {
-    const { doc, getFirestore, onSnapshot } = await import("firebase/firestore");
-    return onSnapshot(
-      doc(getFirestore(app), PATH.replace(/^\/+/, "")),
-      (snap) => this.receive(snap.data()),
-      (e) => console.warn("[StudyLoop] hardware Firebase read refused, simulating", e),
-    );
-  }
-
   private receive(data: unknown) {
     const latest = latestEntry(data);
     const real = (v: number | null) => (v !== null && v > 0 ? v : null);
-    this.raw = { hr: real(pick(latest, KEYS.hr)), eda: real(pick(latest, KEYS.eda)), battery: real(pick(latest, KEYS.battery)), at: Date.now() };
+    const flag = (re: RegExp) => {
+      const v = pick(latest, re);
+      return v === null ? true : v > 0; // absent → assume ok; present → truthy means ok
+    };
+    const online = flag(/^(online|connected|present)$/i);
+    // Skin contact: any of the contact flags reading false means the sensor isn't on the skin.
+    const contact = flag(/^(contact|ppg_?contact|gsr_?contact|on_?skin|worn)$/i);
+    this.raw = {
+      hr: online ? real(pick(latest, KEYS.hr)) : null,
+      eda: online ? real(pick(latest, KEYS.eda)) : null,
+      battery: real(pick(latest, KEYS.battery)),
+      online,
+      contact,
+      at: Date.now(),
+    };
     if (this.raw.hr !== null) this.avg.hr.add(this.raw.hr);
     if (this.raw.eda !== null) this.avg.eda.add(this.raw.eda);
     if (this.raw.battery !== null) this.avg.battery.add(this.raw.battery);
@@ -143,7 +154,7 @@ export class FirebaseSensorProvider implements SensorProvider {
       hr: value("hr", s.hr),
       eda: value("eda", s.eda),
       battery: Math.round(Math.min(100, Math.max(1, value("battery", s.battery) ?? this.avg.battery.value))),
-      quality: live && this.raw.hr !== null ? "good" : s.quality,
+      quality: live ? (this.raw.hr !== null && this.raw.contact ? "good" : this.raw.online ? "fair" : s.quality) : s.quality,
       deviceName: live ? "StudyLoop band" : "StudyLoop band (simulated)",
     });
   }

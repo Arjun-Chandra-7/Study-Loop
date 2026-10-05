@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { FirebaseSensorProvider, latestEntry, pick } from "../sensors/firebase";
+import { FirebaseSensorProvider, latestEntry, pathFor, pick } from "../sensors/firebase";
 import type { SensorReading } from "../sensors/types";
 
 describe("band readings from the hardware's Firebase", () => {
@@ -15,6 +15,35 @@ describe("band readings from the hardware's Firebase", () => {
   it("reads a log of readings as its newest entry", () => {
     expect(latestEntry({ "-Na1": { bpm: 70 }, "-Na2": { bpm: 75 } })).toEqual({ bpm: 75 });
     expect(latestEntry({ bpm: 75, gsr: 3 })).toEqual({ bpm: 75, gsr: 3 });
+  });
+
+  it("reads each user's own live node: users/<uid>/device/live", () => {
+    expect(pathFor("abc123")).toBe("users/abc123/device/live");
+  });
+
+  it("matches the band's real field names (heartRate, gsr), not its baseline/change siblings", () => {
+    const live = { heartRate: 88, hrBaseline: 70, hrChange: 18, gsr: 5.1, gsrRaw: 2048, gsrBaseline: 4, gsrChange: 1.1, spo2: 97 };
+    expect(pick(live, /^(hr|bpm|heart_?rate|heartbeat|pulse|beat_?avg|avg_?bpm)$/i)).toBe(88);
+    expect(pick(live, /^(eda|gsr|skin_?conductance|conductance|sweat)$/i)).toBe(5.1);
+  });
+
+  it("simulates while the band reports itself offline, then uses real values once it's back", async () => {
+    vi.useFakeTimers();
+    const band = new FirebaseSensorProvider("uid-1");
+    await band.connect();
+    vi.advanceTimersByTime(1500);
+    const internal = band as unknown as { receive(d: unknown): void };
+
+    internal.receive({ online: false, heartRate: 0, gsr: 0 });
+    vi.advanceTimersByTime(300);
+    expect(band.getReading().hr).toBeGreaterThan(40); // offline: simulated, never a flat 0
+
+    internal.receive({ online: true, heartRate: 83, gsr: 4.9, contact: true });
+    vi.advanceTimersByTime(300);
+    const r = band.getReading();
+    expect(r.hr).toBe(83);
+    expect(r.quality).toBe("good");
+    band.dispose();
   });
 
   it("uses real values, and simulates null or zero ones around that value's average", async () => {
