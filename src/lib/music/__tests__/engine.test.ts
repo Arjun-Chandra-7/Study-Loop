@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import type { VibeProfile } from "../vibe/profile";
 import { DEMO_SONGS } from "../vibe/songs";
 
 /** A stand-in for Tone.js that records every note it's asked to play, as MIDI numbers. */
@@ -51,13 +52,13 @@ vi.mock("tone", () => {
 
 type Voice = { played: { note: number; step: number }[] };
 
-/** Play a demo song for `bars` bars; what each voice played. */
-async function play(title: string, bars: number) {
+/** Play a demo song (or a profile) for `bars` bars; what each voice played. */
+async function play(song: string | VibeProfile, bars: number) {
   const tone = (await import("tone")) as unknown as { clock: { step: number; tick: (t: number) => void } };
   const { VibeEngine } = await import("../vibe/engine");
   const engine = new VibeEngine();
-  const song = DEMO_SONGS.find((s) => s.title === title)!;
-  await engine.play({ name: song.title, playlistName: null, profile: song.profile }, "stable");
+  const profile = typeof song === "string" ? DEMO_SONGS.find((s) => s.title === song)!.profile : song;
+  await engine.play({ name: "song", playlistName: null, profile }, "stable");
   for (tone.clock.step = 0; tone.clock.step < bars * 16; tone.clock.step++) tone.clock.tick(0);
   return (engine as unknown as { voices: Record<string, Voice | undefined> }).voices;
 }
@@ -84,5 +85,14 @@ describe("the beat engine", () => {
   it("stabs Let It Be's chords as plain triads on the beat", async () => {
     const v = await play("Let It Be", 1);
     expect(v.chords!.played.map((n) => n.step)).toEqual([0, 0, 0, 4, 4, 4, 8, 8, 8, 12, 12, 12]); // C, C, G, G
+  });
+
+  it("plays the riff, then sings the chorus twice, each starting on the loop's first chord", async () => {
+    const base = DEMO_SONGS.find((s) => s.title === "Let It Be")!.profile;
+    const v = await play({ ...base, key: "C", mode: "major", progression: [1, 5, 6, 4], harmonicRhythm: 1, riff: "5:8 3:8", melody: "1:4 2:4 3:8" }, 12);
+    // 4-bar chord loop: riff for bars 1–4, chorus for bars 5–8, riff again from bar 9
+    expect(v.lead!.played.map((n) => n.step)).toEqual([0, 8, 16, 24, 32, 40, 48, 56, 128, 136, 144, 152, 160, 168, 176, 184]);
+    expect(v.singer!.played.slice(0, 3).map((n) => [n.note, n.step])).toEqual([[60, 64], [62, 68], [64, 72]]); // C4 D4 E4
+    expect(v.singer!.played.map((n) => n.step).every((st) => st >= 64 && st < 128)).toBe(true);
   });
 });

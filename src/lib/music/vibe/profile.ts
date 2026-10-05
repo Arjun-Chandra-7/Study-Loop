@@ -3,7 +3,7 @@ import type { PhysioState } from "../../sensors/classify";
 
 /**
  * A song's (or a playlist's) production fingerprint: tempo, key, chord loop, groove and sound,
- * read from its title and artist, plus a song's signature hook and bass line when they're known.
+ * read from its title and artist, plus a song's chorus melody, riff and bass line when they're known.
  * It drives a generated, instrumental beat you can name in a bar or two; lyrics are never reproduced.
  */
 export const KEYS = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"] as const;
@@ -42,7 +42,8 @@ export const VibeProfileSchema = z.object({
     .optional()
     .describe("The drum pattern that defines the song's groove."),
   bassRhythm: grid("Bass notes on the chord root").optional(),
-  riff: hookLine("The song's signature hook (its main riff, or the chorus melody played on an instrument)").optional(),
+  melody: hookLine("The chorus's sung melody (the line everyone hums), played on an instrument").optional(),
+  riff: hookLine("The song's signature instrumental riff").optional(),
   bassLine: hookLine("The song's bass line, when it's part of what makes the song recognisable").optional(),
   comp: grid("Chord stabs (the rhythm the keys or guitar play the chords in)").optional(),
   sevenths: z.boolean().optional().describe("true for jazzy 7th chords, false for plain triads."),
@@ -256,11 +257,12 @@ export function parseHook(text: string | null | undefined): Hook | null {
 export const hookMidi = (key: VibeProfile["key"], mode: VibeProfile["mode"], n: HookNote, octave: number) => scale(key, mode, octave + n.octave)[n.degree - 1] + n.shift;
 
 /** The hook fields of a model's answer, kept only where they parse. */
-export function hookFields(f: { riff?: unknown; bass?: unknown; comp?: unknown; sevenths?: unknown }): Pick<VibeProfile, "riff" | "bassLine" | "comp" | "sevenths"> {
+export function hookFields(f: { melody?: unknown; riff?: unknown; bass?: unknown; comp?: unknown; sevenths?: unknown }): Pick<VibeProfile, "melody" | "riff" | "bassLine" | "comp" | "sevenths"> {
   const line = (v: unknown) => (typeof v === "string" && parseHook(v) ? v.trim().replace(/\s+/g, " ") : undefined);
+  const melody = line(f.melody);
   const riff = line(f.riff);
   const bassLine = line(f.bass);
   const comp = typeof f.comp === "string" && stepGrid(f.comp) ? f.comp.trim().slice(0, 40) : undefined;
   const sevenths = typeof f.sevenths === "boolean" ? f.sevenths : undefined;
-  return { ...(riff ? { riff } : {}), ...(bassLine ? { bassLine } : {}), ...(comp ? { comp } : {}), ...(sevenths !== undefined ? { sevenths } : {}) };
+  return { ...(melody ? { melody } : {}), ...(riff ? { riff } : {}), ...(bassLine ? { bassLine } : {}), ...(comp ? { comp } : {}), ...(sevenths !== undefined ? { sevenths } : {}) };
 }

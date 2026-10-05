@@ -104,6 +104,18 @@ export function songLoop(queue: SongBeat[], i: number, from: { name: string | nu
 /** Chords per bar, kept to a value that divides a 16-step bar. */
 const chordsPerBar = (p: VibeProfile) => (p.harmonicRhythm === 2 || p.harmonicRhythm === 4 ? p.harmonicRhythm : 1);
 
+/**
+ * How riff and chorus share the song: with both, at least two bars of riff then the chorus twice,
+ * each section a whole number of chord loops so the melody always starts on its own chord.
+ * With one, it plays throughout.
+ */
+export function arrange(p: VibeProfile, riff: Hook | null, melody: Hook | null) {
+  const loop = Math.ceil(p.progression.length / chordsPerBar(p)) * 16;
+  const whole = (steps: number) => Math.ceil(steps / loop) * loop;
+  if (riff && melody) return { riffSteps: whole(Math.max(32, riff.steps)), melodySteps: whole(melody.steps * 2) };
+  return { riffSteps: riff ? riff.steps : 0, melodySteps: melody ? melody.steps : 0 };
+}
+
 export interface LoopSnapshot {
   playing: boolean;
   loop: LoopMeta | null;
@@ -130,8 +142,10 @@ export class VibeEngine {
   private advancing = false;
   /** A song's own drum and bass grids, when it has them. */
   private grooves: { kick: number[] | null; snare: number[] | null; hat: number[] | null; bass: number[] | null } = { kick: null, snare: null, hat: null, bass: null };
-  /** A song's own hook, bass line and chord-stab rhythm: the parts that make it recognisable. */
-  private hooks: { riff: Hook | null; bass: Hook | null; comp: number[] | null } = { riff: null, bass: null, comp: null };
+  /** A song's own chorus melody, riff, bass line and chord-stab rhythm: what makes it recognisable. */
+  private hooks: { melody: Hook | null; riff: Hook | null; bass: Hook | null; comp: number[] | null } = { melody: null, riff: null, bass: null, comp: null };
+  /** Riff and chorus take turns like the record: `riffSteps` of riff, then `melodySteps` of chorus. */
+  private sections = { riffSteps: 0, melodySteps: 0 };
   /** Drum density at the song's own feel; below it (stress), hits start to drop out. */
   private fullDensity = 1;
   /** Octave the riff's tonic sits in, by instrument. */
@@ -163,7 +177,8 @@ export class VibeEngine {
     this.profile = profile;
     this.state = state;
     this.params = beatParams(profile, state);
-    this.hooks = { riff: parseHook(profile.riff), bass: parseHook(profile.bassLine), comp: stepGrid(profile.comp) };
+    this.hooks = { melody: parseHook(profile.melody), riff: parseHook(profile.riff), bass: parseHook(profile.bassLine), comp: stepGrid(profile.comp) };
+    this.sections = arrange(profile, this.hooks.riff, this.hooks.melody);
     this.build(T, profile, this.params);
     const transport = T.getTransport();
     transport.bpm.value = this.params.bpm;
@@ -255,6 +270,8 @@ export class VibeEngine {
     chords?: import("tone").PolySynth;
     pluck?: import("tone").PluckSynth;
     lead?: import("tone").Synth | import("tone").FMSynth | import("tone").PluckSynth;
+    /** Sings the chorus melody. */
+    singer?: import("tone").Synth;
     bass?: import("tone").MonoSynth;
     kick?: import("tone").MembraneSynth;
     snare?: import("tone").NoiseSynth;
@@ -308,8 +325,19 @@ export class VibeEngine {
       this.choppy = false;
     }
 
+    if (this.hooks.melody) {
+      // A voice-like lead: it glides between notes and sings with a little vibrato, so the chorus
+      // reads as the song's vocal line rather than a ringtone.
+      const vib = keep(new T.Vibrato(5.5, 0.09)).connect(filter);
+      const tone = keep(new T.Filter(2600, "lowpass", -12)).connect(vib);
+      const singer = new T.Synth({ portamento: 0.045, oscillator: { type: "fatsawtooth", count: 2, spread: 8 }, envelope: { attack: 0.03, decay: 0.25, sustain: 0.8, release: 0.22 } });
+      singer.volume.value = -14;
+      this.voices.singer = keep(singer).connect(tone);
+    }
     if (this.hooks.riff) {
       this.voices.lead = this.riffVoice(T, p, filter, keep);
+    } else if (this.hooks.melody) {
+      // The singer carries the tune; no wandering lead on top of it.
     } else if (pal.has("flute")) {
       // Sparse lead: flute (sine + vibrato), bells (FM), else soft piano.
       const vib = keep(new T.Vibrato(5, 0.12)).connect(filter);
@@ -403,6 +431,9 @@ export class VibeEngine {
     const midi = (n: number) => T.Frequency(n, "midi").toFrequency();
     const g = this.grooves;
     const h = this.hooks;
+    // Where we are in the riff → chorus cycle.
+    const { riffSteps, melodySteps } = this.sections;
+    const inCycle = (this.step - 1) % (riffSteps + melodySteps || 1);
     const sixteenth = 15 / T.getTransport().bpm.value;
     // At the song's own feel every hit lands; under stress they start to drop out.
     const thin = Math.min(1, params.drumDensity / this.fullDensity);
@@ -438,21 +469,23 @@ export class VibeEngine {
     // arpeggio over the chord. Quiet when a riff carries the song.
     if (v.pluck) {
       const tones = chordNotes(4);
-      const play = h.comp ? h.comp[s] > 0 : h.riff ? false : this.choppy ? s % 4 === 2 || (s % 4 === 3 && Math.random() < params.drumDensity * 0.5) : s % 4 === 2;
+      const play = h.comp ? h.comp[s] > 0 : h.riff && inCycle < riffSteps ? false : this.choppy ? s % 4 === 2 || (s % 4 === 3 && Math.random() < params.drumDensity * 0.5) : s % 4 === 2;
       if (play) v.pluck.triggerAttack(midi(tones[h.comp ? tones.length - 1 : (Math.floor(s / 2) + bar) % tones.length]), time);
     }
 
-    // The hook, note for note: it's what makes the song recognisable, so it plays at every stress
-    // level, just softer as stress rises.
-    if (h.riff && v.lead) {
-      const pos = (this.step - 1) % h.riff.steps;
-      for (const n of h.riff.notes) {
+    // The hooks, note for note: they're what make the song recognisable, so they play at every
+    // stress level, just softer as stress rises. Riff and chorus take turns, as on the record.
+    const playLine = (line: Hook, pos: number, octave: number, voice: NonNullable<typeof v.lead>, vel: number) => {
+      for (const n of line.notes) {
         if (n.step !== pos) continue;
-        const note = midi(hookMidi(p.key, p.mode, n, this.riffOctave));
-        if (v.lead instanceof T.PluckSynth) v.lead.triggerAttack(note, time);
-        else v.lead.triggerAttackRelease(note, sixteenth * n.len * 0.92, time, 0.45 + 0.4 * thin);
+        const note = midi(hookMidi(p.key, p.mode, n, octave));
+        if (voice instanceof T.PluckSynth) voice.triggerAttack(note, time);
+        else voice.triggerAttackRelease(note, sixteenth * n.len * 0.92, time, vel);
       }
-    } else if (v.lead && !h.bass && s % 2 === 0 && Math.random() < params.melodyDensity) {
+    };
+    if (h.riff && v.lead && inCycle < riffSteps) playLine(h.riff, inCycle % h.riff.steps, this.riffOctave, v.lead, 0.45 + 0.4 * thin);
+    if (h.melody && v.singer && inCycle >= riffSteps) playLine(h.melody, (inCycle - riffSteps) % h.melody.steps, 4, v.singer, 0.5 + 0.35 * thin);
+    if (!h.riff && !h.melody && v.lead && !h.bass && s % 2 === 0 && Math.random() < params.melodyDensity) {
       // No hook: a sparse, gentle random walk on the pentatonic subset of the scale.
       const sc = scale(p.key, p.mode, 5);
       const penta = p.mode === "major" ? [0, 1, 2, 4, 5] : [0, 2, 3, 4, 6];

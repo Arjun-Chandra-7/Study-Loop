@@ -9,11 +9,14 @@ import { ApiError } from "./http";
 import { log } from "./log";
 
 /**
- * Which model reads the vibe: Groq when GROQ_API_KEY is set, else Google Gemini when GOOGLE_GENERATIVE_AI_API_KEY is set (free tier
+ * Which model reads the vibe: MUSIC_VIBE_MODEL on the Vercel AI Gateway when set (e.g.
+ * "anthropic/claude-opus-5.5", which knows far more melodies than the free models), else Groq when
+ * GROQ_API_KEY is set, else Google Gemini when GOOGLE_GENERATIVE_AI_API_KEY is set (free tier
  * works), otherwise the Vercel AI Gateway. Returns [model, id used in the cache key].
  */
 export function vibeModel(): [LanguageModel, string] {
   if (modelOverride) return [modelOverride, "test"];
+  if (process.env.MUSIC_VIBE_MODEL) return [process.env.MUSIC_VIBE_MODEL, `gateway/${process.env.MUSIC_VIBE_MODEL}`];
   if (process.env.GROQ_API_KEY) {
     const id = process.env.MUSIC_VIBE_GROQ_MODEL || "openai/gpt-oss-120b";
     return [groq(id), `groq/${id}`];
